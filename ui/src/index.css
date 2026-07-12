@@ -1,0 +1,140 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/archivo";
+
+@theme {
+  /* Centoire palette — from the product deck */
+  --color-ink: #17171d;
+  --color-ink-soft: #57534a;
+  --color-ink-faint: #8b857a;
+  --color-cream: #f2ede4;
+  --color-paper: #fbf9f4;
+  --color-line: #e4dccc;
+  --color-crimson: #c0392b;
+  --color-crimson-deep: #9a2b20;
+  --color-crimson-tint: #f6e3e0;
+  --color-gold: #b3903f;
+  --color-gold-tint: #f1e8d3;
+  --color-ink-inverse: #f5f0e8;
+
+  --font-display: "Fraunces Variable", "Georgia", serif;
+  --font-sans: "Archivo Variable", "Helvetica Neue", sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(23 23 29 / 0.04);
+  --shadow-card-hover: 0 6px 24px -8px rgb(23 23 29 / 0.16);
+
+  --animate-stitch: stitch 0.35s ease-out;
+
+  @keyframes stitch {
+    0% {
+      stroke-dashoffset: 24;
+    }
+    100% {
+      stroke-dashoffset: 0;
+    }
+  }
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-cream);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: var(--color-crimson);
+    color: var(--color-ink-inverse);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-crimson);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility kicker {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-crimson);
+}
+
+@utility font-display-serif {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 40;
+}
+
+@layer components {
+  /* Rendered rich text (post bodies + editor) */
+  .prose-editorial h2 {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-weight: 600;
+    margin: 1.6em 0 0.5em;
+  }
+  .prose-editorial h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 1.4em 0 0.4em;
+  }
+  .prose-editorial p {
+    margin: 0.9em 0;
+  }
+  .prose-editorial blockquote {
+    border-left: 3px solid var(--color-crimson);
+    padding-left: 1rem;
+    font-style: italic;
+    color: var(--color-ink-soft);
+    margin: 1.2em 0;
+  }
+  .prose-editorial ul,
+  .prose-editorial ol {
+    padding-left: 1.4rem;
+    margin: 0.9em 0;
+  }
+  .prose-editorial ul {
+    list-style: disc;
+  }
+  .prose-editorial ol {
+    list-style: decimal;
+  }
+  .prose-editorial li {
+    margin: 0.3em 0;
+  }
+  .prose-editorial img {
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-line);
+    margin: 1.4em 0;
+    max-width: 100%;
+  }
+  .prose-editorial a {
+    color: var(--color-crimson);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose-editorial strong {
+    font-weight: 650;
+  }
+  /* TipTap placeholder */
+  .prose-editorial p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--color-ink-faint);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+}
