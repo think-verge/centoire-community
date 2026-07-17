@@ -60,7 +60,7 @@ export function LandingPage() {
       <section className="mx-auto grid max-w-5xl gap-4 px-6 pb-24 sm:grid-cols-3">
         {[
           {
-            title: "Discover",
+            title: "Discover Us",
             body: "A personalized feed of fashion's best — editorial, blogs, lookbooks, and member posts in one clean stream.",
           },
           {
