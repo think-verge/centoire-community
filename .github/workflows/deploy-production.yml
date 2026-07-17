@@ -1,0 +1,42 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: centoire-community-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload application
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CENTOIRE_COMMUNITY_SSH_HOST }}
+          username: ${{ secrets.CENTOIRE_COMMUNITY_SSH_USER }}
+          key: ${{ secrets.CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY }}
+          source: "backend,ui,deploy.sh,setup.sh"
+          target: /var/www/centoire-community
+          strip_components: 0
+          overwrite: true
+
+      - name: Deploy on VM
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.CENTOIRE_COMMUNITY_SSH_HOST }}
+          username: ${{ secrets.CENTOIRE_COMMUNITY_SSH_USER }}
+          key: ${{ secrets.CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY }}
+          command_timeout: 25m
+          script: |
+            chmod +x /var/www/centoire-community/deploy.sh /var/www/centoire-community/setup.sh
+            sudo -n /usr/local/sbin/deploy-centoire-community

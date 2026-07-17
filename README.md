@@ -65,6 +65,23 @@ With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 | ui | `npm run api:refresh` | regenerate orval client from backend spec |
 | ui | `npm run build` | typecheck + production build |
 
+## Production deployment
+
+Production deploys to the shared VM without modifying the existing CAG, Centoire,
+or Opho Digital services. Nginx serves the UI on port `5175` and proxies same-origin
+API requests to the backend on `127.0.0.1:8002`.
+
+Pushes to `main` run `.github/workflows/deploy-production.yml`. The repository needs
+the `CENTOIRE_COMMUNITY_SSH_HOST`, `CENTOIRE_COMMUNITY_SSH_USER`, and
+`CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY` GitHub Actions secrets. Runtime secrets are kept
+only on the VM in `/etc/centoire-community/backend.env`.
+The SSH user has passwordless sudo access only to the root-owned
+`/usr/local/sbin/deploy-centoire-community` wrapper.
+
+The initial HTTP deployment uses `COOKIE_SECURE=false`. Change `CLIENT_ORIGIN` to the
+final HTTPS URL and set `COOKIE_SECURE=true` when a domain and TLS certificate are
+configured.
+
 ## Architecture notes
 
 - **For You ranking** (`backend/src/services/feedService.ts`): Mongo aggregation —

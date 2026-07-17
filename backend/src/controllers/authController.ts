@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { env, isProduction } from "../config/env.js";
+import { env } from "../config/env.js";
 import * as authService from "../services/authService.js";
 import { serializeUser } from "../services/userSerializer.js";
 import type { IUser } from "../models/User.js";
@@ -9,7 +9,7 @@ const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 function setSessionCookie(res: Response, user: IUser): void {
   res.cookie("token", authService.signSessionToken(user), {
     httpOnly: true,
-    secure: isProduction,
+    secure: env.COOKIE_SECURE,
     sameSite: "lax",
     maxAge: COOKIE_MAX_AGE_MS,
   });

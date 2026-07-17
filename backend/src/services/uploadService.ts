@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { cloudinary, cloudinaryEnabled } from "../config/cloudinary.js";
 import { env } from "../config/env.js";
 
@@ -10,7 +10,7 @@ export interface UploadedImage {
   height: number | null;
 }
 
-const LOCAL_UPLOAD_DIR = join(process.cwd(), "uploads");
+const LOCAL_UPLOAD_DIR = resolve(process.cwd(), env.UPLOAD_DIR);
 
 /**
  * Uploads to Cloudinary when configured; otherwise writes to local disk
