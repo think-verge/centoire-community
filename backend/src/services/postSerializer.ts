@@ -65,6 +65,7 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
     publishedAt: post.publishedAt?.toISOString() ?? null,
     updatedAt: post.updatedAt.toISOString(),
     viewer: viewer ?? { voted: null, bookmarked: false },
+    authorIsCreator: (author?.role as string) === "creator",
   };
 }
 
@@ -80,5 +81,7 @@ export function serializePostDetail(
     viewCount: post.viewCount,
     rejectionReason: post.rejectionReason ?? null,
     authorFollowedByViewer: authorFollowedByViewer ?? false,
+    aiSummary: post.aiSummary ?? null,
+    clickbaitDetected: Boolean(post.clickbaitDetected),
   };
 }

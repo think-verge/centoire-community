@@ -29,6 +29,13 @@ export interface IPost extends Document {
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
   rejectionReason?: string;
+  aiProcessed?: boolean;
+  aiReadTimeMinutes?: number;
+  aiCategory?: string;
+  aiQualityScore?: number;
+  aiIsSpam?: boolean;
+  aiSummary?: string;
+  clickbaitDetected?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +70,13 @@ const postSchema = new Schema<IPost>(
     reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
     reviewedAt: { type: Date },
     rejectionReason: { type: String, maxlength: 500 },
+    aiProcessed: { type: Boolean, default: false },
+    aiReadTimeMinutes: { type: Number },
+    aiCategory: { type: String },
+    aiQualityScore: { type: Number },
+    aiIsSpam: { type: Boolean },
+    aiSummary: { type: String },
+    clickbaitDetected: { type: Boolean },
   },
   { timestamps: true },
 );

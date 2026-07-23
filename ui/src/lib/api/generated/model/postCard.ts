@@ -39,4 +39,5 @@ export interface PostCard {
   publishedAt: string | null;
   updatedAt: string;
   viewer: ViewerState;
+  authorIsCreator: boolean;
 }

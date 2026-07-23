@@ -72,6 +72,6 @@ export function googleEnabled(_req: Request, res: Response): void {
 }
 
 export async function getInvitePreview(req: Request, res: Response): Promise<void> {
-  const preview = await inviteService.previewInvite(req.params.token);
+  const preview = await inviteService.previewInvite(req.params.token as string);
   res.json(preview);
 }

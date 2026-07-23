@@ -50,6 +50,7 @@ export const PostCardSchema = registry.register(
     publishedAt: z.string().nullable(),
     updatedAt: z.string(),
     viewer: ViewerStateSchema,
+    authorIsCreator: z.boolean(),
   }),
 );
 
@@ -60,6 +61,8 @@ export const PostDetailSchema = registry.register(
     viewCount: z.number(),
     rejectionReason: z.string().nullable(),
     authorFollowedByViewer: z.boolean(),
+    aiSummary: z.string().nullable(),
+    clickbaitDetected: z.boolean(),
   }),
 );
 

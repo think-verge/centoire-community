@@ -126,7 +126,6 @@ function InviteRow({ invite }: { invite: Invite }) {
 function InviteDialog({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"creator" | "editor" | "admin">("creator");
 
   const createInvite = useCreateInvite({
     mutation: {
@@ -139,7 +138,7 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    createInvite.mutate({ data: { email, role } });
+    createInvite.mutate({ data: { email, role: "creator" } });
   }
 
   return (
@@ -155,7 +154,10 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
       >
         <p className="kicker mb-1">New invite</p>
-        <h2 className="font-display-serif text-2xl font-semibold">Invite a member</h2>
+        <h2 className="font-display-serif text-2xl font-semibold">Invite a creator</h2>
+        <p className="mt-1 text-sm text-ink-soft">
+          Creator posts rank higher in feeds and show a "Must Read" badge.
+        </p>
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <Field
             label="Email"
@@ -165,18 +167,6 @@ function InviteDialog({ onClose }: { onClose: () => void }) {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-ink">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as typeof role)}
-              className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-crimson focus:outline-none"
-            >
-              <option value="creator">Creator — can publish & bypass queue</option>
-              <option value="editor">Editor — can moderate content & policies</option>
-              <option value="admin">Admin — full access</option>
-            </select>
-          </div>
           {createInvite.error && (
             <p className="text-sm text-crimson">{createInvite.error.message}</p>
           )}

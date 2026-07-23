@@ -14,12 +14,12 @@ export async function listQueue(req: Request, res: Response): Promise<void> {
 }
 
 export async function approvePost(req: Request, res: Response): Promise<void> {
-  const post = await moderationService.approve(req.user!.userId, req.params.id);
+  const post = await moderationService.approve(req.user!.userId, req.params.id as string);
   res.json(serializePostCard(post));
 }
 
 export async function rejectPost(req: Request, res: Response): Promise<void> {
-  const post = await moderationService.reject(req.user!.userId, req.params.id, req.body.reason);
+  const post = await moderationService.reject(req.user!.userId, req.params.id as string, req.body.reason);
   res.json(serializePostCard(post));
 }
 
@@ -35,11 +35,11 @@ export async function createPolicy(req: Request, res: Response): Promise<void> {
 }
 
 export async function updatePolicy(req: Request, res: Response): Promise<void> {
-  const policy = await policyService.updatePolicy(req.params.id, req.body);
+  const policy = await policyService.updatePolicy(req.params.id as string, req.body);
   res.json(policy);
 }
 
 export async function deletePolicy(req: Request, res: Response): Promise<void> {
-  await policyService.deletePolicy(req.params.id);
+  await policyService.deletePolicy(req.params.id as string);
   res.status(204).end();
 }

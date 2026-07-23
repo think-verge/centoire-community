@@ -12,11 +12,11 @@ export async function listInvites(_req: Request, res: Response): Promise<void> {
 }
 
 export async function revokeInvite(req: Request, res: Response): Promise<void> {
-  await inviteService.revokeInvite(req.params.id);
+  await inviteService.revokeInvite(req.params.id as string);
   res.status(204).end();
 }
 
 export async function previewInvite(req: Request, res: Response): Promise<void> {
-  const preview = await inviteService.previewInvite(req.params.token);
+  const preview = await inviteService.previewInvite(req.params.token as string);
   res.json(preview);
 }

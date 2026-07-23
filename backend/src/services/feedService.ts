@@ -28,7 +28,7 @@ interface KeysetCursor extends Record<string, unknown> {
 }
 
 const CARD_POPULATE = [
-  { path: "authorId", select: "handle displayName avatarUrl" },
+  { path: "authorId", select: "handle displayName avatarUrl role" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
   { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
@@ -69,6 +69,7 @@ function scoreStages(
             { $multiply: ["$authorFollowed", 6] },
             { $multiply: ["$inJoinedCircle", 4] },
             { $multiply: ["$authorIsCreator", 3] },
+            { $multiply: [{ $ifNull: ["$aiQualityScore", 0] }, 2] },
             { $multiply: [{ $divide: ["$hoursSincePublished", 6] }, -1] },
           ],
         },

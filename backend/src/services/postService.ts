@@ -171,7 +171,7 @@ export async function getBySlug(
   viewerRole?: UserRole,
 ): Promise<IPost> {
   const post = await Post.findOne({ slug })
-    .populate("authorId", "handle displayName avatarUrl reputation")
+    .populate("authorId", "handle displayName avatarUrl reputation role")
     .populate("sourceId", "name siteUrl faviconUrl")
     .populate("tags", "name slug")
     .populate("circleId", "name slug");

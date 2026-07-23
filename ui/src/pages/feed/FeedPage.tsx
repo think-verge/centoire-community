@@ -1,10 +1,16 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
+import { PostDrawer } from "../../components/PostDrawer";
 import { useGetFeedForYouInfinite } from "../../lib/api/generated/feed/feed";
 import { useAuth } from "../../lib/auth-context";
+import type { PostCard } from "../../lib/api/generated/model";
 
 export function FeedPage() {
   const { user } = useAuth();
+  const location = useLocation();
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const [feedPath] = useState(() => location.pathname + location.search);
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedForYouInfinite(undefined, {
       query: {
@@ -37,6 +43,7 @@ export function FeedPage() {
         hasNextPage={Boolean(hasNextPage)}
         isFetchingNextPage={isFetchingNextPage}
         fetchNextPage={fetchNextPage}
+        onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
         emptyState={
           <div className="rounded-xl border border-dashed border-line p-12 text-center">
             <p className="font-display-serif text-2xl font-semibold">
@@ -63,6 +70,13 @@ export function FeedPage() {
           </div>
         }
       />
+      {selectedSlug && (
+        <PostDrawer
+          slug={selectedSlug}
+          feedPath={feedPath}
+          onClose={() => setSelectedSlug(null)}
+        />
+      )}
     </div>
   );
 }

@@ -445,6 +445,9 @@
           },
           "viewer": {
             "$ref": "#/components/schemas/ViewerState"
+          },
+          "authorIsCreator": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -466,7 +469,8 @@
           "readTimeMinutes",
           "publishedAt",
           "updatedAt",
-          "viewer"
+          "viewer",
+          "authorIsCreator"
         ]
       },
       "PostDetail": {
@@ -493,13 +497,22 @@
               },
               "authorFollowedByViewer": {
                 "type": "boolean"
+              },
+              "aiSummary": {
+                "type": "string",
+                "nullable": true
+              },
+              "clickbaitDetected": {
+                "type": "boolean"
               }
             },
             "required": [
               "content",
               "viewCount",
               "rejectionReason",
-              "authorFollowedByViewer"
+              "authorFollowedByViewer",
+              "aiSummary",
+              "clickbaitDetected"
             ]
           }
         ]

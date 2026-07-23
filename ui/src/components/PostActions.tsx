@@ -16,7 +16,13 @@ import { StitchIcon } from "./PostCard";
  * instantly and reconcile with server truth on the next feed refetch.
  * Bookmarking with folders: click opens a picker when folders exist.
  */
-export function PostActions({ post }: { post: PostCardType }) {
+export function PostActions({
+  post,
+  onOpenModal,
+}: {
+  post: PostCardType;
+  onOpenModal?: () => void;
+}) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [voted, setVoted] = useState<1 | -1 | null>(
@@ -102,7 +108,7 @@ export function PostActions({ post }: { post: PostCardType }) {
       </button>
       <button
         type="button"
-        onClick={() => navigate(`/p/${post.slug}#comments`)}
+        onClick={onOpenModal ?? (() => navigate(`/p/${post.slug}#comments`))}
         className="flex items-center gap-1 text-ink-soft hover:text-ink"
         title="Comments"
       >

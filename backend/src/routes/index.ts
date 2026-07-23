@@ -8,6 +8,7 @@ import {
   postEngagementRouter,
 } from "./engagementRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
+import { internalRouter } from "./internalRoutes.js";
 import { inviteRouter } from "./inviteRoutes.js";
 import { moderationRouter } from "./moderationRoutes.js";
 import { onboardingRouter } from "./onboardingRoutes.js";
@@ -36,6 +37,7 @@ apiRouter.use("/admin/sources", sourceRouter);
 apiRouter.use("/admin/invites", inviteRouter);
 apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/search", searchRouter);
+apiRouter.use("/internal", internalRouter);
 
 apiRouter.get("/health", (_req, res) => {
   res.json({ status: "ok", uptimeSeconds: Math.round(process.uptime()) });

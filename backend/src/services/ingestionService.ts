@@ -4,8 +4,10 @@ import { Post } from "../models/Post.js";
 import { Source, type ISource } from "../models/Source.js";
 import { canonicalUrlHash } from "../utils/url-hash.js";
 import { slugifyWithId } from "../utils/slugify.js";
+import { readTimeMinutes } from "../utils/read-time.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { finalizePublish } from "./postService.js";
+import { env } from "../config/env.js";
 
 const parser = new Parser({
   timeout: 15_000,
@@ -99,8 +101,11 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           canonicalUrlHash: hash,
           tags: source.tags,
           publishedAt,
-          readTimeMinutes: 3,
+          readTimeMinutes: readTimeMinutes(excerpt),
         });
+
+        // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
+        void fireAiProcessing(post._id.toString(), link);
 
         if (policyOutcome === "auto_approve") {
           await finalizePublish(post);
@@ -137,6 +142,18 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
   }
 
   return stats;
+}
+
+async function fireAiProcessing(postId: string, url: string): Promise<void> {
+  try {
+    await fetch(`${env.AI_SERVICE_URL}/v1/process-post`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, url, origin: "aggregated" }),
+    });
+  } catch {
+    // AI processing is fire-and-forget — failures don't affect ingestion
+  }
 }
 
 export async function fetchAllActiveSources(): Promise<FetchStats[]> {

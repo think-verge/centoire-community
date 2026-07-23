@@ -214,7 +214,7 @@ export async function updateComment(
 
 export async function deleteComment(
   userId: string,
-  role: "member" | "admin",
+  role: string,
   commentId: string,
 ): Promise<void> {
   const comment = await Comment.findById(commentId);

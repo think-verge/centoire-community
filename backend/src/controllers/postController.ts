@@ -7,7 +7,7 @@ import { isFollowing } from "../services/userService.js";
 export async function create(req: Request, res: Response): Promise<void> {
   const post = await postService.createPost(req.user!.userId, { ...req.body, role: req.user!.role });
   await post.populate([
-    { path: "authorId", select: "handle displayName avatarUrl" },
+    { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
@@ -17,7 +17,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   const post = await postService.updatePost(req.user!.userId, req.params.id as string, req.body);
   await post.populate([
-    { path: "authorId", select: "handle displayName avatarUrl" },
+    { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
@@ -27,7 +27,7 @@ export async function update(req: Request, res: Response): Promise<void> {
 export async function publish(req: Request, res: Response): Promise<void> {
   const post = await postService.publishPost(req.user!.userId, req.params.id as string, req.user!.role);
   await post.populate([
-    { path: "authorId", select: "handle displayName avatarUrl" },
+    { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);

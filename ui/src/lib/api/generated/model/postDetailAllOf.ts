@@ -14,4 +14,7 @@ export type PostDetailAllOf = {
   /** @nullable */
   rejectionReason: string | null;
   authorFollowedByViewer: boolean;
+  /** @nullable */
+  aiSummary: string | null;
+  clickbaitDetected: boolean;
 };

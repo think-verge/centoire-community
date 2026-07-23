@@ -27,6 +27,8 @@ export const env = {
   MAIL_FROM: process.env.MAIL_FROM ?? "Centoire <no-reply@centoire.local>",
   ENABLE_INGESTION: process.env.ENABLE_INGESTION === "true",
   INGESTION_CRON: process.env.INGESTION_CRON ?? "*/30 * * * *",
+  AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
+  AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
 };
 
 export const isProduction = env.NODE_ENV === "production";
