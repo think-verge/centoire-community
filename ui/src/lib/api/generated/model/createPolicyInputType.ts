@@ -6,13 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CurrentUserAllOfRole = typeof CurrentUserAllOfRole[keyof typeof CurrentUserAllOfRole];
+export type CreatePolicyInputType = typeof CreatePolicyInputType[keyof typeof CreatePolicyInputType];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CurrentUserAllOfRole = {
-  member: 'member',
-  creator: 'creator',
-  editor: 'editor',
-  admin: 'admin',
+export const CreatePolicyInputType = {
+  user: 'user',
+  source: 'source',
+  all: 'all',
 } as const;

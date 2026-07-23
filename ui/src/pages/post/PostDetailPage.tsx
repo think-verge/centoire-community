@@ -2,17 +2,20 @@ import { generateHTML } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import { CommentThread } from "../../components/CommentThread";
 import { PostActions } from "../../components/PostActions";
 import { useGetPost } from "../../lib/api/generated/posts/posts";
+import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
+import { useAuth } from "../../lib/auth-context";
 
 const EXTENSIONS = [StarterKit, Image, Link];
 
 export function PostDetailPage() {
   const { slug } = useParams();
+  const { user } = useAuth();
   const { data: post, isLoading, error } = useGetPost(slug ?? "");
 
   const html = useMemo(() => {
@@ -35,6 +38,9 @@ export function PostDetailPage() {
       </div>
     );
   }
+
+  const canFollow =
+    post.author && user && user.id !== post.author.id;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8">
@@ -60,15 +66,23 @@ export function PostDetailPage() {
         <h1 className="font-display-serif mt-3 text-4xl font-semibold leading-tight">
           {post.title}
         </h1>
-        <div className="mt-4 flex items-center gap-3 text-sm text-ink-soft">
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink-soft">
           {post.author && (
-            <RouterLink
-              to={post.author.handle ? `/u/${post.author.handle}` : "#"}
-              className="flex items-center gap-2 font-medium text-ink hover:underline"
-            >
-              <AvatarBubble name={post.author.displayName} url={post.author.avatarUrl} />
-              {post.author.displayName}
-            </RouterLink>
+            <div className="flex items-center gap-3">
+              <RouterLink
+                to={post.author.handle ? `/u/${post.author.handle}` : "#"}
+                className="flex items-center gap-2 font-medium text-ink hover:underline"
+              >
+                <AvatarBubble name={post.author.displayName} url={post.author.avatarUrl} />
+                {post.author.displayName}
+              </RouterLink>
+              {canFollow && (
+                <FollowButton
+                  authorId={post.author.id}
+                  initialFollowing={post.authorFollowedByViewer}
+                />
+              )}
+            </div>
           )}
           {post.source && (
             <a
@@ -136,5 +150,47 @@ export function PostDetailPage() {
         <CommentThread postId={post.id} />
       </footer>
     </article>
+  );
+}
+
+function FollowButton({
+  authorId,
+  initialFollowing,
+}: {
+  authorId: string;
+  initialFollowing: boolean;
+}) {
+  const [following, setFollowing] = useState(initialFollowing);
+
+  const followUser = useFollowUser({
+    mutation: { onSuccess: () => setFollowing(true) },
+  });
+  const unfollowUser = useUnfollowUser({
+    mutation: { onSuccess: () => setFollowing(false) },
+  });
+
+  const loading = followUser.isPending || unfollowUser.isPending;
+
+  function toggle() {
+    if (following) {
+      unfollowUser.mutate({ id: authorId });
+    } else {
+      followUser.mutate({ id: authorId });
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={loading}
+      className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-60 ${
+        following
+          ? "border-line bg-paper text-ink-soft hover:border-crimson hover:text-crimson"
+          : "border-crimson bg-crimson text-ink-inverse hover:bg-crimson-deep"
+      }`}
+    >
+      {following ? "Following" : "Follow"}
+    </button>
   );
 }

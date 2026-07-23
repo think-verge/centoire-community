@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "../lib/api/generated/auth/auth";
 import { useAuth } from "../lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { hasPermission } from "../lib/permissions";
 
 const NAV_ITEMS = [
   { to: "/feed", label: "For You", icon: HomeIcon },
@@ -76,6 +77,16 @@ export function AppShell() {
                       Sources admin
                     </MenuLink>
                   )}
+                  {hasPermission(user?.role, "moderation.review") && (
+                    <MenuLink to="/moderation" onClick={() => setMenuOpen(false)}>
+                      Moderation
+                    </MenuLink>
+                  )}
+                  {hasPermission(user?.role, "user.invite") && (
+                    <MenuLink to="/admin/invites" onClick={() => setMenuOpen(false)}>
+                      Invites
+                    </MenuLink>
+                  )}
                   <button
                     type="button"
                     onClick={() => logout.mutate()}
@@ -111,6 +122,36 @@ export function AppShell() {
               {label}
             </NavLink>
           ))}
+          {hasPermission(user?.role, "moderation.review") && (
+            <NavLink
+              to="/moderation"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-paper text-crimson shadow-card"
+                    : "text-ink-soft hover:bg-paper hover:text-ink"
+                }`
+              }
+            >
+              <ShieldIcon className="size-4.5" />
+              Moderation
+            </NavLink>
+          )}
+          {hasPermission(user?.role, "user.invite") && (
+            <NavLink
+              to="/admin/invites"
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-paper text-crimson shadow-card"
+                    : "text-ink-soft hover:bg-paper hover:text-ink"
+                }`
+              }
+            >
+              <UserPlusIcon className="size-4.5" />
+              Invites
+            </NavLink>
+          )}
         </nav>
 
         <main className="min-h-[calc(100vh-3.5rem)] w-full min-w-0 pb-20 md:pb-6">
@@ -245,6 +286,22 @@ function SearchIcon({ className }: IconProps) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+function ShieldIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <path d="M12 2 3 6.5v5C3 16.5 7 21 12 22c5-1 9-5.5 9-10.5v-5z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function UserPlusIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" strokeLinecap="round" />
+      <path d="M19 8v6M16 11h6" strokeLinecap="round" />
     </svg>
   );
 }

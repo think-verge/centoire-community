@@ -14,6 +14,8 @@ import {
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
 import { useJoinCircle, useLeaveCircle } from "../../lib/api/generated/circles/circles";
+import { CircleRulesModal } from "../../components/CircleRulesModal";
+import type { Circle } from "../../lib/api/generated/model";
 import type { Tag } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
 
@@ -147,6 +149,7 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
   const unfollow = useUnfollowUser({ mutation: { onSuccess: () => refetch() } });
   const join = useJoinCircle({ mutation: { onSuccess: () => refetch() } });
   const leave = useLeaveCircle({ mutation: { onSuccess: () => refetch() } });
+  const [rulesModalCircle, setRulesModalCircle] = useState<Circle | null>(null);
 
   const followedIds = new Set(data?.followedCreatorIds ?? []);
   const joinedIds = new Set(data?.joinedCircleIds ?? []);
@@ -181,11 +184,15 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
                   </div>
                   <Button
                     variant={joined ? "secondary" : "primary"}
-                    onClick={() =>
-                      joined
-                        ? leave.mutate({ slug: circle.slug })
-                        : join.mutate({ slug: circle.slug })
-                    }
+                    onClick={() => {
+                      if (joined) {
+                        leave.mutate({ slug: circle.slug });
+                      } else if (circle.rules.length > 0) {
+                        setRulesModalCircle(circle);
+                      } else {
+                        join.mutate({ slug: circle.slug });
+                      }
+                    }}
                   >
                     {joined ? "Joined" : "Join"}
                   </Button>
@@ -246,6 +253,20 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
           </Button>
         </div>
       </div>
+
+      {rulesModalCircle && (
+        <CircleRulesModal
+          circle={rulesModalCircle}
+          onCancel={() => setRulesModalCircle(null)}
+          onAgree={() =>
+            join.mutate(
+              { slug: rulesModalCircle.slug },
+              { onSuccess: () => setRulesModalCircle(null) },
+            )
+          }
+          loading={join.isPending}
+        />
+      )}
     </section>
   );
 }

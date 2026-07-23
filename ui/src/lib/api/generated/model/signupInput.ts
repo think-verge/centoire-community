@@ -18,4 +18,5 @@ export interface SignupInput {
    * @maxLength 60
    */
   displayName: string;
+  inviteToken?: string;
 }

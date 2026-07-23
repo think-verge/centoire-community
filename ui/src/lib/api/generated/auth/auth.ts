@@ -30,6 +30,7 @@ import type {
   ForgotPasswordInput,
   GoogleConfig,
   GoogleLoginInput,
+  InvitePreview,
   LoginInput,
   ResetPasswordInput,
   Sent,
@@ -675,4 +676,89 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const getInvitePreview = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<InvitePreview>(
+      {url: `/auth/invite/${token}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetInvitePreviewQueryKey = (token?: string,) => {
+    return [
+    `/auth/invite/${token}`
+    ] as const;
+    }
+
     
+export const getGetInvitePreviewQueryOptions = <TData = Awaited<ReturnType<typeof getInvitePreview>>, TError = ErrorType<unknown>>(token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInvitePreviewQueryKey(token);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInvitePreview>>> = ({ signal }) => getInvitePreview(token, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetInvitePreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getInvitePreview>>>
+export type GetInvitePreviewQueryError = ErrorType<unknown>
+
+
+export function useGetInvitePreview<TData = Awaited<ReturnType<typeof getInvitePreview>>, TError = ErrorType<unknown>>(
+ token: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInvitePreview>>,
+          TError,
+          Awaited<ReturnType<typeof getInvitePreview>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetInvitePreview<TData = Awaited<ReturnType<typeof getInvitePreview>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInvitePreview>>,
+          TError,
+          Awaited<ReturnType<typeof getInvitePreview>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetInvitePreview<TData = Awaited<ReturnType<typeof getInvitePreview>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetInvitePreview<TData = Awaited<ReturnType<typeof getInvitePreview>>, TError = ErrorType<unknown>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getInvitePreview>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetInvitePreviewQueryOptions(token,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

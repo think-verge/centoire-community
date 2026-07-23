@@ -1,6 +1,8 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { AdminSourcesPage } from "./pages/admin/AdminSourcesPage";
+import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
+import { ModerationPage } from "./pages/moderation/ModerationPage";
 import { OnboardingGate, ProtectedRoute } from "./components/ProtectedRoute";
 import { AuthProvider } from "./lib/auth-context";
 import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
@@ -46,6 +48,8 @@ export default function App() {
               <Route path="/search" element={<SearchPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin/sources" element={<AdminSourcesPage />} />
+              <Route path="/admin/invites" element={<AdminInvitesPage />} />
+              <Route path="/moderation" element={<ModerationPage />} />
               <Route path="/compose" element={<ComposePage />} />
               <Route path="/compose/:id" element={<ComposePage />} />
               <Route path="/drafts" element={<DraftsPage />} />

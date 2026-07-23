@@ -12,6 +12,8 @@ export type PostCardStatus = typeof PostCardStatus[keyof typeof PostCardStatus];
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PostCardStatus = {
   draft: 'draft',
+  pending_review: 'pending_review',
   published: 'published',
+  rejected: 'rejected',
   removed: 'removed',
 } as const;

@@ -11,4 +11,7 @@ export type PostDetailAllOf = {
   /** @nullable */
   content: PostDetailAllOfContent;
   viewCount: number;
+  /** @nullable */
+  rejectionReason: string | null;
+  authorFollowedByViewer: boolean;
 };

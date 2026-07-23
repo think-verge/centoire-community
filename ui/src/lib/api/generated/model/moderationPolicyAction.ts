@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CurrentUserAllOfRole = typeof CurrentUserAllOfRole[keyof typeof CurrentUserAllOfRole];
+export type ModerationPolicyAction = typeof ModerationPolicyAction[keyof typeof ModerationPolicyAction];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CurrentUserAllOfRole = {
-  member: 'member',
-  creator: 'creator',
-  editor: 'editor',
-  admin: 'admin',
+export const ModerationPolicyAction = {
+  auto_approve: 'auto_approve',
+  auto_reject: 'auto_reject',
 } as const;

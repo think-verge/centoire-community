@@ -25,9 +25,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateInviteInput,
   CreateSourceInput,
   ErrorResponse,
   FetchStats,
+  Invite,
+  InviteList,
   Source,
   UpdateSourceInput
 } from '.././model';
@@ -38,7 +41,206 @@ import type { ErrorType } from '../../http';
 
 
 
-export const listSources = (
+export const createInvite = (
+    createInviteInput: CreateInviteInput,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<Invite>(
+      {url: `/admin/invites`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createInviteInput, signal
+    },
+      );
+    }
+  
+
+
+export const getCreateInviteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvite>>, TError,{data: CreateInviteInput}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createInvite>>, TError,{data: CreateInviteInput}, TContext> => {
+
+const mutationKey = ['createInvite'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInvite>>, {data: CreateInviteInput}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInvite(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInviteMutationResult = NonNullable<Awaited<ReturnType<typeof createInvite>>>
+    export type CreateInviteMutationBody = CreateInviteInput
+    export type CreateInviteMutationError = ErrorType<ErrorResponse>
+
+    export const useCreateInvite = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInvite>>, TError,{data: CreateInviteInput}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createInvite>>,
+        TError,
+        {data: CreateInviteInput},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const listInvites = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<InviteList>(
+      {url: `/admin/invites`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getListInvitesQueryKey = () => {
+    return [
+    `/admin/invites`
+    ] as const;
+    }
+
+    
+export const getListInvitesQueryOptions = <TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInvitesQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInvites>>> = ({ signal }) => listInvites(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListInvitesQueryResult = NonNullable<Awaited<ReturnType<typeof listInvites>>>
+export type ListInvitesQueryError = ErrorType<unknown>
+
+
+export function useListInvites<TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvites>>,
+          TError,
+          Awaited<ReturnType<typeof listInvites>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvites<TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInvites>>,
+          TError,
+          Awaited<ReturnType<typeof listInvites>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListInvites<TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListInvites<TData = Awaited<ReturnType<typeof listInvites>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listInvites>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListInvitesQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const revokeInvite = (
+    id: string,
+ ) => {
+      
+      
+      return customInstance<void>(
+      {url: `/admin/invites/${id}`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getRevokeInviteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['revokeInvite'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInvite>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeInvite(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeInviteMutationResult = NonNullable<Awaited<ReturnType<typeof revokeInvite>>>
+    
+    export type RevokeInviteMutationError = ErrorType<ErrorResponse>
+
+    export const useRevokeInvite = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInvite>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof revokeInvite>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRevokeInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const listSources = (
     
  signal?: AbortSignal
 ) => {
