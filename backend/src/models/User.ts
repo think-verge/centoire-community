@@ -1,6 +1,6 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
 
-export type UserRole = "member" | "admin";
+export type UserRole = "member" | "creator" | "editor" | "admin";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -48,7 +48,7 @@ const userSchema = new Schema<IUser>(
     displayName: { type: String, required: true, trim: true, maxlength: 60 },
     avatarUrl: { type: String },
     bio: { type: String, maxlength: 160 },
-    role: { type: String, enum: ["member", "admin"], default: "member" },
+    role: { type: String, enum: ["member", "creator", "editor", "admin"], default: "member" },
     interests: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
     onboardingCompletedAt: { type: Date },
     reputation: { type: Number, default: 0 },
@@ -60,5 +60,6 @@ const userSchema = new Schema<IUser>(
 );
 
 userSchema.index({ handle: "text", displayName: "text", bio: "text" });
+userSchema.index({ role: 1 });
 
 export const User = mongoose.model<IUser>("User", userSchema);

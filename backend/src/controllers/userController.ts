@@ -51,3 +51,8 @@ export async function unfollow(req: Request, res: Response): Promise<void> {
   await userService.unfollowUser(req.user!.userId, req.params.id as string);
   res.status(204).end();
 }
+
+export async function promoteUser(req: Request, res: Response): Promise<void> {
+  const user = await userService.promoteUser(req.user!.userId, req.params.id, req.body.role);
+  res.json(serializeUser(user));
+}

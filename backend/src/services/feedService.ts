@@ -34,11 +34,13 @@ const CARD_POPULATE = [
   { path: "circleId", select: "name slug" },
 ];
 
-/** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 - hoursOld/6 */
+/** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 + creator*3 - hoursOld/6
+ *  Note: cache creatorIds if the creator roster grows large (currently invite-only, so small). */
 function scoreStages(
   interestIds: Types.ObjectId[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
+  creatorIds: Types.ObjectId[],
 ): PipelineStage[] {
   return [
     {
@@ -49,6 +51,9 @@ function scoreStages(
         },
         inJoinedCircle: {
           $cond: [{ $in: ["$circleId", circleIds] }, 1, 0],
+        },
+        authorIsCreator: {
+          $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
         },
         hoursSincePublished: {
           $divide: [{ $subtract: [new Date(), "$publishedAt"] }, 1000 * 60 * 60],
@@ -63,6 +68,7 @@ function scoreStages(
             { $multiply: ["$tagMatchCount", 2] },
             { $multiply: ["$authorFollowed", 6] },
             { $multiply: ["$inJoinedCircle", 4] },
+            { $multiply: ["$authorIsCreator", 3] },
             { $multiply: [{ $divide: ["$hoursSincePublished", 6] }, -1] },
           ],
         },
@@ -124,6 +130,7 @@ async function rankedFeed(
   interestIds: Types.ObjectId[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
+  creatorIds: Types.ObjectId[],
   cursor: string | undefined,
   userId?: string,
 ): Promise<FeedPage> {
@@ -132,7 +139,7 @@ async function rankedFeed(
 
   const results = await Post.aggregate<{ _id: Types.ObjectId }>([
     { $match: match },
-    ...(scoreStages(interestIds, followedIds, circleIds) as PipelineStage.FacetPipelineStage[]),
+    ...(scoreStages(interestIds, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
     { $skip: offset },
     { $limit: PAGE_SIZE + 1 },
     { $project: { _id: 1 } },
@@ -144,12 +151,18 @@ async function rankedFeed(
   return buildPage(ids, userId, nextCursor);
 }
 
+async function getCreatorIds(): Promise<Types.ObjectId[]> {
+  const creators = await User.find({ role: "creator" }).select("_id");
+  return creators.map((u) => u._id);
+}
+
 export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
   const user = await User.findById(userId).select("interests");
   const interestIds = (user?.interests ?? []) as Types.ObjectId[];
-  const [followedIds, circleIds] = await Promise.all([
+  const [followedIds, circleIds, creatorIds] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
+    getCreatorIds(),
   ]);
 
   const since = new Date(Date.now() - FOR_YOU_WINDOW_DAYS * 24 * 60 * 60 * 1000);
@@ -162,7 +175,7 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
       { authorId: { $in: followedIds } },
     ],
   };
-  return rankedFeed(match, interestIds, followedIds, circleIds, cursor, userId);
+  return rankedFeed(match, interestIds, followedIds, circleIds, creatorIds, cursor, userId);
 }
 
 export async function discover(
@@ -174,11 +187,13 @@ export async function discover(
 
   if (options.sort === "trending") {
     const since = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const creatorIds = await getCreatorIds();
     return rankedFeed(
       { ...base, publishedAt: { $gte: since } },
       [],
       [],
       [],
+      creatorIds,
       options.cursor,
       userId,
     );

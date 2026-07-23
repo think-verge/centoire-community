@@ -34,7 +34,7 @@ export const PostCardSchema = registry.register(
     id: z.string(),
     slug: z.string(),
     origin: z.enum(["native", "aggregated"]),
-    status: z.enum(["draft", "published", "removed"]),
+    status: z.enum(["draft", "pending_review", "published", "rejected", "removed"]),
     title: z.string(),
     excerpt: z.string(),
     coverImageUrl: z.string().nullable(),
@@ -58,6 +58,8 @@ export const PostDetailSchema = registry.register(
   PostCardSchema.extend({
     content: z.record(z.string(), z.unknown()).nullable(),
     viewCount: z.number(),
+    rejectionReason: z.string().nullable(),
+    authorFollowedByViewer: z.boolean(),
   }),
 );
 

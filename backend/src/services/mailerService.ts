@@ -3,6 +3,7 @@ import { env } from "../config/env.js";
 interface Mailer {
   sendVerification(to: string, link: string): Promise<void>;
   sendPasswordReset(to: string, link: string): Promise<void>;
+  sendInvite(to: string, link: string, role: string): Promise<void>;
 }
 
 const consoleMailer: Mailer = {
@@ -11,6 +12,9 @@ const consoleMailer: Mailer = {
   },
   async sendPasswordReset(to, link) {
     console.log(`[mail] password reset ${to}: ${link}`);
+  },
+  async sendInvite(to, link, role) {
+    console.log(`[mail] invite (${role}) ${to}: ${link}`);
   },
 };
 
@@ -41,6 +45,13 @@ const resendMailer: Mailer = {
       to,
       "Reset your Centoire password",
       `<p>Reset your password using the link below. It expires in 1 hour.</p><p><a href="${link}">Reset password</a></p>`,
+    );
+  },
+  async sendInvite(to, link, role) {
+    await sendViaResend(
+      to,
+      "You're invited to join Centoire",
+      `<p>You've been invited to join Centoire as a <strong>${role}</strong>.</p><p><a href="${link}">Accept invite</a></p><p>This link expires in 14 days.</p>`,
     );
   },
 };

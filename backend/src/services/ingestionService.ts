@@ -2,9 +2,10 @@ import * as cheerio from "cheerio";
 import Parser from "rss-parser";
 import { Post } from "../models/Post.js";
 import { Source, type ISource } from "../models/Source.js";
-import { Tag } from "../models/Tag.js";
 import { canonicalUrlHash } from "../utils/url-hash.js";
 import { slugifyWithId } from "../utils/slugify.js";
+import { evaluate as evaluatePolicy } from "./policyService.js";
+import { finalizePublish } from "./postService.js";
 
 const parser = new Parser({
   timeout: 15_000,
@@ -81,10 +82,13 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
       const coverImageUrl = enclosureUrl ?? (await fetchOgImage(link));
       const publishedAt = item.isoDate ? new Date(item.isoDate) : new Date();
 
+      // Check policy before creating — determines initial status
+      const policyOutcome = await evaluatePolicy({ sourceId: source._id });
+
       try {
-        await Post.create({
+        const post = await Post.create({
           origin: "aggregated",
-          status: "published",
+          status: "pending_review", // default; overridden below if policy matches
           sourceId: source._id,
           title: title.slice(0, 200),
           slug: slugifyWithId(title),
@@ -97,7 +101,20 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           publishedAt,
           readTimeMinutes: 3,
         });
-        stats.imported += 1;
+
+        if (policyOutcome === "auto_approve") {
+          await finalizePublish(post);
+          stats.imported += 1;
+        } else if (policyOutcome === "auto_reject") {
+          post.status = "rejected";
+          post.reviewedAt = new Date();
+          post.rejectionReason = "Rejected by moderation policy";
+          await post.save();
+          // rejected posts don't count as imported
+        } else {
+          // pending_review — tag/post counts deferred until editor approves
+          stats.imported += 1;
+        }
       } catch (err: unknown) {
         if ((err as { code?: number }).code === 11000) {
           stats.skippedDuplicates += 1; // raced with another fetch
@@ -105,13 +122,6 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           throw err;
         }
       }
-    }
-
-    if (stats.imported > 0 && source.tags.length > 0) {
-      await Tag.updateMany(
-        { _id: { $in: source.tags } },
-        { $inc: { postCount: stats.imported } },
-      );
     }
 
     source.lastFetchedAt = new Date();

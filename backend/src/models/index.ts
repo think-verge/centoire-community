@@ -11,3 +11,5 @@ import "./Comment.js";
 import "./Vote.js";
 import "./Bookmark.js";
 import "./ReputationEvent.js";
+import "./Invite.js";
+import "./ModerationPolicy.js";

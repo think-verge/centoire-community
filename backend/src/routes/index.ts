@@ -8,6 +8,8 @@ import {
   postEngagementRouter,
 } from "./engagementRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
+import { inviteRouter } from "./inviteRoutes.js";
+import { moderationRouter } from "./moderationRoutes.js";
 import { onboardingRouter } from "./onboardingRoutes.js";
 import { postRouter } from "./postRoutes.js";
 import { searchRouter } from "./searchRoutes.js";
@@ -31,6 +33,8 @@ apiRouter.use("/bookmarks", bookmarkRouter);
 apiRouter.use("/bookmark-folders", bookmarkFolderRouter);
 apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/admin/sources", sourceRouter);
+apiRouter.use("/admin/invites", inviteRouter);
+apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/search", searchRouter);
 
 apiRouter.get("/health", (_req, res) => {

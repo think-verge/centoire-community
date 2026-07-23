@@ -1,12 +1,14 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { env } from "../config/env.js";
+import { hasPermission, type Permission } from "../config/permissions.js";
+import type { UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 
 export interface AuthPayload {
   userId: string;
   email: string;
-  role: "member" | "admin";
+  role: UserRole;
 }
 
 declare global {
@@ -52,4 +54,12 @@ export function requireAdmin(req: Request, _res: Response, next: NextFunction): 
   if (!req.user) throw new ApiError(401, "Authentication required");
   if (req.user.role !== "admin") throw new ApiError(403, "Admin access required");
   next();
+}
+
+export function requirePermission(permission: Permission) {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    if (!req.user) throw new ApiError(401, "Authentication required");
+    if (!hasPermission(req.user.role, permission)) throw new ApiError(403, "Insufficient permissions");
+    next();
+  };
 }

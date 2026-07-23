@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as userController from "../controllers/userController.js";
-import { optionalAuth, requireAuth } from "../middleware/auth.js";
+import { optionalAuth, requireAuth, requirePermission } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { SetInterestsInputSchema, UpdateMeInputSchema } from "../schemas/community.js";
 import { asyncHandler } from "../utils/async-handler.js";
@@ -26,5 +26,11 @@ userRouter.post(
 );
 userRouter.post("/:id/follow", requireAuth, asyncHandler(userController.follow));
 userRouter.delete("/:id/follow", requireAuth, asyncHandler(userController.unfollow));
+userRouter.patch(
+  "/:id/role",
+  requireAuth,
+  requirePermission("user.promote"),
+  asyncHandler(userController.promoteUser),
+);
 userRouter.get("/:handle", optionalAuth, asyncHandler(userController.getByHandle));
 userRouter.get("/:handle/posts", optionalAuth, asyncHandler(userController.getUserPosts));

@@ -14,10 +14,12 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
   const user = await User.findById(userId);
   const interestIds = user?.interests ?? [];
 
-  // Creators: highest-reputation members who share the user's interests, falling
-  // back to top members overall so the step never renders empty.
+  // Creators: only role:"creator" users — invite-only privileged accounts.
+  // Primary: creators who share the user's interests.
+  // Fallback: top creators overall (still role-filtered).
   const matching = await User.find({
     _id: { $ne: userId },
+    role: "creator",
     handle: { $exists: true },
     interests: { $in: interestIds },
   })
@@ -28,6 +30,7 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
   if (creators.length < 6) {
     const fallback = await User.find({
       _id: { $ne: userId, $nin: creators.map((c) => c._id) },
+      role: "creator",
       handle: { $exists: true },
     })
       .sort({ reputation: -1, followerCount: -1 })

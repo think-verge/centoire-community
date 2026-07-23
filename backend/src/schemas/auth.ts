@@ -29,7 +29,7 @@ export const CurrentUserSchema = registry.register(
   "CurrentUser",
   PublicUserSchema.extend({
     email: z.string(),
-    role: z.enum(["member", "admin"]),
+    role: z.enum(["member", "creator", "editor", "admin"]),
     emailVerified: z.boolean(),
     onboardingCompleted: z.boolean(),
     interests: z.array(TagRefSchema),
@@ -42,6 +42,7 @@ export const SignupInputSchema = registry.register(
     email: z.string().email(),
     password: z.string().min(8).max(128),
     displayName: z.string().min(1).max(60),
+    inviteToken: z.string().optional(),
   }),
 );
 

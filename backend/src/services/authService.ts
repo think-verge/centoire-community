@@ -6,6 +6,7 @@ import { env } from "../config/env.js";
 import { User, type IUser } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 import { mailer } from "./mailerService.js";
+import { consumeInvite } from "./inviteService.js";
 
 const BCRYPT_ROUNDS = 12;
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
@@ -37,13 +38,20 @@ export async function signup(input: {
   email: string;
   password: string;
   displayName: string;
+  inviteToken?: string;
 }): Promise<IUser> {
   const existing = await User.findOne({ email: input.email.toLowerCase() });
   if (existing) throw new ApiError(409, "An account with this email already exists");
+
+  const inviteRole = input.inviteToken
+    ? await consumeInvite(input.inviteToken, input.email)
+    : null;
+
   const user = new User({
     email: input.email,
     passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
     displayName: input.displayName,
+    role: inviteRole ?? "member",
   });
   await issueVerification(user);
   return user;

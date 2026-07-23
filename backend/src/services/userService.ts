@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Follow } from "../models/Follow.js";
 import { Tag } from "../models/Tag.js";
-import { User, type IUser } from "../models/User.js";
+import { User, type IUser, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 
 const RESERVED_HANDLES = new Set([
@@ -113,4 +113,13 @@ export async function getMembershipCircleIds(userId: string): Promise<Types.Obje
 export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
   const follow = await Follow.findOne({ followerId, followeeId });
   return Boolean(follow);
+}
+
+export async function promoteUser(actorId: string, targetUserId: string, newRole: UserRole): Promise<IUser> {
+  if (actorId === targetUserId) throw new ApiError(422, "You cannot change your own role");
+  const user = await User.findById(targetUserId);
+  if (!user) throw new ApiError(404, "User not found");
+  user.role = newRole;
+  await user.save();
+  return user;
 }

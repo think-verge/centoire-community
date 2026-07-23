@@ -69,10 +69,16 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
 }
 
 /** Full detail: card + rich content. */
-export function serializePostDetail(post: IPost, viewer?: ViewerState) {
+export function serializePostDetail(
+  post: IPost,
+  viewer?: ViewerState,
+  authorFollowedByViewer?: boolean,
+) {
   return {
     ...serializePostCard(post, viewer),
     content: (post.content as Record<string, unknown>) ?? null,
     viewCount: post.viewCount,
+    rejectionReason: post.rejectionReason ?? null,
+    authorFollowedByViewer: authorFollowedByViewer ?? false,
   };
 }

@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { env } from "../config/env.js";
 import * as authService from "../services/authService.js";
+import * as inviteService from "../services/inviteService.js";
 import { serializeUser } from "../services/userSerializer.js";
 import type { IUser } from "../models/User.js";
 
@@ -68,4 +69,9 @@ export async function resetPassword(req: Request, res: Response): Promise<void> 
 
 export function googleEnabled(_req: Request, res: Response): void {
   res.json({ enabled: Boolean(env.GOOGLE_CLIENT_ID), clientId: env.GOOGLE_CLIENT_ID || null });
+}
+
+export async function getInvitePreview(req: Request, res: Response): Promise<void> {
+  const preview = await inviteService.previewInvite(req.params.token);
+  res.json(preview);
 }

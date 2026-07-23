@@ -67,3 +67,4 @@ authRouter.post(
   validate({ body: ResetPasswordInputSchema }),
   asyncHandler(authController.resetPassword),
 );
+authRouter.get("/invite/:token", asyncHandler(authController.getInvitePreview));
