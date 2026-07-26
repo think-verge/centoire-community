@@ -2,6 +2,22 @@ import type { Request, Response } from "express";
 import * as moderationService from "../services/moderationService.js";
 import * as policyService from "../services/policyService.js";
 import { serializePostCard } from "../services/postSerializer.js";
+import type { IModerationPolicy } from "../models/ModerationPolicy.js";
+
+function serializePolicy(policy: IModerationPolicy) {
+  return {
+    id: policy._id.toString(),
+    name: policy.name,
+    conditions: policy.conditions,
+    logic: policy.logic,
+    action: policy.action,
+    priority: policy.priority,
+    reason: policy.reason ?? null,
+    active: policy.active,
+    expiresAt: policy.expiresAt?.toISOString() ?? null,
+    createdAt: policy.createdAt.toISOString(),
+  };
+}
 
 // Queue
 export async function listQueue(req: Request, res: Response): Promise<void> {
@@ -26,17 +42,17 @@ export async function rejectPost(req: Request, res: Response): Promise<void> {
 // Policies
 export async function listPolicies(_req: Request, res: Response): Promise<void> {
   const policies = await policyService.listPolicies();
-  res.json({ policies });
+  res.json({ policies: policies.map(serializePolicy) });
 }
 
 export async function createPolicy(req: Request, res: Response): Promise<void> {
   const policy = await policyService.createPolicy(req.user!.userId, req.body);
-  res.status(201).json(policy);
+  res.status(201).json(serializePolicy(policy));
 }
 
 export async function updatePolicy(req: Request, res: Response): Promise<void> {
   const policy = await policyService.updatePolicy(req.params.id as string, req.body);
-  res.json(policy);
+  res.json(serializePolicy(policy));
 }
 
 export async function deletePolicy(req: Request, res: Response): Promise<void> {

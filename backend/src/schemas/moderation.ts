@@ -1,16 +1,40 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 import { PostCardSchema } from "./posts.js";
 
-const PolicyTypeEnum = z.enum(["user", "source", "all"]);
 const PolicyActionEnum = z.enum(["auto_approve", "auto_reject"]);
+
+const PolicyConditionSchema = z.object({
+  key: z.enum([
+    "author",
+    "author_role",
+    "source",
+    "origin",
+    "ai_category",
+    "ai_tags",
+    "ai_quality_score",
+    "ai_is_spam",
+    "clickbait",
+  ]),
+  operator: z.enum([
+    "equals",
+    "not_equals",
+    "any_of",
+    "not_any_of",
+    "greater_than",
+    "less_than",
+  ]),
+  values: z.array(z.union([z.string(), z.number(), z.boolean()])),
+});
 
 export const ModerationPolicySchema = registry.register(
   "ModerationPolicy",
   z.object({
     id: z.string(),
-    type: PolicyTypeEnum,
-    targetId: z.string().nullable(),
+    name: z.string(),
+    conditions: z.array(PolicyConditionSchema),
+    logic: z.enum(["and", "or"]),
     action: PolicyActionEnum,
+    priority: z.number(),
     reason: z.string().nullable(),
     active: z.boolean(),
     expiresAt: z.string().nullable(),
@@ -21,9 +45,11 @@ export const ModerationPolicySchema = registry.register(
 export const CreatePolicyInputSchema = registry.register(
   "CreatePolicyInput",
   z.object({
-    type: PolicyTypeEnum,
-    targetId: z.string().optional(),
+    name: z.string().min(1).max(100),
+    conditions: z.array(PolicyConditionSchema).default([]),
+    logic: z.enum(["and", "or"]).default("and"),
     action: PolicyActionEnum,
+    priority: z.number().int().default(0),
     reason: z.string().max(500).optional(),
     expiresAt: z.string().datetime().optional(),
   }),

@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ModerationPolicyType = typeof ModerationPolicyType[keyof typeof ModerationPolicyType];
+export type ModerationPolicyLogic = typeof ModerationPolicyLogic[keyof typeof ModerationPolicyLogic];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const ModerationPolicyType = {
-  user: 'user',
-  source: 'source',
-  all: 'all',
+export const ModerationPolicyLogic = {
+  and: 'and',
+  or: 'or',
 } as const;

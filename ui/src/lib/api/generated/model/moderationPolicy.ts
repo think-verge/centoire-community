@@ -5,15 +5,17 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { ModerationPolicyType } from './moderationPolicyType';
+import type { ModerationPolicyConditionsItem } from './moderationPolicyConditionsItem';
+import type { ModerationPolicyLogic } from './moderationPolicyLogic';
 import type { ModerationPolicyAction } from './moderationPolicyAction';
 
 export interface ModerationPolicy {
   id: string;
-  type: ModerationPolicyType;
-  /** @nullable */
-  targetId: string | null;
+  name: string;
+  conditions: ModerationPolicyConditionsItem[];
+  logic: ModerationPolicyLogic;
   action: ModerationPolicyAction;
+  priority: number;
   /** @nullable */
   reason: string | null;
   active: boolean;

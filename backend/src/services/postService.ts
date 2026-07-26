@@ -121,8 +121,12 @@ export async function publishPost(userId: string, postId: string, role: UserRole
     return post;
   }
 
-  // Check if a moderation policy auto-approves or auto-rejects this author
-  const policyOutcome = await evaluatePolicy({ authorId: post.authorId?.toString() });
+  // Check if a moderation policy auto-approves or auto-rejects this author (Phase 1: identity only)
+  const policyOutcome = await evaluatePolicy({
+    authorId: post.authorId?.toString(),
+    authorRole: role,
+    origin: "native",
+  });
   if (policyOutcome === "auto_approve") {
     await finalizePublish(post);
     return post;

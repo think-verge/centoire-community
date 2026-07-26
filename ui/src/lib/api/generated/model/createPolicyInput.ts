@@ -5,13 +5,20 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { CreatePolicyInputType } from './createPolicyInputType';
+import type { CreatePolicyInputConditionsItem } from './createPolicyInputConditionsItem';
+import type { CreatePolicyInputLogic } from './createPolicyInputLogic';
 import type { CreatePolicyInputAction } from './createPolicyInputAction';
 
 export interface CreatePolicyInput {
-  type: CreatePolicyInputType;
-  targetId?: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  name: string;
+  conditions?: CreatePolicyInputConditionsItem[];
+  logic?: CreatePolicyInputLogic;
   action: CreatePolicyInputAction;
+  priority?: number;
   /** @maxLength 500 */
   reason?: string;
   expiresAt?: string;

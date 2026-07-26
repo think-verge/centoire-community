@@ -38,6 +38,7 @@ async def _run_and_callback(request: ProcessPostRequest) -> None:
         "status": final_state["status"],
         "aiReadTimeMinutes": analysis.read_time_minutes if analysis else None,
         "aiCategory": analysis.category if analysis else None,
+        "aiTags": analysis.suggested_tags if analysis else [],
         "aiQualityScore": analysis.quality_score if analysis else None,
         "aiIsSpam": analysis.is_spam if analysis else None,
         "aiSummary": analysis.summary if analysis else None,

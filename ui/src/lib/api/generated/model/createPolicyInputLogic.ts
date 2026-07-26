@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CreatePolicyInputType = typeof CreatePolicyInputType[keyof typeof CreatePolicyInputType];
+export type CreatePolicyInputLogic = typeof CreatePolicyInputLogic[keyof typeof CreatePolicyInputLogic];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CreatePolicyInputType = {
-  user: 'user',
-  source: 'source',
-  all: 'all',
+export const CreatePolicyInputLogic = {
+  and: 'and',
+  or: 'or',
 } as const;

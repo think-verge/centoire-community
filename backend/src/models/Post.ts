@@ -32,6 +32,7 @@ export interface IPost extends Document {
   aiProcessed?: boolean;
   aiReadTimeMinutes?: number;
   aiCategory?: string;
+  aiTags?: string[];
   aiQualityScore?: number;
   aiIsSpam?: boolean;
   aiSummary?: string;
@@ -73,6 +74,7 @@ const postSchema = new Schema<IPost>(
     aiProcessed: { type: Boolean, default: false },
     aiReadTimeMinutes: { type: Number },
     aiCategory: { type: String },
+    aiTags: { type: [String], default: [] },
     aiQualityScore: { type: Number },
     aiIsSpam: { type: Boolean },
     aiSummary: { type: String },

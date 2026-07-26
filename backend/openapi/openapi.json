@@ -1222,17 +1222,69 @@
           "id": {
             "type": "string"
           },
-          "type": {
+          "name": {
+            "type": "string"
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "author",
+                    "author_role",
+                    "source",
+                    "origin",
+                    "ai_category",
+                    "ai_tags",
+                    "ai_quality_score",
+                    "ai_is_spam",
+                    "clickbait"
+                  ]
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "not_equals",
+                    "any_of",
+                    "not_any_of",
+                    "greater_than",
+                    "less_than"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "operator",
+                "values"
+              ]
+            }
+          },
+          "logic": {
             "type": "string",
             "enum": [
-              "user",
-              "source",
-              "all"
+              "and",
+              "or"
             ]
-          },
-          "targetId": {
-            "type": "string",
-            "nullable": true
           },
           "action": {
             "type": "string",
@@ -1240,6 +1292,9 @@
               "auto_approve",
               "auto_reject"
             ]
+          },
+          "priority": {
+            "type": "number"
           },
           "reason": {
             "type": "string",
@@ -1258,9 +1313,11 @@
         },
         "required": [
           "id",
-          "type",
-          "targetId",
+          "name",
+          "conditions",
+          "logic",
           "action",
+          "priority",
           "reason",
           "active",
           "expiresAt",
@@ -1270,16 +1327,73 @@
       "CreatePolicyInput": {
         "type": "object",
         "properties": {
-          "type": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "author",
+                    "author_role",
+                    "source",
+                    "origin",
+                    "ai_category",
+                    "ai_tags",
+                    "ai_quality_score",
+                    "ai_is_spam",
+                    "clickbait"
+                  ]
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "not_equals",
+                    "any_of",
+                    "not_any_of",
+                    "greater_than",
+                    "less_than"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "operator",
+                "values"
+              ]
+            },
+            "default": []
+          },
+          "logic": {
             "type": "string",
             "enum": [
-              "user",
-              "source",
-              "all"
-            ]
-          },
-          "targetId": {
-            "type": "string"
+              "and",
+              "or"
+            ],
+            "default": "and"
           },
           "action": {
             "type": "string",
@@ -1287,6 +1401,10 @@
               "auto_approve",
               "auto_reject"
             ]
+          },
+          "priority": {
+            "type": "integer",
+            "default": 0
           },
           "reason": {
             "type": "string",
@@ -1298,7 +1416,7 @@
           }
         },
         "required": [
-          "type",
+          "name",
           "action"
         ]
       },

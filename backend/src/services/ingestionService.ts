@@ -84,8 +84,8 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
       const coverImageUrl = enclosureUrl ?? (await fetchOgImage(link));
       const publishedAt = item.isoDate ? new Date(item.isoDate) : new Date();
 
-      // Check policy before creating — determines initial status
-      const policyOutcome = await evaluatePolicy({ sourceId: source._id });
+      // Check policy before creating — determines initial status (Phase 1: identity only)
+      const policyOutcome = await evaluatePolicy({ sourceId: source._id.toString(), origin: "aggregated" });
 
       try {
         const post = await Post.create({
