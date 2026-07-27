@@ -10,6 +10,7 @@ import { ApiError } from "../utils/api-error.js";
 export interface PolicyContext {
   // Identity — available at ingestion / post creation
   authorId?: string;
+  authorEmail?: string;
   authorRole?: string;
   sourceId?: string;
   origin?: string;
@@ -25,7 +26,7 @@ export interface PolicyContext {
 function resolveField(key: ICondition["key"], ctx: PolicyContext): unknown {
   switch (key) {
     case "author":
-      return ctx.authorId;
+      return ctx.authorEmail;
     case "author_role":
       return ctx.authorRole;
     case "source":

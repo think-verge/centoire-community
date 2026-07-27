@@ -10,6 +10,7 @@ import { slugifyWithId } from "../utils/slugify.js";
 import { hasPermission } from "../config/permissions.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
+import { fireAiProcessing } from "./aiService.js";
 
 interface PostInput {
   title: string;
@@ -116,14 +117,17 @@ export async function publishPost(userId: string, postId: string, role: UserRole
   if (!post.contentText?.trim()) throw new ApiError(422, "Write something before publishing");
 
   if (hasPermission(role, "post.bypass_queue")) {
-    // Creators, editors, admins bypass the moderation queue
+    // Editors, admins bypass the moderation queue; AI still runs for quality data
     await finalizePublish(post);
+    void fireAiProcessing(post._id.toString(), { origin: "native", content: post.contentText });
     return post;
   }
 
   // Check if a moderation policy auto-approves or auto-rejects this author (Phase 1: identity only)
+  const author = await User.findById(userId).select("email").lean();
   const policyOutcome = await evaluatePolicy({
     authorId: post.authorId?.toString(),
+    authorEmail: author?.email,
     authorRole: role,
     origin: "native",
   });
@@ -139,9 +143,10 @@ export async function publishPost(userId: string, postId: string, role: UserRole
     return post;
   }
 
-  // Default: enter the moderation queue
+  // Default: enter the moderation queue; AI fires async and will re-evaluate via Phase 2
   post.status = "pending_review";
   await post.save();
+  void fireAiProcessing(post._id.toString(), { origin: "native", content: post.contentText });
   return post;
 }
 

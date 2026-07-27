@@ -2,9 +2,14 @@ import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
+import { PostDrawer } from "../../components/PostDrawer";
 import {
+  approvePost,
+  deletePolicy,
   getGetModerationQueueQueryKey,
   getListPoliciesQueryKey,
+  rejectPost,
+  updatePolicy,
   useApprovePost,
   useCreatePolicy,
   useDeletePolicy,
@@ -43,11 +48,11 @@ type KeyMeta = {
 
 const KEY_META: Record<ConditionKey, KeyMeta> = {
   author: {
-    label: "Author (user ID)",
+    label: "Author (email)",
     group: "Identity",
     operators: ["equals", "not_equals"],
     valueType: "text",
-    placeholder: "MongoDB ObjectId of user",
+    placeholder: "Email address",
   },
   author_role: {
     label: "Author role",
@@ -174,6 +179,12 @@ function QueueTab() {
   const { data, isLoading } = useGetModerationQueue();
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkRejectOpen, setBulkRejectOpen] = useState(false);
+  const [bulkReason, setBulkReason] = useState("");
+  const [drawerSlug, setDrawerSlug] = useState<string | null>(null);
+  const [drawerPostId, setDrawerPostId] = useState<string | null>(null);
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: getGetModerationQueueQueryKey() });
@@ -190,9 +201,66 @@ function QueueTab() {
     },
   });
 
-  if (isLoading) return <p className="text-ink-faint">Loading…</p>;
-
   const items = data?.items ?? [];
+  const allIds = items.map((p) => p.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkApprove() {
+    setBulkLoading(true);
+    await Promise.allSettled([...selected].map((id) => approvePost(id)));
+    setBulkLoading(false);
+    setSelected(new Set());
+    invalidate();
+  }
+
+  async function bulkReject() {
+    setBulkLoading(true);
+    await Promise.allSettled(
+      [...selected].map((id) => rejectPost(id, { reason: bulkReason || "Bulk rejected" })),
+    );
+    setBulkLoading(false);
+    setSelected(new Set());
+    setBulkRejectOpen(false);
+    setBulkReason("");
+    invalidate();
+  }
+
+  function openDrawer(postId: string, slug: string) {
+    setDrawerPostId(postId);
+    setDrawerSlug(slug);
+  }
+
+  function closeDrawer() {
+    setDrawerSlug(null);
+    setDrawerPostId(null);
+  }
+
+  function drawerApprove() {
+    if (!drawerPostId) return;
+    approve.mutate({ id: drawerPostId }, { onSuccess: closeDrawer });
+  }
+
+  function drawerReject(r: string) {
+    if (!drawerPostId) return;
+    reject.mutate({ id: drawerPostId, data: { reason: r || "Rejected by moderator" } }, {
+      onSuccess: closeDrawer,
+    });
+  }
+
+  if (isLoading) return <p className="text-ink-faint">Loading…</p>;
 
   if (items.length === 0) {
     return (
@@ -204,11 +272,89 @@ function QueueTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+    <div className="space-y-3">
+      {/* Bulk action bar */}
+      <div className="flex items-center gap-3 rounded-lg border border-line bg-paper px-4 py-2.5">
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+          onChange={toggleAll}
+          className="h-4 w-4 accent-crimson cursor-pointer"
+          aria-label="Select all"
+        />
+        {someSelected ? (
+          <>
+            <span className="text-sm text-ink-soft">{selected.size} selected</span>
+            <div className="ml-auto flex items-center gap-2">
+              {bulkRejectOpen ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Rejection reason (optional)"
+                    value={bulkReason}
+                    onChange={(e) => setBulkReason(e.target.value)}
+                    className="w-56 rounded border border-line px-2.5 py-1 text-sm text-ink placeholder-ink-faint focus:border-crimson focus:outline-none"
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs !text-crimson"
+                    loading={bulkLoading}
+                    onClick={bulkReject}
+                  >
+                    Confirm reject {selected.size}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs"
+                    onClick={() => setBulkRejectOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    className="!px-3 !py-1.5 text-xs"
+                    loading={bulkLoading}
+                    onClick={bulkApprove}
+                  >
+                    Approve {selected.size}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs !text-crimson"
+                    onClick={() => setBulkRejectOpen(true)}
+                  >
+                    Reject {selected.size}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(new Set())}
+                    className="text-xs text-ink-faint hover:text-ink"
+                  >
+                    Clear
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          <span className="text-sm text-ink-faint">Select items for bulk actions</span>
+        )}
+      </div>
+
+      {/* Items */}
       {items.map((post) => (
         <QueueItem
           key={post.id}
           post={post}
+          selected={selected.has(post.id)}
+          onToggleSelect={() => toggleOne(post.id)}
+          onOpenDrawer={() => openDrawer(post.id, post.slug)}
           rejectingId={rejectingId}
           reason={reason}
           onReason={setReason}
@@ -224,11 +370,31 @@ function QueueTab() {
         />
       ))}
     </div>
+
+    {drawerSlug && (
+      <PostDrawer
+        slug={drawerSlug}
+        onClose={closeDrawer}
+        syncUrl={false}
+        headerActions={
+          <ModerationDrawerActions
+            onApprove={drawerApprove}
+            onReject={drawerReject}
+            approveLoading={approve.isPending}
+            rejectLoading={reject.isPending}
+          />
+        }
+      />
+    )}
+    </>
   );
 }
 
 interface QueueItemProps {
   post: PostCard;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onOpenDrawer: () => void;
   rejectingId: string | null;
   reason: string;
   onReason: (v: string) => void;
@@ -242,6 +408,9 @@ interface QueueItemProps {
 
 function QueueItem({
   post,
+  selected,
+  onToggleSelect,
+  onOpenDrawer,
   rejectingId,
   reason,
   onReason,
@@ -255,43 +424,66 @@ function QueueItem({
   const isRejecting = rejectingId === post.id;
 
   return (
-    <div className="rounded-xl border border-line bg-paper p-5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-display-serif text-lg font-semibold leading-snug">{post.title}</p>
-          <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{post.excerpt}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
-            {post.author && <span>By {post.author.displayName}</span>}
-            {post.source && <span>· {post.source.name}</span>}
-            {post.tags.length > 0 && (
-              <span>· {post.tags.map((t) => t.name).join(", ")}</span>
-            )}
-            <span>· {post.origin}</span>
+    <div className={`rounded-xl border bg-paper transition-colors ${selected ? "border-crimson/40 bg-crimson/[0.02]" : "border-line"}`}>
+      {/* Clickable card body */}
+      <button
+        type="button"
+        onClick={onOpenDrawer}
+        className="w-full p-5 text-left hover:bg-cream/50 rounded-xl transition-colors"
+      >
+        <div className="flex flex-wrap items-start gap-3">
+          <div
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={onToggleSelect}
+              className="mt-1 h-4 w-4 accent-crimson cursor-pointer"
+              aria-label={`Select ${post.title}`}
+            />
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-display-serif text-lg font-semibold leading-snug">{post.title}</p>
+            <p className="mt-1 line-clamp-2 text-sm text-ink-soft">{post.excerpt}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
+              {post.author && <span>By {post.author.displayName}</span>}
+              {post.source && <span>· {post.source.name}</span>}
+              {post.tags.length > 0 && (
+                <span>· {post.tags.map((t) => t.name).join(", ")}</span>
+              )}
+              <span>· {post.origin}</span>
+            </div>
+          </div>
+          {!isRejecting && (
+            <div
+              role="presentation"
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                variant="secondary"
+                className="!px-3 !py-1.5 text-xs"
+                loading={approveLoading}
+                onClick={onApprove}
+              >
+                Approve
+              </Button>
+              <Button
+                variant="ghost"
+                className="!px-3 !py-1.5 text-xs !text-crimson"
+                onClick={onRejectOpen}
+              >
+                Reject
+              </Button>
+            </div>
+          )}
         </div>
-        {!isRejecting && (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              className="!px-3 !py-1.5 text-xs"
-              loading={approveLoading}
-              onClick={onApprove}
-            >
-              Approve
-            </Button>
-            <Button
-              variant="ghost"
-              className="!px-3 !py-1.5 text-xs !text-crimson"
-              onClick={onRejectOpen}
-            >
-              Reject
-            </Button>
-          </div>
-        )}
-      </div>
+      </button>
 
       {isRejecting && (
-        <div className="mt-4 space-y-3">
+        <div className="border-t border-line px-5 pb-5 pt-4 space-y-3">
           <Field
             label="Rejection reason (optional)"
             placeholder="Why is this post being rejected?"
@@ -318,23 +510,123 @@ function QueueItem({
   );
 }
 
+// ─── Moderation drawer header actions ────────────────────────────────────────
+
+function ModerationDrawerActions({
+  onApprove,
+  onReject,
+  approveLoading,
+  rejectLoading,
+}: {
+  onApprove: () => void;
+  onReject: (reason: string) => void;
+  approveLoading: boolean;
+  rejectLoading: boolean;
+}) {
+  const [rejecting, setRejecting] = useState(false);
+  const [reason, setReason] = useState("");
+
+  if (rejecting) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          autoFocus
+          className="w-44 rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink placeholder-ink-faint focus:border-crimson focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => { onReject(reason); setRejecting(false); setReason(""); }}
+          disabled={rejectLoading}
+          className="rounded-lg bg-crimson px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+        >
+          {rejectLoading ? "…" : "Confirm reject"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setRejecting(false); setReason(""); }}
+          className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:text-ink"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onApprove}
+        disabled={approveLoading}
+        className="rounded-lg border border-line bg-paper px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink disabled:opacity-50"
+      >
+        {approveLoading ? "…" : "Approve ✓"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setRejecting(true)}
+        className="rounded-lg border border-crimson/30 bg-crimson/5 px-3 py-1.5 text-xs font-semibold text-crimson hover:bg-crimson/10"
+      >
+        Reject
+      </button>
+    </>
+  );
+}
+
 // ─── Policies tab ─────────────────────────────────────────────────────────────
 
 function PoliciesTab() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useListPolicies();
   const [createOpen, setCreateOpen] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   function invalidate() {
     void queryClient.invalidateQueries({ queryKey: getListPoliciesQueryKey() });
   }
 
-  const deletePolicy = useDeletePolicy({ mutation: { onSuccess: invalidate } });
-  const updatePolicy = useUpdatePolicy({ mutation: { onSuccess: invalidate } });
+  const deletePolicyMutation = useDeletePolicy({ mutation: { onSuccess: invalidate } });
+  const updatePolicyMutation = useUpdatePolicy({ mutation: { onSuccess: invalidate } });
 
   if (isLoading) return <p className="text-ink-faint">Loading…</p>;
 
   const policies = data?.policies ?? [];
+  const allIds = policies.map((p) => p.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = selected.size > 0;
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function bulkDelete() {
+    setBulkLoading(true);
+    await Promise.allSettled([...selected].map((id) => deletePolicy(id)));
+    setBulkLoading(false);
+    setSelected(new Set());
+    invalidate();
+  }
+
+  async function bulkSetActive(active: boolean) {
+    setBulkLoading(true);
+    await Promise.allSettled([...selected].map((id) => updatePolicy(id, { active })));
+    setBulkLoading(false);
+    setSelected(new Set());
+    invalidate();
+  }
 
   return (
     <div>
@@ -347,18 +639,74 @@ function PoliciesTab() {
       </div>
 
       <div className="mt-4 space-y-3">
+        {/* Bulk action bar */}
+        {policies.length > 0 && (
+          <div className="flex items-center gap-3 rounded-lg border border-line bg-paper px-4 py-2.5">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+              onChange={toggleAll}
+              className="h-4 w-4 accent-crimson cursor-pointer"
+              aria-label="Select all"
+            />
+            {someSelected ? (
+              <>
+                <span className="text-sm text-ink-soft">{selected.size} selected</span>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    className="!px-3 !py-1.5 text-xs"
+                    loading={bulkLoading}
+                    onClick={() => bulkSetActive(true)}
+                  >
+                    Enable {selected.size}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs"
+                    loading={bulkLoading}
+                    onClick={() => bulkSetActive(false)}
+                  >
+                    Disable {selected.size}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="!px-3 !py-1.5 text-xs !text-crimson"
+                    loading={bulkLoading}
+                    onClick={bulkDelete}
+                  >
+                    Delete {selected.size}
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(new Set())}
+                    className="text-xs text-ink-faint hover:text-ink"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            ) : (
+              <span className="text-sm text-ink-faint">Select policies for bulk actions</span>
+            )}
+          </div>
+        )}
+
         {policies.map((policy) => (
           <PolicyRow
             key={policy.id}
             policy={policy}
-            onDelete={() => deletePolicy.mutate({ id: policy.id })}
+            selected={selected.has(policy.id)}
+            onToggleSelect={() => toggleOne(policy.id)}
+            onDelete={() => deletePolicyMutation.mutate({ id: policy.id })}
             onToggleActive={() =>
-              updatePolicy.mutate({ id: policy.id, data: { active: !policy.active } })
+              updatePolicyMutation.mutate({ id: policy.id, data: { active: !policy.active } })
             }
-            deleteLoading={deletePolicy.isPending}
+            deleteLoading={deletePolicyMutation.isPending}
           />
         ))}
-        {!isLoading && policies.length === 0 && (
+        {policies.length === 0 && (
           <p className="text-sm text-ink-faint">No policies defined.</p>
         )}
       </div>
@@ -374,11 +722,15 @@ function PoliciesTab() {
 
 function PolicyRow({
   policy,
+  selected,
+  onToggleSelect,
   onDelete,
   onToggleActive,
   deleteLoading,
 }: {
   policy: ModerationPolicy;
+  selected: boolean;
+  onToggleSelect: () => void;
   onDelete: () => void;
   onToggleActive: () => void;
   deleteLoading: boolean;
@@ -390,8 +742,15 @@ function PolicyRow({
   const actionLabel = policy.action === "auto_approve" ? "Auto-approve" : "Auto-reject";
 
   return (
-    <div className={`rounded-xl border border-line bg-paper p-4 ${!policy.active ? "opacity-60" : ""}`}>
+    <div className={`rounded-xl border bg-paper p-4 transition-colors ${selected ? "border-crimson/40 bg-crimson/[0.02]" : "border-line"} ${!policy.active ? "opacity-60" : ""}`}>
       <div className="flex flex-wrap items-start gap-3">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggleSelect}
+          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-crimson cursor-pointer"
+          aria-label={`Select ${policy.name}`}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span

@@ -75,10 +75,11 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
     await Post.updateOne({ _id: id }, { $set: update });
 
     // Phase 2: Re-evaluate content-based policies for posts still in pending_review.
-    const updated = await Post.findById(id).populate("authorId", "role");
+    const updated = await Post.findById(id).populate("authorId", "role email");
     if (updated && updated.status === "pending_review") {
       const outcome = await evaluate({
         authorId: updated.authorId?.toString(),
+        authorEmail: (updated.authorId as unknown as { email?: string } | null)?.email,
         authorRole: (updated.authorId as unknown as { role?: string } | null)?.role,
         sourceId: updated.sourceId?.toString(),
         origin: updated.origin,

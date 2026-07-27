@@ -9,7 +9,7 @@ export type Permission =
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   member: [],
-  creator: ["post.bypass_queue"],
+  creator: [],
   editor: ["post.bypass_queue", "moderation.review", "moderation.manage_policies"],
   admin: [
     "post.bypass_queue",

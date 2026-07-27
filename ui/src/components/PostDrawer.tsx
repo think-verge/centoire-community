@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useGetPost } from "../lib/api/generated/posts/posts";
 import { PostPanel } from "./PostPanel";
@@ -6,21 +6,38 @@ import { PostSidebar } from "./PostSidebar";
 
 interface PostDrawerProps {
   slug: string;
-  /** The feed URL to restore when the drawer closes. */
-  feedPath: string;
+  /** The feed URL to restore when the drawer closes. Ignored when syncUrl is false. */
+  feedPath?: string;
   onClose: () => void;
+  /**
+   * Custom header action buttons. When omitted the default "Full article ↗" and
+   * "Open page" buttons are shown.
+   */
+  headerActions?: ReactNode;
+  /**
+   * Set to false to skip the history.pushState / replaceState URL sync.
+   * Use this when the drawer is opened from a non-feed context (e.g. moderation).
+   */
+  syncUrl?: boolean;
 }
 
-export function PostDrawer({ slug, feedPath, onClose }: PostDrawerProps) {
+export function PostDrawer({
+  slug,
+  feedPath = "/",
+  onClose,
+  headerActions,
+  syncUrl = true,
+}: PostDrawerProps) {
   const { data: post } = useGetPost(slug);
 
   // Push /p/:slug when drawer opens; restore feed URL on unmount.
   useEffect(() => {
+    if (!syncUrl) return;
     window.history.pushState(null, "", `/p/${slug}`);
     return () => {
       window.history.replaceState(null, "", feedPath);
     };
-  }, [slug, feedPath]);
+  }, [slug, feedPath, syncUrl]);
 
   // Keyboard dismiss
   useEffect(() => {
@@ -40,6 +57,28 @@ export function PostDrawer({ slug, feedPath, onClose }: PostDrawerProps) {
   }, []);
 
   const externalUrl = post?.externalUrl;
+
+  const defaultHeaderActions = (
+    <>
+      {externalUrl && (
+        <a
+          href={externalUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
+        >
+          Full article ↗
+        </a>
+      )}
+      <Link
+        to={`/p/${slug}`}
+        onClick={onClose}
+        className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
+      >
+        Open page
+      </Link>
+    </>
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -74,23 +113,7 @@ export function PostDrawer({ slug, feedPath, onClose }: PostDrawerProps) {
           </p>
 
           <div className="flex shrink-0 items-center gap-2">
-            {externalUrl && (
-              <a
-                href={externalUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
-              >
-                Full article ↗
-              </a>
-            )}
-            <Link
-              to={`/p/${slug}`}
-              onClick={onClose}
-              className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
-            >
-              Open page
-            </Link>
+            {headerActions ?? defaultHeaderActions}
           </div>
         </div>
 

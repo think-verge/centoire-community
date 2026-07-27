@@ -7,12 +7,31 @@ import { slugifyWithId } from "../utils/slugify.js";
 import { readTimeMinutes } from "../utils/read-time.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { finalizePublish } from "./postService.js";
-import { env } from "../config/env.js";
+import { fireAiProcessing } from "./aiService.js";
 
 const parser = new Parser({
   timeout: 15_000,
   headers: { "User-Agent": "CentoireBot/0.1 (+https://centoire.app)" },
 });
+
+// Many real-world RSS feeds contain bare & instead of &amp; which breaks the XML parser.
+// Fetch the raw text ourselves, sanitize it, then parse from the string.
+async function fetchFeedXml(url: string): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "CentoireBot/0.1 (+https://centoire.app)" },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    // Replace bare & not already part of a valid XML entity/char reference
+    return text.replace(/&(?!(?:#\d+|#x[\da-fA-F]+|[\w.-]+);)/g, "&amp;");
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 const OG_IMAGE_TIMEOUT_MS = 3_000;
 const MAX_ITEMS_PER_FETCH = 25;
@@ -62,7 +81,8 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
   };
 
   try {
-    const feed = await parser.parseURL(source.feedUrl);
+    const feedXml = await fetchFeedXml(source.feedUrl);
+    const feed = await parser.parseString(feedXml);
     const items = (feed.items ?? []).slice(0, MAX_ITEMS_PER_FETCH);
     stats.itemsSeen = items.length;
 
@@ -105,7 +125,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
         });
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
-        void fireAiProcessing(post._id.toString(), link);
+        void fireAiProcessing(post._id.toString(), { origin: "aggregated", url: link });
 
         if (policyOutcome === "auto_approve") {
           await finalizePublish(post);
@@ -144,17 +164,6 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
   return stats;
 }
 
-async function fireAiProcessing(postId: string, url: string): Promise<void> {
-  try {
-    await fetch(`${env.AI_SERVICE_URL}/v1/process-post`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ postId, url, origin: "aggregated" }),
-    });
-  } catch {
-    // AI processing is fire-and-forget — failures don't affect ingestion
-  }
-}
 
 export async function fetchAllActiveSources(): Promise<FetchStats[]> {
   const sources = await Source.find({ active: true });

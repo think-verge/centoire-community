@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { connectDb, disconnectDb } from "../src/config/db.js";
 import { Circle } from "../src/models/Circle.js";
 import { CircleMembership } from "../src/models/CircleMembership.js";
+import { ModerationPolicy } from "../src/models/ModerationPolicy.js";
 import { Source } from "../src/models/Source.js";
 import { Tag } from "../src/models/Tag.js";
 import { User } from "../src/models/User.js";
@@ -86,6 +87,28 @@ async function main(): Promise<void> {
   } else {
     console.log("[seed] admin user already exists");
   }
+
+  // Default catch-all policy: AI-analyzed non-spam content auto-approves
+  // Condition: ai_is_spam not_equals true
+  //   Phase 1 (undefined): returns false → post stays pending_review → AI fires
+  //   Phase 2 (false for non-spam): returns true → matches → auto_approve
+  await ModerationPolicy.updateOne(
+    { name: "Default — auto-approve AI-analyzed non-spam content" },
+    {
+      $setOnInsert: {
+        name: "Default — auto-approve AI-analyzed non-spam content",
+        conditions: [{ key: "ai_is_spam", operator: "not_equals", values: [true] }],
+        logic: "and",
+        action: "auto_approve",
+        priority: 0,
+        reason: "Seeded default: any post AI has processed that is not spam gets published automatically.",
+        active: true,
+        createdBy: admin._id,
+      },
+    },
+    { upsert: true },
+  );
+  console.log("[seed] default auto-approve policy ensured");
 
   // Sources — upsert by feedUrl
   for (const s of SOURCES) {
