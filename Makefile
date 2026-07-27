@@ -1,4 +1,7 @@
-.PHONY: ui backend agent install openapi seed help
+SHELL := /bin/bash
+AGENT_VENV := ai-agent/.venv
+
+.PHONY: ui backend agent agent-install install openapi seed help
 
 ## Start the React dev server (port 5173)
 ui:
@@ -8,15 +11,19 @@ ui:
 backend:
 	cd backend && npm run dev
 
-## Start the FastAPI AI agent with hot-reload (port 8001)
-agent:
-	cd ai-agent && uvicorn app.main:app --reload --port 8001
+## Create venv and install Python deps if needed
+agent-install:
+	test -d $(AGENT_VENV) || python3 -m venv $(AGENT_VENV)
+	$(AGENT_VENV)/bin/pip install -r ai-agent/requirements.txt
 
-## Install all dependencies
-install:
+## Start the FastAPI AI agent with hot-reload (port 8001)
+agent: agent-install
+	cd ai-agent && . .venv/bin/activate && uvicorn app.main:app --reload --port 8001
+
+## Install all dependencies (Node + Python)
+install: agent-install
 	cd backend && npm install
 	cd ui && npm install
-	cd ai-agent && pip install -r requirements.txt
 
 ## Regenerate OpenAPI spec + frontend client (run after backend schema changes)
 openapi:
