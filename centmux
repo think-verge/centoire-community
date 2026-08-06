@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# tmux launcher for the centoire-community dev stack (ui, backend, agent).
+# Usage:
+#   ./centmux        start (or attach to) the dev session
+#   ./centmux kill   stop all three services and tear down the session
+
+set -euo pipefail
+
+SESSION="centoire"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! command -v tmux >/dev/null 2>&1; then
+  echo "tmux is not installed. Install it with: brew install tmux" >&2
+  exit 1
+fi
+
+attach() {
+  if [ -n "${TMUX:-}" ]; then
+    tmux switch-client -t "$SESSION"
+  else
+    tmux attach-session -t "$SESSION"
+  fi
+}
+
+start() {
+  if tmux has-session -t "$SESSION" 2>/dev/null; then
+    echo "centmux: session '$SESSION' already running, attaching..."
+    attach
+    exit 0
+  fi
+
+  tmux new-session -d -s "$SESSION" -n dev -c "$ROOT"
+  tmux set-option -t "$SESSION" pane-border-status top
+  tmux set-option -t "$SESSION" pane-border-format "#{pane_title}"
+
+  # Splits renumber pane_index by screen position, so track panes by their
+  # stable pane_id instead of dev.N indices to avoid targeting the wrong pane.
+  local backend_pane ui_pane agent_pane control_pane
+  backend_pane="$(tmux display-message -p -t "$SESSION:dev.0" '#{pane_id}')"
+  ui_pane="$(tmux split-window -h -t "$SESSION:dev" -c "$ROOT" -P -F '#{pane_id}')"
+  agent_pane="$(tmux split-window -v -t "$ui_pane" -c "$ROOT" -P -F '#{pane_id}')"
+  control_pane="$(tmux split-window -v -t "$backend_pane" -c "$ROOT" -P -F '#{pane_id}')"
+
+  tmux select-pane -t "$backend_pane" -T backend
+  tmux send-keys -t "$backend_pane" "make backend" C-m
+
+  tmux select-pane -t "$ui_pane" -T ui
+  tmux send-keys -t "$ui_pane" "make ui" C-m
+
+  tmux select-pane -t "$agent_pane" -T agent
+  tmux send-keys -t "$agent_pane" "make agent" C-m
+
+  tmux select-pane -t "$control_pane" -T control
+  tmux send-keys -t "$control_pane" "clear; echo 'Run: ./centmux kill   (to stop everything)'" C-m
+
+  tmux select-layout -t "$SESSION:dev" tiled
+
+  attach
+}
+
+kill_session() {
+  if tmux has-session -t "$SESSION" 2>/dev/null; then
+    tmux kill-session -t "$SESSION"
+    echo "centmux: session '$SESSION' stopped."
+  else
+    echo "centmux: no running session named '$SESSION'."
+  fi
+}
+
+case "${1:-start}" in
+  start)
+    start
+    ;;
+  kill|stop)
+    kill_session
+    ;;
+  *)
+    echo "Usage: $0 [start|kill]" >&2
+    exit 1
+    ;;
+esac
