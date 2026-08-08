@@ -26,6 +26,7 @@ export const env = {
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
   MAIL_FROM: process.env.MAIL_FROM ?? "Centoire <no-reply@centoire.local>",
   ENABLE_INGESTION: process.env.ENABLE_INGESTION === "true",
+  ENABLE_AI_PROCESSING: process.env.ENABLE_AI_PROCESSING !== "false",
   INGESTION_CRON: process.env.INGESTION_CRON ?? "*/30 * * * *",
   AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
   AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
