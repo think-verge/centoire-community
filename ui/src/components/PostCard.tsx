@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { AvatarBubble } from "./AppShell";
@@ -11,16 +12,15 @@ import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 export function PostCard({
   post,
   onOpenPost,
-  showCategoryPill,
 }: {
   post: PostCardType;
   onOpenPost?: (post: PostCardType) => void;
-  /** Discover mixes all categories together — show which one each card belongs to.
-   *  Vertical CategoryPages don't need this since every card there is already the same category. */
-  showCategoryPill?: boolean;
 }) {
   const navigate = useNavigate();
   const external = post.origin === "aggregated" && post.externalUrl;
+  // Text posts have nothing to wait for; image posts fade in once the image
+  // actually resolves, so the masonry grid never reflows under a late image.
+  const [imageLoaded, setImageLoaded] = useState(!post.coverImageUrl);
 
   function openPost() {
     if (onOpenPost) {
@@ -35,12 +35,19 @@ export function PostCard({
   return (
     <article className="group mb-4 break-inside-avoid overflow-hidden rounded-xl border border-line bg-paper shadow-card transition-shadow hover:shadow-card-hover">
       {post.coverImageUrl && (
-        <button type="button" onClick={openPost} className="block w-full cursor-pointer">
+        <button type="button" onClick={openPost} className="relative block w-full cursor-pointer">
+          {!imageLoaded && (
+            <div className="h-48 w-full animate-pulse bg-cream" aria-hidden />
+          )}
           <img
             src={post.coverImageUrl}
             alt=""
             loading="lazy"
-            className="max-h-72 w-full object-cover"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageLoaded(true)}
+            className={`max-h-72 w-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? "opacity-100" : "absolute inset-0 h-48 opacity-0"
+            }`}
           />
         </button>
       )}
@@ -56,7 +63,7 @@ export function PostCard({
               {tag.name}
             </Link>
           ))}
-          {showCategoryPill && post.category && isPostCategory(post.category) && (
+          {post.category && isPostCategory(post.category) && (
             <span className="rounded-full border border-line bg-cream px-2.5 py-0.5 text-xs text-ink-soft">
               {CATEGORY_LABELS[post.category]}
               {post.subcategory && ` · ${post.subcategory}`}

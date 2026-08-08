@@ -8,6 +8,7 @@ import { AvatarBubble } from "./AppShell";
 import { CommentThread } from "./CommentThread";
 import { PostActions } from "./PostActions";
 import { useGetPost } from "../lib/api/generated/posts/posts";
+import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 
 const EXTENSIONS = [StarterKit, Image, Link];
 
@@ -50,6 +51,12 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
     <article>
       <header>
         <div className="flex flex-wrap items-center gap-2">
+          {post.category && isPostCategory(post.category) && (
+            <span className="rounded-full border border-line bg-cream px-2.5 py-0.5 text-xs text-ink-soft">
+              {CATEGORY_LABELS[post.category]}
+              {post.subcategory && ` · ${post.subcategory}`}
+            </span>
+          )}
           {post.tags.map((tag) => (
             <RouterLink key={tag.id} to={`/t/${tag.slug}`} className="kicker hover:underline">
               {tag.name}

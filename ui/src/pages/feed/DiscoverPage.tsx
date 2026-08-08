@@ -140,7 +140,6 @@ export function DiscoverPage() {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
           onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
-          showCategoryPill
           emptyState={
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">Nothing here yet</p>

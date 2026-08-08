@@ -10,7 +10,6 @@ interface MasonryFeedProps {
   fetchNextPage: () => void;
   emptyState: ReactNode;
   onOpenPost?: (post: PostCardType) => void;
-  showCategoryPill?: boolean;
 }
 
 export function MasonryFeed({
@@ -21,7 +20,6 @@ export function MasonryFeed({
   fetchNextPage,
   emptyState,
   onOpenPost,
-  showCategoryPill,
 }: MasonryFeedProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -58,13 +56,14 @@ export function MasonryFeed({
     <>
       <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} showCategoryPill={showCategoryPill} />
+          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} />
         ))}
+        {isFetchingNextPage &&
+          Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={`next-page-skeleton-${i}`} tall={i % 2 === 0} />
+          ))}
       </div>
       <div ref={sentinelRef} aria-hidden />
-      {isFetchingNextPage && (
-        <p className="py-6 text-center text-sm text-ink-faint">Loading more…</p>
-      )}
       {!hasNextPage && posts.length > 0 && (
         <p className="py-6 text-center text-sm text-ink-faint">You're all caught up.</p>
       )}
