@@ -5,7 +5,14 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { GetModerationQueueStatus } from './getModerationQueueStatus';
+import type { GetModerationQueueOrigin } from './getModerationQueueOrigin';
 
 export type GetModerationQueueParams = {
 cursor?: string;
+status?: GetModerationQueueStatus;
+origin?: GetModerationQueueOrigin;
+source?: string;
+tag?: string;
+author?: string;
 };

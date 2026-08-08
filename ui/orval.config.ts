@@ -19,6 +19,7 @@ export default defineConfig({
           getFeedForYou: { query: { useInfinite: true, useInfiniteQueryParam: "cursor" } },
           getFeedFollowing: { query: { useInfinite: true, useInfiniteQueryParam: "cursor" } },
           getFeedDiscover: { query: { useInfinite: true, useInfiniteQueryParam: "cursor" } },
+          getFeedCategory: { query: { useInfinite: true, useInfiniteQueryParam: "cursor" } },
         },
       },
     },

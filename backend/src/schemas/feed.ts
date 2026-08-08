@@ -1,5 +1,5 @@
 import { registry, z, jsonResponse } from "./registry.js";
-import { PostCardSchema } from "./posts.js";
+import { PostCardSchema, PostCategorySchema } from "./posts.js";
 
 export const FeedPageSchema = registry.register(
   "FeedPage",
@@ -16,6 +16,19 @@ export const FeedCursorQuerySchema = z.object({
 export const DiscoverQuerySchema = z.object({
   sort: z.enum(["trending", "new"]).optional(),
   tag: z.string().optional(),
+  origin: z.enum(["native", "aggregated"]).optional(),
+  source: z.string().optional(),
+  category: PostCategorySchema.optional(),
+  subcategory: z.string().optional(),
+  cursor: z.string().optional(),
+});
+
+export const CategoryFeedParamsSchema = z.object({
+  category: PostCategorySchema,
+});
+
+export const CategoryFeedQuerySchema = z.object({
+  subcategory: z.string().optional(),
   cursor: z.string().optional(),
 });
 
@@ -43,5 +56,13 @@ export function registerFeedPaths(): void {
     operationId: "getFeedDiscover",
     request: { query: DiscoverQuerySchema },
     responses: { 200: jsonResponse("Discover feed page", FeedPageSchema) },
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/feed/category/{category}",
+    tags: ["feed"],
+    operationId: "getFeedCategory",
+    request: { params: CategoryFeedParamsSchema, query: CategoryFeedQuerySchema },
+    responses: { 200: jsonResponse("Category vertical feed page", FeedPageSchema) },
   });
 }

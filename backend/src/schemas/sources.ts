@@ -1,4 +1,5 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
+import { PostCategorySchema } from "./posts.js";
 
 export const SourceSchema = registry.register(
   "Source",
@@ -9,6 +10,8 @@ export const SourceSchema = registry.register(
     feedUrl: z.string(),
     faviconUrl: z.string().nullable(),
     tags: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
+    category: PostCategorySchema.nullable(),
+    subcategory: z.string().nullable(),
     active: z.boolean(),
     lastFetchedAt: z.string().nullable(),
     lastStatus: z.enum(["ok", "error"]).nullable(),
@@ -24,6 +27,8 @@ export const CreateSourceInputSchema = registry.register(
     feedUrl: z.string().url(),
     faviconUrl: z.string().url().optional(),
     tagIds: z.array(z.string()).max(5).optional(),
+    category: PostCategorySchema.nullable().optional(),
+    subcategory: z.string().nullable().optional(),
     active: z.boolean().optional(),
   }),
 );

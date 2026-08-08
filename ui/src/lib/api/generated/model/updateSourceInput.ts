@@ -5,6 +5,7 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateSourceInputCategory } from './updateSourceInputCategory';
 
 export interface UpdateSourceInput {
   /**
@@ -17,5 +18,9 @@ export interface UpdateSourceInput {
   faviconUrl?: string;
   /** @maxItems 5 */
   tagIds?: string[];
+  /** @nullable */
+  category?: UpdateSourceInputCategory;
+  /** @nullable */
+  subcategory?: string | null;
   active?: boolean;
 }

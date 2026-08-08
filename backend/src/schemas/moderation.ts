@@ -82,13 +82,22 @@ const PolicyListSchema = registry.register(
   z.object({ policies: z.array(ModerationPolicySchema) }),
 );
 
+export const ModerationQueueQuerySchema = z.object({
+  cursor: z.string().optional(),
+  status: z.enum(["pending_review", "rejected", "all"]).default("pending_review"),
+  origin: z.enum(["native", "aggregated"]).optional(),
+  source: z.string().optional(),
+  tag: z.string().optional(),
+  author: z.string().optional(),
+});
+
 export function registerModerationPaths(): void {
   registry.registerPath({
     method: "get",
     path: "/moderation/queue",
     tags: ["moderation"],
     operationId: "getModerationQueue",
-    request: { query: z.object({ cursor: z.string().optional() }) },
+    request: { query: ModerationQueueQuerySchema },
     responses: {
       200: jsonResponse("Pending posts awaiting review", ModerationQueueSchema),
       403: errorResponse("Insufficient permissions"),

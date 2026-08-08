@@ -10,6 +10,7 @@ import type { PostCardStatus } from './postCardStatus';
 import type { PostCardAuthor } from './postCardAuthor';
 import type { PostCardSource } from './postCardSource';
 import type { PostCardCircle } from './postCardCircle';
+import type { PostCardCategory } from './postCardCategory';
 import type { PostCardTagsItem } from './postCardTagsItem';
 import type { ViewerState } from './viewerState';
 
@@ -30,6 +31,10 @@ export interface PostCard {
   source: PostCardSource;
   /** @nullable */
   circle: PostCardCircle;
+  /** @nullable */
+  category: PostCardCategory;
+  /** @nullable */
+  subcategory: string | null;
   tags: PostCardTagsItem[];
   upvoteCount: number;
   commentCount: number;

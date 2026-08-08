@@ -1,18 +1,12 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useLogout } from "../lib/api/generated/auth/auth";
 import { useAuth } from "../lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { hasPermission } from "../lib/permissions";
-
-const NAV_ITEMS = [
-  { to: "/feed", label: "For You", icon: HomeIcon },
-  { to: "/following", label: "Following", icon: UsersIcon },
-  { to: "/discover", label: "Discover", icon: CompassIcon },
-  { to: "/circles", label: "Circles", icon: CirclesIcon },
-  { to: "/bookmarks", label: "Bookmarks", icon: BookmarkIcon },
-  { to: "/drafts", label: "Drafts", icon: DraftIcon },
-];
+import { DesktopSidebar } from "./nav/DesktopSidebar";
+import { MobileNav } from "./nav/MobileNav";
+import { SearchIcon } from "./nav/icons";
 
 export function AppShell() {
   const { user } = useAuth();
@@ -102,84 +96,14 @@ export function AppShell() {
       </header>
 
       <div className="flex w-full">
-        <nav
-          aria-label="Primary"
-          className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-52 shrink-0 flex-col gap-1 border-r border-line px-3 py-6 md:flex"
-        >
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-paper text-crimson shadow-card"
-                    : "text-ink-soft hover:bg-paper hover:text-ink"
-                }`
-              }
-            >
-              <Icon className="size-4.5" />
-              {label}
-            </NavLink>
-          ))}
-          {hasPermission(user?.role, "moderation.review") && (
-            <NavLink
-              to="/moderation"
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-paper text-crimson shadow-card"
-                    : "text-ink-soft hover:bg-paper hover:text-ink"
-                }`
-              }
-            >
-              <ShieldIcon className="size-4.5" />
-              Moderation
-            </NavLink>
-          )}
-          {hasPermission(user?.role, "user.invite") && (
-            <NavLink
-              to="/admin/invites"
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-paper text-crimson shadow-card"
-                    : "text-ink-soft hover:bg-paper hover:text-ink"
-                }`
-              }
-            >
-              <UserPlusIcon className="size-4.5" />
-              Invites
-            </NavLink>
-          )}
-        </nav>
+        <DesktopSidebar />
 
         <main className="min-h-[calc(100vh-3.5rem)] w-full min-w-0 pb-20 md:pb-6">
           <Outlet />
         </main>
       </div>
 
-      <nav
-        aria-label="Primary mobile"
-        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-paper md:hidden"
-      >
-        {[NAV_ITEMS[0], NAV_ITEMS[2], { to: "/compose", label: "Write", icon: PenIcon }, NAV_ITEMS[3], NAV_ITEMS[4]].map(
-          ({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-                  isActive ? "text-crimson" : "text-ink-soft"
-                }`
-              }
-            >
-              <Icon className="size-5" />
-              {label}
-            </NavLink>
-          ),
-        )}
-      </nav>
+      <MobileNav />
     </div>
   );
 }
@@ -222,86 +146,5 @@ export function AvatarBubble({
     >
       {name.charAt(0).toUpperCase()}
     </span>
-  );
-}
-
-type IconProps = { className?: string };
-function HomeIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="M3 10.5 12 3l9 7.5V21H3z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function UsersIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" strokeLinecap="round" />
-      <path d="M16 8.5a3 3 0 1 0 .01-5.99" />
-      <path d="M17.5 15.2c2 .5 3.4 1.9 4 4" strokeLinecap="round" />
-    </svg>
-  );
-}
-function CompassIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function CirclesIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <circle cx="9" cy="9" r="5.5" />
-      <circle cx="15.5" cy="15.5" r="5.5" />
-    </svg>
-  );
-}
-function BookmarkIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="M6 3h12v18l-6-4-6 4z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function DraftIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="M5 3h9l5 5v13H5z" strokeLinejoin="round" />
-      <path d="M14 3v5h5" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function PenIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="m4 20 1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function SearchIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function ShieldIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="M12 2 3 6.5v5C3 16.5 7 21 12 22c5-1 9-5.5 9-10.5v-5z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function UserPlusIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5" strokeLinecap="round" />
-      <path d="M19 8v6M16 11h6" strokeLinecap="round" />
-    </svg>
   );
 }

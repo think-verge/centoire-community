@@ -120,6 +120,8 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           externalUrl: link,
           canonicalUrlHash: hash,
           tags: source.tags,
+          category: source.category,
+          subcategory: source.subcategory,
           publishedAt,
           readTimeMinutes: readTimeMinutes(excerpt),
         });

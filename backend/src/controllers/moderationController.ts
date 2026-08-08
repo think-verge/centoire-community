@@ -21,8 +21,8 @@ function serializePolicy(policy: IModerationPolicy) {
 
 // Queue
 export async function listQueue(req: Request, res: Response): Promise<void> {
-  const cursor = req.query.cursor as string | undefined;
-  const page = await moderationService.listQueue(cursor);
+  const params = (req.validatedQuery ?? {}) as moderationService.QueueParams;
+  const page = await moderationService.listQueue(params);
   res.json({
     items: page.items.map((p) => serializePostCard(p)),
     nextCursor: page.nextCursor,

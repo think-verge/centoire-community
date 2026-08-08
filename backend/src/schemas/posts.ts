@@ -1,4 +1,7 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
+import { POST_CATEGORIES } from "../config/categoryTaxonomy.js";
+
+export const PostCategorySchema = z.enum(POST_CATEGORIES);
 
 const PostAuthorSchema = z.object({
   id: z.string(),
@@ -42,6 +45,8 @@ export const PostCardSchema = registry.register(
     author: PostAuthorSchema.nullable(),
     source: PostSourceSchema.nullable(),
     circle: PostCircleRefSchema.nullable(),
+    category: PostCategorySchema.nullable(),
+    subcategory: z.string().nullable(),
     tags: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
     upvoteCount: z.number(),
     commentCount: z.number(),
@@ -74,6 +79,8 @@ export const CreatePostInputSchema = registry.register(
     tagIds: z.array(z.string()).max(5).optional(),
     circleId: z.string().nullable().optional(),
     coverImageUrl: z.string().url().nullable().optional(),
+    category: PostCategorySchema.nullable().optional(),
+    subcategory: z.string().nullable().optional(),
     status: z.enum(["draft", "published"]).optional(),
   }),
 );
@@ -81,6 +88,14 @@ export const CreatePostInputSchema = registry.register(
 export const UpdatePostInputSchema = registry.register(
   "UpdatePostInput",
   CreatePostInputSchema.omit({ status: true }).partial(),
+);
+
+export const BackfillCategoriesResultSchema = registry.register(
+  "BackfillCategoriesResult",
+  z.object({
+    scanned: z.number(),
+    updated: z.number(),
+  }),
 );
 
 export const UploadedImageSchema = registry.register(
@@ -154,6 +169,13 @@ export function registerPostPaths(): void {
     operationId: "deletePost",
     request: { params: z.object({ id: z.string() }) },
     responses: { 204: { description: "Post removed" } },
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/admin/posts/backfill-categories",
+    tags: ["admin"],
+    operationId: "backfillPostCategories",
+    responses: { 200: jsonResponse("Backfill result", BackfillCategoriesResultSchema) },
   });
   registry.registerPath({
     method: "post",

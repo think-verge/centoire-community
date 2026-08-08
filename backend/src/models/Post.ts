@@ -1,4 +1,5 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
+import { POST_CATEGORIES, isValidSubcategory, type PostCategory } from "../config/categoryTaxonomy.js";
 
 export type PostOrigin = "native" | "aggregated";
 export type PostStatus = "draft" | "pending_review" | "published" | "rejected" | "removed";
@@ -19,6 +20,8 @@ export interface IPost extends Document {
   canonicalUrlHash?: string;
   tags: Types.ObjectId[];
   circleId?: Types.ObjectId;
+  category?: PostCategory;
+  subcategory?: string;
   upvoteCount: number;
   downvoteCount: number;
   commentCount: number;
@@ -61,6 +64,8 @@ const postSchema = new Schema<IPost>(
     canonicalUrlHash: { type: String, unique: true, sparse: true },
     tags: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
     circleId: { type: Schema.Types.ObjectId, ref: "Circle" },
+    category: { type: String, enum: POST_CATEGORIES },
+    subcategory: { type: String },
     upvoteCount: { type: Number, default: 0 },
     downvoteCount: { type: Number, default: 0 },
     commentCount: { type: Number, default: 0 },
@@ -88,6 +93,20 @@ postSchema.index({ status: 1, createdAt: -1 }); // for moderation queue ordering
 postSchema.index({ status: 1, tags: 1, publishedAt: -1 });
 postSchema.index({ status: 1, circleId: 1, publishedAt: -1 });
 postSchema.index({ authorId: 1, status: 1, updatedAt: -1 });
+postSchema.index({ status: 1, category: 1, publishedAt: -1 });
+postSchema.index({ status: 1, category: 1, subcategory: 1, publishedAt: -1 });
 postSchema.index({ title: "text", contentText: "text", excerpt: "text" });
+
+postSchema.pre("validate", function (next) {
+  if (this.subcategory && !this.category) {
+    next(new Error("subcategory requires category"));
+    return;
+  }
+  if (this.category && this.subcategory && !isValidSubcategory(this.category, this.subcategory)) {
+    next(new Error(`"${this.subcategory}" is not a valid subcategory of "${this.category}"`));
+    return;
+  }
+  next();
+});
 
 export const Post = mongoose.model<IPost>("Post", postSchema);

@@ -6,9 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { GetFeedDiscoverSort } from './getFeedDiscoverSort';
+import type { GetFeedDiscoverOrigin } from './getFeedDiscoverOrigin';
+import type { GetFeedDiscoverCategory } from './getFeedDiscoverCategory';
 
 export type GetFeedDiscoverParams = {
 sort?: GetFeedDiscoverSort;
 tag?: string;
+origin?: GetFeedDiscoverOrigin;
+source?: string;
+category?: GetFeedDiscoverCategory;
+subcategory?: string;
 cursor?: string;
 };

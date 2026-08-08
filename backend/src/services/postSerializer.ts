@@ -53,6 +53,8 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
           slug: (circle.slug as string) ?? "",
         }
       : null,
+    category: post.category ?? null,
+    subcategory: post.subcategory ?? null,
     tags: tags.map((t) => ({
       id: String(t._id),
       name: (t.name as string) ?? "",

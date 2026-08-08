@@ -25,6 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  BackfillCategoriesResult,
   CreateInviteInput,
   CreateSourceInput,
   ErrorResponse,
@@ -237,6 +238,62 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getRevokeInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const backfillPostCategories = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<BackfillCategoriesResult>(
+      {url: `/admin/posts/backfill-categories`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getBackfillPostCategoriesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof backfillPostCategories>>, TError,void, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof backfillPostCategories>>, TError,void, TContext> => {
+
+const mutationKey = ['backfillPostCategories'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof backfillPostCategories>>, void> = () => {
+          
+
+          return  backfillPostCategories()
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BackfillPostCategoriesMutationResult = NonNullable<Awaited<ReturnType<typeof backfillPostCategories>>>
+    
+    export type BackfillPostCategoriesMutationError = ErrorType<unknown>
+
+    export const useBackfillPostCategories = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof backfillPostCategories>>, TError,void, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof backfillPostCategories>>,
+        TError,
+        void,
+        TContext
+      > => {
+
+      const mutationOptions = getBackfillPostCategoriesMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

@@ -16,6 +16,8 @@ function serializeSource(source: ISource) {
       name: t.name ?? "",
       slug: t.slug ?? "",
     })),
+    category: source.category ?? null,
+    subcategory: source.subcategory ?? null,
     active: source.active,
     lastFetchedAt: source.lastFetchedAt?.toISOString() ?? null,
     lastStatus: source.lastStatus ?? null,
@@ -47,12 +49,14 @@ export async function create(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   const source = await Source.findById(req.params.id);
   if (!source) throw new ApiError(404, "Source not found");
-  const { name, siteUrl, feedUrl, active, tagIds } = req.body;
+  const { name, siteUrl, feedUrl, active, tagIds, category, subcategory } = req.body;
   if (name !== undefined) source.name = name;
   if (siteUrl !== undefined) source.siteUrl = siteUrl;
   if (feedUrl !== undefined) source.feedUrl = feedUrl;
   if (active !== undefined) source.active = active;
   if (tagIds !== undefined) source.tags = tagIds;
+  if (category !== undefined) source.category = category ?? undefined;
+  if (subcategory !== undefined) source.subcategory = subcategory ?? undefined;
   await source.save();
   await source.populate("tags", "name slug");
   res.json(serializeSource(source));

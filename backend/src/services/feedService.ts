@@ -2,6 +2,7 @@ import { Types, type PipelineStage } from "mongoose";
 import { Post, type IPost } from "../models/Post.js";
 import { User } from "../models/User.js";
 import { decodeCursor, encodeCursor } from "../utils/cursor.js";
+import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as userService from "./userService.js";
 import { serializePostCard, type ViewerState } from "./postSerializer.js";
 
@@ -179,29 +180,14 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
   return rankedFeed(match, interestIds, followedIds, circleIds, creatorIds, cursor, userId);
 }
 
-export async function discover(
-  options: { sort: "trending" | "new"; tagId?: Types.ObjectId; cursor?: string },
+/** Shared "new"-sort pagination: keyset cursor on (publishedAt, _id). Used by
+ *  discover()'s "new" sort and by categoryFeed(), which has no ranking mode. */
+async function keysetPublishedFeed(
+  base: Record<string, unknown>,
+  cursor: string | undefined,
   userId?: string,
 ): Promise<FeedPage> {
-  const base: Record<string, unknown> = { status: "published" };
-  if (options.tagId) base.tags = options.tagId;
-
-  if (options.sort === "trending") {
-    const since = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-    const creatorIds = await getCreatorIds();
-    return rankedFeed(
-      { ...base, publishedAt: { $gte: since } },
-      [],
-      [],
-      [],
-      creatorIds,
-      options.cursor,
-      userId,
-    );
-  }
-
-  // "new": keyset cursor on (publishedAt, _id)
-  const decoded = decodeCursor<KeysetCursor>(options.cursor);
+  const decoded = decodeCursor<KeysetCursor>(cursor);
   const filter: Record<string, unknown> = { ...base, publishedAt: { $ne: null } };
   if (decoded) {
     filter.$or = [
@@ -226,6 +212,55 @@ export async function discover(
       ? encodeCursor({ publishedAt: lastDoc.publishedAt.toISOString(), id: String(last!._id) })
       : null;
   return buildPage(page.map((p) => p._id), userId, nextCursor);
+}
+
+export async function discover(
+  options: {
+    sort: "trending" | "new";
+    tagId?: Types.ObjectId;
+    sourceId?: Types.ObjectId;
+    origin?: string;
+    category?: PostCategory;
+    subcategory?: string;
+    cursor?: string;
+  },
+  userId?: string,
+): Promise<FeedPage> {
+  const base: Record<string, unknown> = { status: "published" };
+  if (options.tagId) base.tags = options.tagId;
+  if (options.sourceId) base.sourceId = options.sourceId;
+  if (options.origin) base.origin = options.origin;
+  if (options.category) base.category = options.category;
+  if (options.subcategory) base.subcategory = options.subcategory;
+
+  if (options.sort === "trending") {
+    const since = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const creatorIds = await getCreatorIds();
+    return rankedFeed(
+      { ...base, publishedAt: { $gte: since } },
+      [],
+      [],
+      [],
+      creatorIds,
+      options.cursor,
+      userId,
+    );
+  }
+
+  return keysetPublishedFeed(base, options.cursor, userId);
+}
+
+/** A single content vertical's mixed-subcategory feed (Fashion, Beauty, etc.) —
+ *  no personalization/ranking, just newest-first within the category. */
+export async function categoryFeed(
+  category: PostCategory,
+  subcategory: string | undefined,
+  cursor: string | undefined,
+  userId?: string,
+): Promise<FeedPage> {
+  const base: Record<string, unknown> = { status: "published", category };
+  if (subcategory) base.subcategory = subcategory;
+  return keysetPublishedFeed(base, cursor, userId);
 }
 
 export async function following(userId: string, cursor?: string): Promise<FeedPage> {

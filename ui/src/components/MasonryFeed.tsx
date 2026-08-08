@@ -10,6 +10,7 @@ interface MasonryFeedProps {
   fetchNextPage: () => void;
   emptyState: ReactNode;
   onOpenPost?: (post: PostCardType) => void;
+  showCategoryPill?: boolean;
 }
 
 export function MasonryFeed({
@@ -20,6 +21,7 @@ export function MasonryFeed({
   fetchNextPage,
   emptyState,
   onOpenPost,
+  showCategoryPill,
 }: MasonryFeedProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +58,7 @@ export function MasonryFeed({
     <>
       <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} />
+          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} showCategoryPill={showCategoryPill} />
         ))}
       </div>
       <div ref={sentinelRef} aria-hidden />

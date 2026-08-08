@@ -8,6 +8,7 @@ import { ApiError } from "../utils/api-error.js";
 import { readTimeMinutes, tiptapToPlainText } from "../utils/read-time.js";
 import { slugifyWithId } from "../utils/slugify.js";
 import { hasPermission } from "../config/permissions.js";
+import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
@@ -18,6 +19,8 @@ interface PostInput {
   tagIds?: string[];
   circleId?: string | null;
   coverImageUrl?: string | null;
+  category?: PostCategory | null;
+  subcategory?: string | null;
   status?: "draft" | "published";
   role?: UserRole;
 }
@@ -46,6 +49,8 @@ export async function createPost(userId: string, input: PostInput): Promise<IPos
     tags: input.tagIds ?? [],
     circleId: input.circleId ?? undefined,
     coverImageUrl: input.coverImageUrl ?? undefined,
+    category: input.category ?? undefined,
+    subcategory: input.subcategory ?? undefined,
   });
   deriveTextFields(post);
   await post.save();
@@ -73,6 +78,12 @@ export async function updatePost(
   }
   if (input.coverImageUrl !== undefined) {
     post.coverImageUrl = input.coverImageUrl ?? undefined;
+  }
+  if (input.category !== undefined) {
+    post.category = input.category ?? undefined;
+  }
+  if (input.subcategory !== undefined) {
+    post.subcategory = input.subcategory ?? undefined;
   }
   deriveTextFields(post);
   await post.save();

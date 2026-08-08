@@ -3,6 +3,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { PostDrawer } from "../../components/PostDrawer";
+import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
+import { ServerFilterBar } from "../../components/filter/ServerFilterBar";
+import { useServerFilter } from "../../components/filter/useServerFilter";
+import type { FilterFieldDef } from "../../components/filter/types";
 import {
   approvePost,
   deletePolicy,
@@ -27,8 +31,56 @@ import {
   CreatePolicyInputAction,
   CreatePolicyInputLogic,
 } from "../../lib/api/generated/model";
+import { listSources } from "../../lib/api/generated/admin/admin";
+import { listTags } from "../../lib/api/generated/tags/tags";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
+
+const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
+  {
+    key: "status",
+    label: "Status",
+    type: "single",
+    options: [
+      { value: "pending_review", label: "Pending Review" },
+      { value: "rejected", label: "Rejected / Blocked" },
+      { value: "all", label: "All" },
+    ],
+  },
+  {
+    key: "origin",
+    label: "Origin",
+    type: "single",
+    options: [
+      { value: "native", label: "User posts" },
+      { value: "aggregated", label: "Source posts" },
+    ],
+  },
+  {
+    key: "source",
+    label: "Source",
+    type: "multi",
+    loadOptions: async () => {
+      const res = await listSources();
+      return res.map((s) => ({ value: s.id, label: s.name }));
+    },
+  },
+  {
+    key: "tag",
+    label: "Tag",
+    type: "multi",
+    loadOptions: async () => {
+      const res = await listTags();
+      return (res ?? []).map((t) => ({ value: t.slug, label: t.name }));
+    },
+  },
+  {
+    key: "author",
+    label: "Author (email)",
+    type: "text",
+    placeholder: "e.g. ds680@snu.edu.in",
+  },
+];
 
 type Tab = "queue" | "policies";
 
@@ -176,7 +228,14 @@ export function ModerationPage() {
 
 function QueueTab() {
   const queryClient = useQueryClient();
-  const { data, isLoading } = useGetModerationQueue();
+  const { activeFilters, filterCount } = useServerFilter(QUEUE_FILTER_CONFIG);
+  const { data, isLoading } = useGetModerationQueue({
+    status: activeFilters.status?.[0] as "pending_review" | "rejected" | "all" | undefined,
+    origin: activeFilters.origin?.[0] as "native" | "aggregated" | undefined,
+    source: activeFilters.source?.[0],
+    tag: activeFilters.tag?.[0],
+    author: activeFilters.author?.[0],
+  });
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -264,9 +323,21 @@ function QueueTab() {
 
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-line p-12 text-center">
-        <p className="font-display-serif text-2xl font-semibold">Queue is clear</p>
-        <p className="mt-2 text-sm text-ink-soft">No posts waiting for review.</p>
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <ServerFilterBar config={QUEUE_FILTER_CONFIG} />
+        </div>
+        {filterCount > 0 && <ActiveFilterPills config={QUEUE_FILTER_CONFIG} />}
+        <div className="rounded-xl border border-dashed border-line p-12 text-center">
+          <p className="font-display-serif text-2xl font-semibold">
+            {filterCount > 0 ? "No posts match" : "Queue is clear"}
+          </p>
+          <p className="mt-2 text-sm text-ink-soft">
+            {filterCount > 0
+              ? "No posts match the current filters."
+              : "No posts waiting for review."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -343,9 +414,17 @@ function QueueTab() {
             </div>
           </>
         ) : (
-          <span className="text-sm text-ink-faint">Select items for bulk actions</span>
+          <>
+            <span className="text-sm text-ink-faint">Select items for bulk actions</span>
+            <div className="ml-auto">
+              <ServerFilterBar config={QUEUE_FILTER_CONFIG} />
+            </div>
+          </>
         )}
       </div>
+
+      {/* Active filter pills */}
+      {filterCount > 0 && <ActiveFilterPills config={QUEUE_FILTER_CONFIG} />}
 
       {/* Items */}
       {items.map((post) => (

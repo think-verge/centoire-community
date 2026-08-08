@@ -5,6 +5,7 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { CreateSourceInputCategory } from './createSourceInputCategory';
 
 export interface CreateSourceInput {
   /**
@@ -17,5 +18,9 @@ export interface CreateSourceInput {
   faviconUrl?: string;
   /** @maxItems 5 */
   tagIds?: string[];
+  /** @nullable */
+  category?: CreateSourceInputCategory;
+  /** @nullable */
+  subcategory?: string | null;
   active?: boolean;
 }

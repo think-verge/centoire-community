@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreatePostInputContent } from './createPostInputContent';
+import type { CreatePostInputCategory } from './createPostInputCategory';
 import type { CreatePostInputStatus } from './createPostInputStatus';
 
 export interface CreatePostInput {
@@ -21,5 +22,9 @@ export interface CreatePostInput {
   circleId?: string | null;
   /** @nullable */
   coverImageUrl?: string | null;
+  /** @nullable */
+  category?: CreatePostInputCategory;
+  /** @nullable */
+  subcategory?: string | null;
   status?: CreatePostInputStatus;
 }

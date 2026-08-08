@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { VerifyEmailPage } from "./pages/auth/VerifyEmailPage";
 import { BookmarksPage } from "./pages/bookmarks/BookmarksPage";
+import { CategoryPage } from "./pages/feed/CategoryPage";
 import { CircleDetailPage } from "./pages/circles/CircleDetailPage";
 import { CirclesPage } from "./pages/circles/CirclesPage";
 import { ComposePage } from "./pages/compose/ComposePage";
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="/feed" element={<FeedPage />} />
               <Route path="/following" element={<FollowingPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
+              <Route path="/category/:category" element={<CategoryPage />} />
               <Route path="/circles" element={<CirclesPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
               <Route path="/search" element={<SearchPage />} />

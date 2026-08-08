@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SourceTagsItem } from './sourceTagsItem';
+import type { SourceCategory } from './sourceCategory';
 import type { SourceLastStatus } from './sourceLastStatus';
 
 export interface Source {
@@ -16,6 +17,10 @@ export interface Source {
   /** @nullable */
   faviconUrl: string | null;
   tags: SourceTagsItem[];
+  /** @nullable */
+  category: SourceCategory;
+  /** @nullable */
+  subcategory: string | null;
   active: boolean;
   /** @nullable */
   lastFetchedAt: string | null;

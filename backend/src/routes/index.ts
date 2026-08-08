@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { adminPostRouter } from "./adminPostRoutes.js";
 import { authRouter } from "./authRoutes.js";
 import { circleRouter } from "./circleRoutes.js";
 import {
@@ -34,6 +35,7 @@ apiRouter.use("/bookmarks", bookmarkRouter);
 apiRouter.use("/bookmark-folders", bookmarkFolderRouter);
 apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/admin/sources", sourceRouter);
+apiRouter.use("/admin/posts", adminPostRouter);
 apiRouter.use("/admin/invites", inviteRouter);
 apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/search", searchRouter);

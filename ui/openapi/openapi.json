@@ -402,6 +402,21 @@
               "slug"
             ]
           },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
+          },
           "tags": {
             "type": "array",
             "items": {
@@ -462,6 +477,8 @@
           "author",
           "source",
           "circle",
+          "category",
+          "subcategory",
           "tags",
           "upvoteCount",
           "commentCount",
@@ -547,6 +564,21 @@
             "nullable": true,
             "format": "uri"
           },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -588,8 +620,38 @@
             "type": "string",
             "nullable": true,
             "format": "uri"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
           }
         }
+      },
+      "BackfillCategoriesResult": {
+        "type": "object",
+        "properties": {
+          "scanned": {
+            "type": "number"
+          },
+          "updated": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "scanned",
+          "updated"
+        ]
       },
       "UploadedImage": {
         "type": "object",
@@ -1559,6 +1621,21 @@
               ]
             }
           },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
+          },
           "active": {
             "type": "boolean"
           },
@@ -1586,6 +1663,8 @@
           "feedUrl",
           "faviconUrl",
           "tags",
+          "category",
+          "subcategory",
           "active",
           "lastFetchedAt",
           "lastStatus",
@@ -1618,6 +1697,21 @@
               "type": "string"
             },
             "maxItems": 5
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
           },
           "active": {
             "type": "boolean"
@@ -1655,6 +1749,21 @@
               "type": "string"
             },
             "maxItems": 5
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
           },
           "active": {
             "type": "boolean"
@@ -2817,6 +2926,26 @@
         }
       }
     },
+    "/admin/posts/backfill-categories": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "backfillPostCategories",
+        "responses": {
+          "200": {
+            "description": "Backfill result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackfillCategoriesResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/uploads/image": {
       "post": {
         "tags": [
@@ -2954,6 +3083,49 @@
           },
           {
             "schema": {
+              "type": "string",
+              "enum": [
+                "native",
+                "aggregated"
+              ]
+            },
+            "required": false,
+            "name": "origin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "source",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fashion",
+                "beauty",
+                "lifestyle",
+                "ai_technology",
+                "business_intelligence"
+              ]
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "subcategory",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "string"
             },
             "required": false,
@@ -2964,6 +3136,59 @@
         "responses": {
           "200": {
             "description": "Discover feed page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feed/category/{category}": {
+      "get": {
+        "tags": [
+          "feed"
+        ],
+        "operationId": "getFeedCategory",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fashion",
+                "beauty",
+                "lifestyle",
+                "ai_technology",
+                "business_intelligence"
+              ]
+            },
+            "required": true,
+            "name": "category",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "subcategory",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category vertical feed page",
             "content": {
               "application/json": {
                 "schema": {
@@ -3750,6 +3975,56 @@
             },
             "required": false,
             "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending_review",
+                "rejected",
+                "all"
+              ],
+              "default": "pending_review"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "native",
+                "aggregated"
+              ]
+            },
+            "required": false,
+            "name": "origin",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "source",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "tag",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "author",
             "in": "query"
           }
         ],

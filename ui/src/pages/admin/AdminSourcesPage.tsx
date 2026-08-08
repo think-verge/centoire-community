@@ -4,6 +4,7 @@ import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import {
   getListSourcesQueryKey,
+  useBackfillPostCategories,
   useCreateSource,
   useDeleteSource,
   useFetchSourceNow,
@@ -13,11 +14,19 @@ import {
 import { useListTags } from "../../lib/api/generated/tags/tags";
 import type { Source } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
+import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, POST_CATEGORIES, type PostCategoryValue } from "../../lib/categoryTaxonomy";
 
 export function AdminSourcesPage() {
   const { user } = useAuth();
   const { data: sources, isLoading } = useListSources();
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Source | null>(null);
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
+  const backfillCategories = useBackfillPostCategories({
+    mutation: {
+      onSuccess: (result) => setBackfillMessage(`${result.updated} of ${result.scanned} uncategorized posts tagged`),
+    },
+  });
 
   if (user?.role !== "admin") {
     return (
@@ -38,23 +47,34 @@ export function AdminSourcesPage() {
             RSS feeds the ingestion worker pulls into the aggregated feed every 30 minutes.
           </p>
         </div>
-        <Button onClick={() => setAdding(true)}>Add source</Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            loading={backfillCategories.isPending}
+            onClick={() => backfillCategories.mutate()}
+          >
+            Backfill categories
+          </Button>
+          <Button onClick={() => setAdding(true)}>Add source</Button>
+        </div>
       </div>
+      {backfillMessage && <p className="mt-2 text-sm text-ink-soft">{backfillMessage}</p>}
 
       {isLoading && <p className="mt-8 text-ink-faint">Loading…</p>}
 
       <div className="mt-6 space-y-3">
         {(sources ?? []).map((source) => (
-          <SourceRow key={source.id} source={source} />
+          <SourceRow key={source.id} source={source} onEdit={() => setEditing(source)} />
         ))}
       </div>
 
-      {adding && <AddSourceDialog onClose={() => setAdding(false)} />}
+      {adding && <SourceFormDialog onClose={() => setAdding(false)} />}
+      {editing && <SourceFormDialog source={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-function SourceRow({ source }: { source: Source }) {
+function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
   const queryClient = useQueryClient();
   const [stats, setStats] = useState<string | null>(null);
 
@@ -107,6 +127,9 @@ function SourceRow({ source }: { source: Source }) {
           </div>
           <p className="truncate text-xs text-ink-faint">{source.feedUrl}</p>
           <p className="mt-0.5 text-xs text-ink-soft">
+            {source.category ? CATEGORY_LABELS[source.category] : "No category"}
+            {source.subcategory && ` · ${source.subcategory}`}
+            {" — "}
             {source.tags.map((t) => t.name).join(", ") || "No tags"}
             {source.lastFetchedAt &&
               ` · last fetched ${new Date(source.lastFetchedAt).toLocaleString()}`}
@@ -120,6 +143,9 @@ function SourceRow({ source }: { source: Source }) {
             onClick={() => fetchNow.mutate({ id: source.id })}
           >
             Fetch now
+          </Button>
+          <Button variant="ghost" className="!px-2 !py-1.5 text-xs" onClick={onEdit}>
+            Edit
           </Button>
           <Button
             variant="ghost"
@@ -145,23 +171,40 @@ function SourceRow({ source }: { source: Source }) {
   );
 }
 
-function AddSourceDialog({ onClose }: { onClose: () => void }) {
+function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () => void }) {
+  const isEdit = Boolean(source);
   const queryClient = useQueryClient();
   const { data: tags } = useListTags();
-  const [form, setForm] = useState({ name: "", siteUrl: "", feedUrl: "" });
-  const [tagIds, setTagIds] = useState<string[]>([]);
-  const createSource = useCreateSource({
-    mutation: {
-      onSuccess: () => {
-        void queryClient.invalidateQueries({ queryKey: getListSourcesQueryKey() });
-        onClose();
-      },
-    },
+  const [form, setForm] = useState({
+    name: source?.name ?? "",
+    siteUrl: source?.siteUrl ?? "",
+    feedUrl: source?.feedUrl ?? "",
   });
+  const [tagIds, setTagIds] = useState<string[]>(source?.tags.map((t) => t.id) ?? []);
+  const [category, setCategory] = useState<PostCategoryValue | "">(source?.category ?? "");
+  const [subcategory, setSubcategory] = useState(source?.subcategory ?? "");
+
+  function refresh() {
+    void queryClient.invalidateQueries({ queryKey: getListSourcesQueryKey() });
+    onClose();
+  }
+  const createSource = useCreateSource({ mutation: { onSuccess: refresh } });
+  const updateSource = useUpdateSource({ mutation: { onSuccess: refresh } });
+  const pending = isEdit ? updateSource : createSource;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    createSource.mutate({ data: { ...form, tagIds } });
+    const data = {
+      ...form,
+      tagIds,
+      category: category || null,
+      subcategory: category && subcategory ? subcategory : null,
+    };
+    if (isEdit && source) {
+      updateSource.mutate({ id: source.id, data });
+    } else {
+      createSource.mutate({ data });
+    }
   }
 
   return (
@@ -169,15 +212,17 @@ function AddSourceDialog({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="Add source"
+      aria-label={isEdit ? "Edit source" : "Add source"}
       onClick={onClose}
     >
       <div
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-paper p-6 shadow-card-hover"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="kicker mb-1">New source</p>
-        <h2 className="font-display-serif text-2xl font-semibold">Add an RSS source</h2>
+        <p className="kicker mb-1">{isEdit ? "Edit source" : "New source"}</p>
+        <h2 className="font-display-serif text-2xl font-semibold">
+          {isEdit ? "Edit RSS source" : "Add an RSS source"}
+        </h2>
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <Field
             label="Name"
@@ -202,6 +247,50 @@ function AddSourceDialog({ onClose }: { onClose: () => void }) {
             onChange={(e) => setForm({ ...form, feedUrl: e.target.value })}
             required
           />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="source-category" className="mb-1.5 block text-sm font-medium text-ink">
+                Category
+              </label>
+              <select
+                id="source-category"
+                value={category}
+                onChange={(e) => {
+                  setCategory(e.target.value as PostCategoryValue | "");
+                  setSubcategory("");
+                }}
+                className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-crimson focus:outline-none"
+              >
+                <option value="">No category</option>
+                {POST_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {CATEGORY_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-ink-faint">Default for posts imported from this source.</p>
+            </div>
+            <div>
+              <label htmlFor="source-subcategory" className="mb-1.5 block text-sm font-medium text-ink">
+                Subcategory
+              </label>
+              <select
+                id="source-subcategory"
+                value={subcategory}
+                onChange={(e) => setSubcategory(e.target.value)}
+                disabled={!category}
+                className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-crimson focus:outline-none disabled:bg-cream disabled:text-ink-faint"
+              >
+                <option value="">None</option>
+                {category &&
+                  CATEGORY_SUBCATEGORIES[category].map((sub) => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
           <div>
             <p className="mb-1.5 text-sm font-medium">Tags applied to imports</p>
             <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
@@ -230,15 +319,13 @@ function AddSourceDialog({ onClose }: { onClose: () => void }) {
               })}
             </div>
           </div>
-          {createSource.error && (
-            <p className="text-sm text-crimson">{createSource.error.message}</p>
-          )}
+          {pending.error && <p className="text-sm text-crimson">{pending.error.message}</p>}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" loading={createSource.isPending}>
-              Add source
+            <Button type="submit" loading={pending.isPending}>
+              {isEdit ? "Save changes" : "Add source"}
             </Button>
           </div>
         </form>

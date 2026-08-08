@@ -2,9 +2,36 @@ import { useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
+import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
+import { ServerFilterBar } from "../../components/filter/ServerFilterBar";
+import { useServerFilter } from "../../components/filter/useServerFilter";
+import type { FilterFieldDef } from "../../components/filter/types";
 import { useGetFeedDiscoverInfinite } from "../../lib/api/generated/feed/feed";
+import { listSources } from "../../lib/api/generated/admin/admin";
 import { useListTags } from "../../lib/api/generated/tags/tags";
 import type { PostCard } from "../../lib/api/generated/model";
+import type { GetFeedDiscoverOrigin } from "../../lib/api/generated/model";
+
+const DISCOVER_FILTER_CONFIG: FilterFieldDef[] = [
+  {
+    key: "origin",
+    label: "Origin",
+    type: "single",
+    options: [
+      { value: "native", label: "User posts" },
+      { value: "aggregated", label: "Source posts" },
+    ],
+  },
+  {
+    key: "source",
+    label: "Source",
+    type: "multi",
+    loadOptions: async () => {
+      const res = await listSources();
+      return res.map((s) => ({ value: s.id, label: s.name }));
+    },
+  },
+];
 
 export function DiscoverPage() {
   const location = useLocation();
@@ -14,10 +41,14 @@ export function DiscoverPage() {
   const sort = (params.get("sort") as "trending" | "new") ?? "trending";
   const tag = params.get("tag") ?? undefined;
   const { data: tags } = useListTags();
+  const { activeFilters, filterCount } = useServerFilter(DISCOVER_FILTER_CONFIG);
+
+  const origin = activeFilters.origin?.[0] as GetFeedDiscoverOrigin | undefined;
+  const source = activeFilters.source?.[0];
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedDiscoverInfinite(
-      { sort, tag },
+      { sort, tag, origin, source },
       {
         query: {
           initialPageParam: undefined,
@@ -62,7 +93,16 @@ export function DiscoverPage() {
             {value === "trending" ? "Trending" : "New"}
           </button>
         ))}
+        <div className="ml-auto">
+          <ServerFilterBar config={DISCOVER_FILTER_CONFIG} />
+        </div>
       </div>
+
+      {filterCount > 0 && (
+        <div className="mt-2">
+          <ActiveFilterPills config={DISCOVER_FILTER_CONFIG} />
+        </div>
+      )}
 
       <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
         <button
@@ -100,6 +140,7 @@ export function DiscoverPage() {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
           onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
+          showCategoryPill
           emptyState={
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">Nothing here yet</p>

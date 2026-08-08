@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UpdatePostInputContent } from './updatePostInputContent';
+import type { UpdatePostInputCategory } from './updatePostInputCategory';
 
 export interface UpdatePostInput {
   /**
@@ -20,4 +21,8 @@ export interface UpdatePostInput {
   circleId?: string | null;
   /** @nullable */
   coverImageUrl?: string | null;
+  /** @nullable */
+  category?: UpdatePostInputCategory;
+  /** @nullable */
+  subcategory?: string | null;
 }

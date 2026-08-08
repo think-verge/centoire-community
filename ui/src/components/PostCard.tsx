@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { AvatarBubble } from "./AppShell";
 import { PostActions } from "./PostActions";
+import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 
 /**
  * Masonry hybrid: posts with a cover image render as visual cards, text posts
@@ -10,9 +11,13 @@ import { PostActions } from "./PostActions";
 export function PostCard({
   post,
   onOpenPost,
+  showCategoryPill,
 }: {
   post: PostCardType;
   onOpenPost?: (post: PostCardType) => void;
+  /** Discover mixes all categories together — show which one each card belongs to.
+   *  Vertical CategoryPages don't need this since every card there is already the same category. */
+  showCategoryPill?: boolean;
 }) {
   const navigate = useNavigate();
   const external = post.origin === "aggregated" && post.externalUrl;
@@ -51,6 +56,12 @@ export function PostCard({
               {tag.name}
             </Link>
           ))}
+          {showCategoryPill && post.category && isPostCategory(post.category) && (
+            <span className="rounded-full border border-line bg-cream px-2.5 py-0.5 text-xs text-ink-soft">
+              {CATEGORY_LABELS[post.category]}
+              {post.subcategory && ` · ${post.subcategory}`}
+            </span>
+          )}
         </div>
         <button type="button" onClick={openPost} className="block cursor-pointer text-left">
           <h2 className="font-display-serif text-xl font-semibold leading-snug group-hover:text-crimson-deep">

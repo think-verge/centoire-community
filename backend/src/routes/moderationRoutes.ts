@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { asyncHandler } from "../utils/async-handler.js";
 import { requireAuth, requirePermission } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
 import * as moderationController from "../controllers/moderationController.js";
+import { ModerationQueueQuerySchema } from "../schemas/moderation.js";
 
 export const moderationRouter = Router();
 
@@ -12,6 +14,7 @@ moderationRouter.use(requireAuth);
 moderationRouter.get(
   "/queue",
   requirePermission("moderation.review"),
+  validate({ query: ModerationQueueQuerySchema }),
   asyncHandler(moderationController.listQueue),
 );
 moderationRouter.post(
