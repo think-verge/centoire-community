@@ -42,7 +42,6 @@ export function PostCard({
           <img
             src={post.coverImageUrl}
             alt=""
-            loading="lazy"
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageLoaded(true)}
             className={`max-h-72 w-full object-cover transition-opacity duration-300 ${
