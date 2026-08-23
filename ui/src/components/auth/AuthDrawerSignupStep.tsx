@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Field } from "../Field";
 import { useSignup } from "../../lib/api/generated/auth/auth";
-import { useAuth } from "../../lib/auth-context";
 import { AuthDrawerSocialRow } from "./AuthDrawerSocialRow";
 import { CoralButton } from "./CoralButton";
 
@@ -11,13 +10,12 @@ interface AuthDrawerSignupStepProps {
 }
 
 export function AuthDrawerSignupStep({ onSwitchToLogin, onSignedUp }: AuthDrawerSignupStepProps) {
-  const { refresh } = useAuth();
   const [form, setForm] = useState({ displayName: "", email: "", password: "" });
 
   const signup = useSignup({
     mutation: {
-      onSuccess: async () => {
-        await refresh();
+      // No refresh() here — it'd flip `user` truthy and trigger LandingPage's redirect to /feed, skipping this step.
+      onSuccess: () => {
         onSignedUp(form.email);
       },
     },

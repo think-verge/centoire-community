@@ -17,9 +17,9 @@ export function AppShell() {
   const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
-      onSuccess: () => {
+      onSettled: () => {
         queryClient.clear();
-        navigate("/login");
+        navigate("/");
       },
     },
   });
