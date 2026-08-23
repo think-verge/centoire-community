@@ -25,7 +25,7 @@ export function Footer() {
     <footer className="flex flex-col gap-16 bg-sand px-6 pb-10 pt-16 sm:px-20 sm:pt-20">
       <div className="flex flex-col gap-10 sm:flex-row sm:justify-between">
         <div className="flex max-w-[300px] flex-col gap-4">
-          <img src={logoDark} alt="Centoire" className="h-10 w-auto" />
+          <img src={logoDark} alt="Centoire" className="h-10 w-auto self-start" />
           <p className="font-ui text-[13px] leading-[1.5] text-stone">
             High-fashion and lifestyle curation platform. Bringing together editorial, lookbooks,
             and essays on design in one clean broadsheet stream.

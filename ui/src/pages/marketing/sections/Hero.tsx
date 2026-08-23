@@ -4,9 +4,9 @@ import logoLight from "../../../assets/landing/logo-light.svg";
 
 export function Hero() {
   return (
-    <section className="relative flex flex-col items-center justify-center gap-8 overflow-hidden px-6 py-20 sm:px-20 sm:py-24">
+    <section className="relative flex min-h-screen flex-col items-center justify-center gap-8 overflow-hidden px-6 py-20 sm:px-20 sm:py-24">
       <div aria-hidden className="absolute inset-0">
-        <img src={heroBg} alt="" className="size-full object-cover" />
+        <img src={heroBg} alt="" className="size-full object-cover object-top" />
         <div className="absolute inset-0 bg-[rgba(10,10,10,0.45)]" />
       </div>
 

@@ -51,7 +51,7 @@ export function EditorialPicks() {
 
       <div className="flex flex-col gap-12 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-6">
-          <img src={featureImg} alt="" className="h-auto w-full rounded-sm object-cover sm:h-[480px]" />
+          <img src={featureImg} alt="" className="h-auto w-full rounded-sm object-cover object-top sm:h-[480px]" />
           <div className="flex flex-col gap-3">
             <CategoryPill brand="Vogue" topic="Artisanal Curation" />
             <h3 className="font-editorial text-3xl leading-[1.1] text-charcoal sm:text-[44px]">
@@ -74,7 +74,7 @@ export function EditorialPicks() {
               <img
                 src={item.image}
                 alt=""
-                className="size-[140px] shrink-0 rounded-[6px] object-cover"
+                className="size-[140px] shrink-0 rounded-[6px] object-cover object-top"
               />
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <CategoryPill brand={item.brand} topic={item.topic} />

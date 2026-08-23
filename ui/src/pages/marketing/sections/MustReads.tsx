@@ -61,7 +61,7 @@ export function MustReads() {
             <img
               src={item.image}
               alt=""
-              className="size-[72px] shrink-0 rounded-[6px] object-cover sm:size-[100px]"
+              className="size-[72px] shrink-0 rounded-[6px] object-cover object-top sm:size-[100px]"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex items-center gap-2">

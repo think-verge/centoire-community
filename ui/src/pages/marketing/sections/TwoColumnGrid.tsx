@@ -49,7 +49,7 @@ export function TwoColumnGrid() {
             <img
               src={essay.image}
               alt=""
-              className="hidden h-[180px] w-[240px] shrink-0 rounded-sm object-cover sm:block"
+              className="hidden h-[180px] w-[240px] shrink-0 rounded-sm object-cover object-top sm:block"
             />
             <div className="flex min-w-0 flex-1 flex-col gap-3">
               <div className="flex items-center gap-2">

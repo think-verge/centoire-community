@@ -24,7 +24,7 @@ export function FromGQ() {
             <img
               src={card.image}
               alt=""
-              className="h-[280px] w-full rounded-[8px] object-cover sm:h-[320px]"
+              className="h-[280px] w-full rounded-[8px] object-cover object-top sm:h-[320px]"
             />
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
