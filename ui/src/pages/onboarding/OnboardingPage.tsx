@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logoDark from "../../assets/landing/logo-dark.svg";
 import { AvatarBubble } from "../../components/AppShell";
@@ -17,6 +17,7 @@ import {
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
 import { useJoinCircle, useLeaveCircle } from "../../lib/api/generated/circles/circles";
+import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 import type { Circle } from "../../lib/api/generated/model";
 import type { Tag } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
@@ -315,6 +316,9 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
   const [handle, setHandle] = useState(user?.handle ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const updateMe = useUpdateMe();
   const complete = useCompleteOnboarding({
     mutation: {
@@ -325,8 +329,20 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
     },
   });
 
+  async function handleAvatar(file: File) {
+    setAvatarUploading(true);
+    try {
+      const result = await uploadImage({ file });
+      setAvatarUrl(result.url);
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function finish() {
-    await updateMe.mutateAsync({ data: { handle, bio: bio || undefined } });
+    await updateMe.mutateAsync({
+      data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+    });
     complete.mutate();
   }
 
@@ -340,7 +356,28 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
       <p className="mt-2 text-center text-sm text-stone">
         Your handle is how the community knows you.
       </p>
-      <div className="mt-8 space-y-4">
+      <div className="mt-8 flex items-center gap-4">
+        <AvatarBubble name={user?.displayName ?? "?"} url={avatarUrl} size="size-16 text-2xl" />
+        <button
+          type="button"
+          disabled={avatarUploading}
+          onClick={() => fileRef.current?.click()}
+          className="font-ui rounded-full border border-hairline bg-white px-4 py-2 text-sm font-semibold text-charcoal transition-colors hover:border-stone disabled:opacity-50"
+        >
+          {avatarUploading ? "Uploading…" : "Upload photo"}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleAvatar(file);
+          }}
+        />
+      </div>
+      <div className="mt-6 space-y-4">
         <Field
           label="Handle"
           placeholder="e.g. atelier_mira"

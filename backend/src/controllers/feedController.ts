@@ -25,6 +25,8 @@ export async function discover(req: Request, res: Response): Promise<void> {
     source?: string;
     category?: PostCategory;
     subcategory?: string;
+    country?: string;
+    q?: string;
     cursor?: string;
   };
   let tagId: Types.ObjectId | undefined;
@@ -45,6 +47,8 @@ export async function discover(req: Request, res: Response): Promise<void> {
       origin: query.origin,
       category: query.category,
       subcategory: query.subcategory,
+      country: query.country?.toUpperCase(),
+      q: query.q,
       cursor: query.cursor,
     },
     req.user?.userId,

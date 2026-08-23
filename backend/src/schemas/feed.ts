@@ -20,6 +20,11 @@ export const DiscoverQuerySchema = z.object({
   source: z.string().optional(),
   category: PostCategorySchema.optional(),
   subcategory: z.string().optional(),
+  country: z
+    .string()
+    .regex(/^[A-Za-z]{2}$/, "country must be a 2-letter ISO 3166-1 alpha-2 code")
+    .optional(),
+  q: z.string().min(1).max(200).optional(),
   cursor: z.string().optional(),
 });
 

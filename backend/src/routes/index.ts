@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { adminPostRouter } from "./adminPostRoutes.js";
+import { agentRouter } from "./agentRoutes.js";
 import { authRouter } from "./authRoutes.js";
 import { circleRouter } from "./circleRoutes.js";
 import {
@@ -41,6 +42,7 @@ apiRouter.use("/admin/invites", inviteRouter);
 apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/search", searchRouter);
+apiRouter.use("/agent", agentRouter);
 apiRouter.use("/internal", internalRouter);
 
 apiRouter.get("/health", (_req, res) => {

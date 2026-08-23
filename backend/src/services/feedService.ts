@@ -222,6 +222,8 @@ export async function discover(
     origin?: string;
     category?: PostCategory;
     subcategory?: string;
+    country?: string;
+    q?: string;
     cursor?: string;
   },
   userId?: string,
@@ -232,6 +234,8 @@ export async function discover(
   if (options.origin) base.origin = options.origin;
   if (options.category) base.category = options.category;
   if (options.subcategory) base.subcategory = options.subcategory;
+  if (options.country) base.country = options.country;
+  if (options.q) base.$text = { $search: options.q };
 
   if (options.sort === "trending") {
     const since = new Date(Date.now() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);

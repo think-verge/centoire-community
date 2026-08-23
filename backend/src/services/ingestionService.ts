@@ -8,6 +8,7 @@ import { readTimeMinutes } from "../utils/read-time.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { finalizePublish } from "./postService.js";
 import { fireAiProcessing } from "./aiService.js";
+import { inferCountry } from "./regionService.js";
 
 const parser = new Parser({
   timeout: 15_000,
@@ -106,6 +107,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
 
       // Check policy before creating — determines initial status (Phase 1: identity only)
       const policyOutcome = await evaluatePolicy({ sourceId: source._id.toString(), origin: "aggregated" });
+      const country = await inferCountry({ title, excerpt });
 
       try {
         const post = await Post.create({
@@ -122,6 +124,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           tags: source.tags,
           category: source.category,
           subcategory: source.subcategory,
+          country: country ?? undefined,
           publishedAt,
           readTimeMinutes: readTimeMinutes(excerpt),
         });

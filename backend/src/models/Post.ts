@@ -22,6 +22,7 @@ export interface IPost extends Document {
   circleId?: Types.ObjectId;
   category?: PostCategory;
   subcategory?: string;
+  country?: string;
   upvoteCount: number;
   downvoteCount: number;
   commentCount: number;
@@ -66,6 +67,7 @@ const postSchema = new Schema<IPost>(
     circleId: { type: Schema.Types.ObjectId, ref: "Circle" },
     category: { type: String, enum: POST_CATEGORIES },
     subcategory: { type: String },
+    country: { type: String, uppercase: true, minlength: 2, maxlength: 2 },
     upvoteCount: { type: Number, default: 0 },
     downvoteCount: { type: Number, default: 0 },
     commentCount: { type: Number, default: 0 },
@@ -95,6 +97,7 @@ postSchema.index({ status: 1, circleId: 1, publishedAt: -1 });
 postSchema.index({ authorId: 1, status: 1, updatedAt: -1 });
 postSchema.index({ status: 1, category: 1, publishedAt: -1 });
 postSchema.index({ status: 1, category: 1, subcategory: 1, publishedAt: -1 });
+postSchema.index({ status: 1, country: 1, publishedAt: -1 });
 postSchema.index({ title: "text", contentText: "text", excerpt: "text" });
 
 postSchema.pre("validate", function (next) {

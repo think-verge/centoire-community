@@ -23,243 +23,6 @@
           "detail"
         ]
       },
-      "TagRef": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug"
-        ]
-      },
-      "PublicUser": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "handle": {
-            "type": "string",
-            "nullable": true
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "avatarUrl": {
-            "type": "string",
-            "nullable": true
-          },
-          "bio": {
-            "type": "string",
-            "nullable": true
-          },
-          "reputation": {
-            "type": "number"
-          },
-          "followerCount": {
-            "type": "number"
-          },
-          "followingCount": {
-            "type": "number"
-          },
-          "postCount": {
-            "type": "number"
-          },
-          "createdAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "handle",
-          "displayName",
-          "avatarUrl",
-          "bio",
-          "reputation",
-          "followerCount",
-          "followingCount",
-          "postCount",
-          "createdAt"
-        ]
-      },
-      "CurrentUser": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/PublicUser"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "email": {
-                "type": "string"
-              },
-              "role": {
-                "type": "string",
-                "enum": [
-                  "member",
-                  "creator",
-                  "editor",
-                  "admin"
-                ]
-              },
-              "emailVerified": {
-                "type": "boolean"
-              },
-              "onboardingCompleted": {
-                "type": "boolean"
-              },
-              "interests": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/TagRef"
-                }
-              }
-            },
-            "required": [
-              "email",
-              "role",
-              "emailVerified",
-              "onboardingCompleted",
-              "interests"
-            ]
-          }
-        ]
-      },
-      "SignupInput": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 128
-          },
-          "displayName": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 60
-          },
-          "inviteToken": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "email",
-          "password",
-          "displayName"
-        ]
-      },
-      "LoginInput": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "email",
-          "password"
-        ]
-      },
-      "GoogleLoginInput": {
-        "type": "object",
-        "properties": {
-          "idToken": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "idToken"
-        ]
-      },
-      "VerifyEmailInput": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "token"
-        ]
-      },
-      "ForgotPasswordInput": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        },
-        "required": [
-          "email"
-        ]
-      },
-      "ResetPasswordInput": {
-        "type": "object",
-        "properties": {
-          "token": {
-            "type": "string",
-            "minLength": 1
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 128
-          }
-        },
-        "required": [
-          "token",
-          "password"
-        ]
-      },
-      "Sent": {
-        "type": "object",
-        "properties": {
-          "sent": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "sent"
-        ]
-      },
-      "GoogleConfig": {
-        "type": "object",
-        "properties": {
-          "enabled": {
-            "type": "boolean"
-          },
-          "clientId": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "enabled",
-          "clientId"
-        ]
-      },
       "ViewerState": {
         "type": "object",
         "properties": {
@@ -672,6 +435,303 @@
           "url",
           "width",
           "height"
+        ]
+      },
+      "AgentSearchFilters": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "fashion",
+              "beauty",
+              "lifestyle",
+              "ai_technology",
+              "business_intelligence"
+            ]
+          },
+          "subcategory": {
+            "type": "string",
+            "nullable": true
+          },
+          "tag": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "slug",
+              "name"
+            ]
+          },
+          "country": {
+            "type": "string",
+            "nullable": true
+          },
+          "q": {
+            "type": "string",
+            "nullable": true
+          },
+          "sort": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "trending",
+              "new"
+            ]
+          }
+        },
+        "required": [
+          "category",
+          "subcategory",
+          "tag",
+          "country",
+          "q",
+          "sort"
+        ]
+      },
+      "TagRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "PublicUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "bio": {
+            "type": "string",
+            "nullable": true
+          },
+          "reputation": {
+            "type": "number"
+          },
+          "followerCount": {
+            "type": "number"
+          },
+          "followingCount": {
+            "type": "number"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "handle",
+          "displayName",
+          "avatarUrl",
+          "bio",
+          "reputation",
+          "followerCount",
+          "followingCount",
+          "postCount",
+          "createdAt"
+        ]
+      },
+      "CurrentUser": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/PublicUser"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "member",
+                  "creator",
+                  "editor",
+                  "admin"
+                ]
+              },
+              "emailVerified": {
+                "type": "boolean"
+              },
+              "onboardingCompleted": {
+                "type": "boolean"
+              },
+              "interests": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TagRef"
+                }
+              }
+            },
+            "required": [
+              "email",
+              "role",
+              "emailVerified",
+              "onboardingCompleted",
+              "interests"
+            ]
+          }
+        ]
+      },
+      "SignupInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "inviteToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "displayName"
+        ]
+      },
+      "LoginInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "GoogleLoginInput": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
+      "VerifyEmailInput": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ForgotPasswordInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordInput": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ]
+      },
+      "Sent": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sent"
+        ]
+      },
+      "GoogleConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "clientId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "enabled",
+          "clientId"
         ]
       },
       "Tag": {
@@ -3238,6 +3298,25 @@
           },
           {
             "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{2}$"
+            },
+            "required": false,
+            "name": "country",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "string"
             },
             "required": false,
@@ -4462,6 +4541,45 @@
         "responses": {
           "204": {
             "description": "All marked as read"
+          }
+        }
+      }
+    },
+    "/agent/search-query": {
+      "post": {
+        "tags": [
+          "agent"
+        ],
+        "operationId": "agentSearchQuery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "query"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resolved search filters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSearchFilters"
+                }
+              }
+            }
           }
         }
       }

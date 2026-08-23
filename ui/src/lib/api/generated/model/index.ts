@@ -6,6 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './agentSearchFilters';
+export * from './agentSearchFiltersCategory';
+export * from './agentSearchFiltersSort';
+export * from './agentSearchFiltersTag';
+export * from './agentSearchQueryBody';
 export * from './backfillCategoriesResult';
 export * from './bookmarkFolders';
 export * from './bookmarkFoldersFoldersItem';

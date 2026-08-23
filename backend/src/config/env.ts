@@ -30,6 +30,7 @@ export const env = {
   INGESTION_CRON: process.env.INGESTION_CRON ?? "*/30 * * * *",
   AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
   AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
 };
 
 export const isProduction = env.NODE_ENV === "production";

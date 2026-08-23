@@ -12,6 +12,7 @@ import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
+import { inferCountry } from "./regionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 
 interface PostInput {
@@ -136,6 +137,10 @@ export async function publishPost(userId: string, postId: string, role: UserRole
   if (post.status === "published" || post.status === "pending_review") return post;
   if (!post.title.trim()) throw new ApiError(422, "Give your post a title before publishing");
   if (!post.contentText?.trim()) throw new ApiError(422, "Write something before publishing");
+
+  if (!post.country) {
+    post.country = (await inferCountry({ title: post.title, excerpt: post.excerpt })) ?? undefined;
+  }
 
   if (hasPermission(role, "post.bypass_queue")) {
     // Editors, admins bypass the moderation queue; AI still runs for quality data

@@ -16,5 +16,14 @@ origin?: GetFeedDiscoverOrigin;
 source?: string;
 category?: GetFeedDiscoverCategory;
 subcategory?: string;
+/**
+ * @pattern ^[A-Za-z]{2}$
+ */
+country?: string;
+/**
+ * @minLength 1
+ * @maxLength 200
+ */
+q?: string;
 cursor?: string;
 };

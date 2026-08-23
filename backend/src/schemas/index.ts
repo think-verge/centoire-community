@@ -1,3 +1,4 @@
+import { registerAgentPaths } from "./agent.js";
 import { registerAuthPaths } from "./auth.js";
 import {
   registerCircleContentPaths,
@@ -30,4 +31,5 @@ export function registerPaths(): void {
   registerUserContentPaths();
   registerModerationPaths();
   registerNotificationPaths();
+  registerAgentPaths();
 }
