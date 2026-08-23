@@ -1,5 +1,14 @@
 type IconProps = { className?: string };
 
+export function BellIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <path d="M6 9a6 6 0 1 1 12 0c0 3 1 5 1.8 6.2a.9.9 0 0 1-.75 1.4H4.95a.9.9 0 0 1-.75-1.4C5.05 14 6 12 6 9z" strokeLinejoin="round" />
+      <path d="M9.5 19a2.5 2.5 0 0 0 5 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>

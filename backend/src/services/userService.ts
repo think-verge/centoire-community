@@ -4,6 +4,7 @@ import { Follow } from "../models/Follow.js";
 import { Tag } from "../models/Tag.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
+import { emitDomainEvent } from "../events/eventBus.js";
 
 const RESERVED_HANDLES = new Set([
   "admin", "centoire", "settings", "feed", "discover", "circles", "search",
@@ -91,6 +92,7 @@ export async function followUser(followerId: string, followeeId: string): Promis
   }
   await User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } });
   await User.updateOne({ _id: followeeId }, { $inc: { followerCount: 1 } });
+  emitDomainEvent("user.followed", { followerId, followeeId });
 }
 
 export async function unfollowUser(followerId: string, followeeId: string): Promise<void> {

@@ -9,6 +9,7 @@ import { registerEngagementPaths } from "./engagement.js";
 import { registerFeedPaths } from "./feed.js";
 import { registerInvitePaths } from "./invites.js";
 import { registerModerationPaths } from "./moderation.js";
+import { registerNotificationPaths } from "./notifications.js";
 import { registerPostPaths } from "./posts.js";
 import { registerSearchPaths } from "./search.js";
 import { registerSourcePaths } from "./sources.js";
@@ -28,4 +29,5 @@ export function registerPaths(): void {
   registerSearchPaths();
   registerUserContentPaths();
   registerModerationPaths();
+  registerNotificationPaths();
 }

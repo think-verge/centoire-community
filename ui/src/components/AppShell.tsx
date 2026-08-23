@@ -7,12 +7,14 @@ import { hasPermission } from "../lib/permissions";
 import { DesktopSidebar } from "./nav/DesktopSidebar";
 import { MobileNav } from "./nav/MobileNav";
 import { SearchIcon } from "./nav/icons";
+import { NotificationBell } from "./NotificationBell";
 
 export function AppShell() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
+  const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
       onSuccess: () => {
@@ -44,11 +46,16 @@ export function AppShell() {
             >
               Write
             </Link>
+            <NotificationBell
+              active={activeMenu === "bell"}
+              onToggle={() => setActiveMenu((prev) => (prev === "bell" ? null : "bell"))}
+              onClose={() => setActiveMenu(null)}
+            />
             <div className="relative">
               <button
                 type="button"
                 aria-label="Account menu"
-                onClick={() => setMenuOpen((open) => !open)}
+                onClick={() => setActiveMenu((prev) => (prev === "account" ? null : "account"))}
                 className="block rounded-full ring-crimson focus:outline-none focus-visible:ring-2"
               >
                 <AvatarBubble name={user?.displayName ?? "?"} url={user?.avatarUrl ?? null} />
@@ -56,28 +63,28 @@ export function AppShell() {
               {menuOpen && (
                 <div
                   className="absolute right-0 mt-2 w-48 rounded-xl border border-line bg-paper py-1 shadow-card-hover"
-                  onMouseLeave={() => setMenuOpen(false)}
+                  onMouseLeave={() => setActiveMenu(null)}
                 >
                   {user?.handle && (
-                    <MenuLink to={`/u/${user.handle}`} onClick={() => setMenuOpen(false)}>
+                    <MenuLink to={`/u/${user.handle}`} onClick={() => setActiveMenu(null)}>
                       Profile
                     </MenuLink>
                   )}
-                  <MenuLink to="/settings" onClick={() => setMenuOpen(false)}>
+                  <MenuLink to="/settings" onClick={() => setActiveMenu(null)}>
                     Settings
                   </MenuLink>
                   {user?.role === "admin" && (
-                    <MenuLink to="/admin/sources" onClick={() => setMenuOpen(false)}>
+                    <MenuLink to="/admin/sources" onClick={() => setActiveMenu(null)}>
                       Sources admin
                     </MenuLink>
                   )}
                   {hasPermission(user?.role, "moderation.review") && (
-                    <MenuLink to="/moderation" onClick={() => setMenuOpen(false)}>
+                    <MenuLink to="/moderation" onClick={() => setActiveMenu(null)}>
                       Moderation
                     </MenuLink>
                   )}
                   {hasPermission(user?.role, "user.invite") && (
-                    <MenuLink to="/admin/invites" onClick={() => setMenuOpen(false)}>
+                    <MenuLink to="/admin/invites" onClick={() => setActiveMenu(null)}>
                       Invites
                     </MenuLink>
                   )}

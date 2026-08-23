@@ -12,6 +12,7 @@ import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
+import { emitDomainEvent } from "../events/eventBus.js";
 
 interface PostInput {
   title: string;
@@ -116,7 +117,16 @@ export async function finalizePublish(post: IPost): Promise<void> {
         refType: "post",
         refId: post._id.toString(),
       });
+      emitDomainEvent("post.approved", { postId: post._id.toString(), recipientId: post.authorId.toString() });
     }
+  }
+}
+
+// Shared by publishPost's auto_reject branch and moderationService.reject —
+// keeps the notification trigger in one place for both rejection paths.
+export function emitRejection(post: IPost): void {
+  if (post.authorId) {
+    emitDomainEvent("post.rejected", { postId: post._id.toString(), recipientId: post.authorId.toString() });
   }
 }
 
@@ -151,6 +161,7 @@ export async function publishPost(userId: string, postId: string, role: UserRole
     post.reviewedAt = new Date();
     post.rejectionReason = "Rejected by moderation policy";
     await post.save();
+    emitRejection(post);
     return post;
   }
 

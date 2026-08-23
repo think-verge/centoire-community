@@ -3,7 +3,7 @@ import { Post, type IPost } from "../models/Post.js";
 import { Tag } from "../models/Tag.js";
 import { User } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
-import { finalizePublish } from "./postService.js";
+import { emitRejection, finalizePublish } from "./postService.js";
 
 const QUEUE_PAGE_SIZE = 20;
 
@@ -97,5 +97,6 @@ export async function reject(editorId: string, postId: string, reason: string): 
   post.reviewedAt = new Date();
   post.rejectionReason = reason;
   await post.save();
+  emitRejection(post);
   return post;
 }

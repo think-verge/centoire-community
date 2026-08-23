@@ -12,6 +12,7 @@ import { feedRouter } from "./feedRoutes.js";
 import { internalRouter } from "./internalRoutes.js";
 import { inviteRouter } from "./inviteRoutes.js";
 import { moderationRouter } from "./moderationRoutes.js";
+import { notificationRouter } from "./notificationRoutes.js";
 import { onboardingRouter } from "./onboardingRoutes.js";
 import { postRouter } from "./postRoutes.js";
 import { searchRouter } from "./searchRoutes.js";
@@ -38,6 +39,7 @@ apiRouter.use("/admin/sources", sourceRouter);
 apiRouter.use("/admin/posts", adminPostRouter);
 apiRouter.use("/admin/invites", inviteRouter);
 apiRouter.use("/moderation", moderationRouter);
+apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/search", searchRouter);
 apiRouter.use("/internal", internalRouter);
 

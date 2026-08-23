@@ -13,3 +13,4 @@ import "./Bookmark.js";
 import "./ReputationEvent.js";
 import "./Invite.js";
 import "./ModerationPolicy.js";
+import "./Notification.js";

@@ -2,9 +2,11 @@ import { Types } from "mongoose";
 import { Bookmark, BookmarkFolder } from "../models/Bookmark.js";
 import { Comment, type IComment } from "../models/Comment.js";
 import { Post } from "../models/Post.js";
+import { User } from "../models/User.js";
 import { Vote, type VoteTargetType } from "../models/Vote.js";
 import { ApiError } from "../utils/api-error.js";
 import * as reputationService from "./reputationService.js";
+import { emitDomainEvent } from "../events/eventBus.js";
 
 const REP_BY_TARGET: Record<VoteTargetType, { type: "post_upvoted" | "comment_upvoted"; amount: number }> = {
   post: { type: "post_upvoted", amount: 10 },
@@ -60,6 +62,17 @@ export async function setVote(
       refId: targetId,
       actorId: userId,
     });
+    if (targetType === "post") {
+      emitDomainEvent("post.upvoted", { actorId: userId, recipientId: target.authorId, postId: targetId });
+    } else {
+      const comment = await Comment.findById(targetId).select("postId").lean();
+      emitDomainEvent("comment.upvoted", {
+        actorId: userId,
+        recipientId: target.authorId,
+        commentId: targetId,
+        postId: comment?.postId.toString() ?? "",
+      });
+    }
   }
 }
 
@@ -165,6 +178,19 @@ export async function listBookmarkedPostIds(
 
 // --- Comments ---
 
+const MENTION_PATTERN = /@([a-z0-9_]{3,24})/gi;
+
+async function notifyMentions(content: string, actorId: string, postId: string, commentId: string): Promise<void> {
+  const handles = [...content.matchAll(MENTION_PATTERN)].map((m) => m[1]!.toLowerCase());
+  if (!handles.length) return;
+  const mentioned = await User.find({ handle: { $in: [...new Set(handles)] } }).select("_id");
+  for (const user of mentioned) {
+    const recipientId = user._id.toString();
+    if (recipientId === actorId) continue;
+    emitDomainEvent("comment.mentioned", { actorId, recipientId, postId, commentId });
+  }
+}
+
 export async function createComment(
   userId: string,
   postId: string,
@@ -175,12 +201,14 @@ export async function createComment(
   if (!post || post.status !== "published") throw new ApiError(404, "Post not found");
 
   let depth = 0;
+  let parentAuthorId: string | undefined;
   if (parentId) {
     const parent = await Comment.findById(parentId);
     if (!parent || parent.postId.toString() !== postId) {
       throw new ApiError(404, "Parent comment not found");
     }
     depth = Math.min(parent.depth + 1, 2);
+    parentAuthorId = parent.authorId.toString();
   }
 
   const comment = await Comment.create({
@@ -194,6 +222,21 @@ export async function createComment(
   if (parentId) {
     await Comment.updateOne({ _id: parentId }, { $inc: { replyCount: 1 } });
   }
+
+  const commentId = comment._id.toString();
+  if (post.authorId) {
+    emitDomainEvent("comment.created", {
+      actorId: userId,
+      recipientId: post.authorId.toString(),
+      postId,
+      commentId,
+    });
+  }
+  if (parentAuthorId) {
+    emitDomainEvent("comment.replied", { actorId: userId, recipientId: parentAuthorId, postId, commentId });
+  }
+  void notifyMentions(content, userId, postId, commentId);
+
   return comment.populate("authorId", "handle displayName avatarUrl reputation");
 }
 
