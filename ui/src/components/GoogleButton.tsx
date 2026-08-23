@@ -18,7 +18,7 @@ declare global {
 
 let gsiScriptPromise: Promise<void> | null = null;
 
-function loadGsiScript(): Promise<void> {
+export function loadGsiScript(): Promise<void> {
   if (!gsiScriptPromise) {
     gsiScriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");

@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../../components/AuthLayout";
 import { Button } from "../../components/Button";
+import { AuthWelcomePanel } from "../../components/auth/AuthWelcomePanel";
 import {
   useResendVerification,
   useVerifyEmail,
@@ -13,11 +14,12 @@ export function VerifyEmailPage() {
   const token = params.get("token");
   const navigate = useNavigate();
   const { user, refresh } = useAuth();
+  const [verified, setVerified] = useState(false);
   const verify = useVerifyEmail({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/onboarding");
+        setVerified(true);
       },
     },
   });
@@ -29,6 +31,19 @@ export function VerifyEmailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  if (verified || user?.emailVerified) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-cream px-4 py-12">
+        <Link to="/" className="font-display-serif mb-10 text-3xl font-bold tracking-tight">
+          Centoire
+        </Link>
+        <div className="w-full max-w-md rounded-xl bg-blush p-8 shadow-card sm:p-10">
+          <AuthWelcomePanel onGetStarted={() => navigate("/onboarding")} />
+        </div>
+      </main>
+    );
+  }
 
   if (token) {
     return (
@@ -56,7 +71,7 @@ export function VerifyEmailPage() {
           : "Open the verification link we emailed you to unlock posting and commenting."
       }
     >
-      {user && !user.emailVerified && (
+      {user && (
         <div className="space-y-3">
           <Button
             variant="secondary"
@@ -69,14 +84,6 @@ export function VerifyEmailPage() {
           <Link to="/feed" className="block text-center text-sm text-ink-soft hover:text-ink">
             Continue to your feed
           </Link>
-        </div>
-      )}
-      {user?.emailVerified && (
-        <div className="space-y-4">
-          <p className="text-sm text-ink-soft">Your email is verified.</p>
-          <Button className="w-full" onClick={() => navigate("/feed")}>
-            Go to your feed
-          </Button>
         </div>
       )}
     </AuthLayout>

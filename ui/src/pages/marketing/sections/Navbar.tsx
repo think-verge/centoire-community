@@ -4,7 +4,11 @@ import logoDark from "../../../assets/landing/logo-dark.svg";
 
 const NAV_LINKS = ["Curation", "Essays", "Showcases", "Diaries", "Archive"];
 
-export function Navbar() {
+interface NavbarProps {
+  onOpenAuth: (step: "login" | "signup") => void;
+}
+
+export function Navbar({ onOpenAuth }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -34,15 +38,20 @@ export function Navbar() {
       </nav>
 
       <div className="hidden items-center gap-6 md:flex">
-        <Link to="/login" className="font-ui text-sm font-semibold text-charcoal underline">
+        <button
+          type="button"
+          onClick={() => onOpenAuth("login")}
+          className="font-ui text-sm font-semibold text-charcoal underline"
+        >
           Sign In
-        </Link>
-        <Link
-          to="/signup"
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpenAuth("signup")}
           className="font-ui rounded bg-coral px-6 py-2.5 text-[13px] font-bold uppercase text-white transition-opacity hover:opacity-90"
         >
           Subscribe
-        </Link>
+        </button>
       </div>
 
       {menuOpen && (
@@ -53,15 +62,26 @@ export function Navbar() {
             </span>
           ))}
           <div className="mt-2 flex items-center gap-6">
-            <Link to="/login" className="font-ui text-sm font-semibold text-charcoal underline">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenAuth("login");
+              }}
+              className="font-ui text-sm font-semibold text-charcoal underline"
+            >
               Sign In
-            </Link>
-            <Link
-              to="/signup"
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenAuth("signup");
+              }}
               className="font-ui rounded bg-coral px-6 py-2.5 text-[13px] font-bold uppercase text-white"
             >
               Subscribe
-            </Link>
+            </button>
           </div>
         </div>
       )}
