@@ -70,7 +70,7 @@ export function AuthDrawerSignupStep({ onSwitchToLogin, onSignedUp }: AuthDrawer
             minLength={8}
           />
           {signup.error && <p className="text-sm text-crimson">{signup.error.message}</p>}
-          <CoralButton type="submit" loading={signup.isPending}>
+          <CoralButton type="submit" className="w-full" loading={signup.isPending}>
             Sign Up
           </CoralButton>
         </form>

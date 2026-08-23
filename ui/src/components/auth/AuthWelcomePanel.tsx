@@ -17,7 +17,7 @@ export function AuthWelcomePanel({ onGetStarted }: AuthWelcomePanelProps) {
       </p>
 
       <div className="mt-10 w-full">
-        <CoralButton type="button" onClick={onGetStarted}>
+        <CoralButton type="button" className="w-full" onClick={onGetStarted}>
           Get Started
         </CoralButton>
       </div>

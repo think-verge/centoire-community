@@ -7,7 +7,7 @@ interface CoralButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 export function CoralButton({ loading = false, disabled, children, className = "", ...rest }: CoralButtonProps) {
   return (
     <button
-      className={`font-ui inline-flex w-full items-center justify-center gap-2 rounded bg-coral px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${className}`}
+      className={`font-ui inline-flex items-center justify-center gap-2 rounded bg-coral px-4 py-3 text-sm font-bold uppercase tracking-wide text-white transition-opacity hover:opacity-90 disabled:opacity-50 ${className}`}
       disabled={disabled || loading}
       {...rest}
     >

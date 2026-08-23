@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../../components/Button";
+import logoDark from "../../assets/landing/logo-dark.svg";
+import { AvatarBubble } from "../../components/AppShell";
+import { CoralButton } from "../../components/auth/CoralButton";
+import { CircleRulesModal } from "../../components/CircleRulesModal";
 import { Field } from "../../components/Field";
 import {
   useGetOnboardingSuggestions,
@@ -14,7 +17,6 @@ import {
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
 import { useJoinCircle, useLeaveCircle } from "../../lib/api/generated/circles/circles";
-import { CircleRulesModal } from "../../components/CircleRulesModal";
 import type { Circle } from "../../lib/api/generated/model";
 import type { Tag } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
@@ -32,34 +34,38 @@ export function OnboardingPage() {
   const [step, setStep] = useState(0);
 
   return (
-    <main className="min-h-screen bg-cream px-4 py-10">
+    <main className="min-h-screen bg-sand-warm px-4 py-10 sm:py-14">
       <div className="mx-auto max-w-3xl">
-        <header className="mb-10 text-center">
-          <span className="font-display-serif text-2xl font-bold">Centoire</span>
-          <ol className="mt-6 flex items-center justify-center gap-2 text-xs">
+        <header className="mb-10 flex flex-col items-center gap-6">
+          <img src={logoDark} alt="Centoire" className="h-8 w-auto" />
+          <ol className="flex w-full max-w-xs items-center gap-2" aria-hidden>
             {STEPS.map((label, i) => (
-              <li key={label} className="flex items-center gap-2">
-                {i > 0 && <span className="h-px w-8 bg-line" aria-hidden />}
-                <span
-                  className={
-                    i === step
-                      ? "kicker"
-                      : i < step
-                        ? "font-semibold uppercase tracking-[0.14em] text-gold"
-                        : "font-semibold uppercase tracking-[0.14em] text-ink-faint"
-                  }
-                >
-                  {label}
-                </span>
+              <li key={label} className="flex-1">
+                <div className={`h-1.5 rounded-full ${i <= step ? "bg-coral" : "bg-hairline"}`} />
               </li>
             ))}
           </ol>
+          <p className="font-ui text-xs font-bold uppercase tracking-[0.14em] text-charcoal">
+            Step {step + 1} of {STEPS.length} — {STEPS[step]}
+          </p>
         </header>
         {step === 0 && <InterestsStep onDone={() => setStep(1)} />}
         {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
         {step === 2 && <ProfileStep onBack={() => setStep(1)} />}
       </div>
     </main>
+  );
+}
+
+function BackLink({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="font-ui text-sm font-semibold text-stone hover:text-charcoal"
+    >
+      Back
+    </button>
   );
 }
 
@@ -93,17 +99,19 @@ function InterestsStep({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <section>
-      <h1 className="font-display-serif text-center text-3xl font-semibold">
+    <section className="rounded-2xl border border-hairline bg-white p-6 sm:p-10">
+      <h1 className="font-display-serif text-center text-3xl font-semibold text-charcoal">
         What corners of fashion are yours?
       </h1>
-      <p className="mt-2 text-center text-sm text-ink-soft">
+      <p className="mt-2 text-center text-sm text-stone">
         Pick at least 3 — they seed your For You feed from day one.
       </p>
       <div className="mt-8 space-y-8">
         {[...grouped.entries()].map(([category, categoryTags]) => (
           <div key={category}>
-            <p className="kicker mb-3">{CATEGORY_LABELS[category]}</p>
+            <p className="font-ui mb-3 text-xs font-bold uppercase tracking-[0.14em] text-coral">
+              {CATEGORY_LABELS[category]}
+            </p>
             <div className="flex flex-wrap gap-2">
               {categoryTags.map((tag) => {
                 const active = selected.has(tag.id);
@@ -113,10 +121,10 @@ function InterestsStep({ onDone }: { onDone: () => void }) {
                     type="button"
                     aria-pressed={active}
                     onClick={() => toggle(tag.id)}
-                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                    className={`font-ui rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                       active
-                        ? "border-crimson bg-crimson text-ink-inverse"
-                        : "border-line bg-paper text-ink hover:border-ink-soft"
+                        ? "border-coral bg-coral text-white"
+                        : "border-hairline bg-white text-charcoal hover:border-stone"
                     }`}
                   >
                     {tag.name}
@@ -128,16 +136,17 @@ function InterestsStep({ onDone }: { onDone: () => void }) {
         ))}
       </div>
       <div className="mt-10 flex items-center justify-between">
-        <p className="text-sm text-ink-soft">
+        <p className="text-sm text-stone">
           {selected.size} selected{selected.size < 3 && ` — pick ${3 - selected.size} more`}
         </p>
-        <Button
+        <CoralButton
+          type="button"
           disabled={selected.size < 3}
           loading={setInterests.isPending}
           onClick={() => setInterests.mutate({ data: { tagIds: [...selected] } })}
         >
           Continue
-        </Button>
+        </CoralButton>
       </div>
     </section>
   );
@@ -156,34 +165,40 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
   const totalFollows = followedIds.size + joinedIds.size;
 
   return (
-    <section>
-      <h1 className="font-display-serif text-center text-3xl font-semibold">
+    <section className="rounded-2xl border border-hairline bg-white p-6 sm:p-10">
+      <h1 className="font-display-serif text-center text-3xl font-semibold text-charcoal">
         Build your front row
       </h1>
-      <p className="mt-2 text-center text-sm text-ink-soft">
+      <p className="mt-2 text-center text-sm text-stone">
         Follow at least 3 creators or circles so your feed is never empty.
       </p>
 
       {(data?.circles.length ?? 0) > 0 && (
         <div className="mt-8">
-          <p className="kicker mb-3">Circles</p>
+          <p className="font-ui mb-3 text-xs font-bold uppercase tracking-[0.14em] text-coral">
+            Circles
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {data!.circles.map((circle) => {
               const joined = joinedIds.has(circle.id);
               return (
                 <div
                   key={circle.id}
-                  className="flex items-start justify-between gap-3 rounded-xl border border-line bg-paper p-4"
+                  className="flex items-start justify-between gap-3 rounded-xl border border-hairline bg-white p-4"
                 >
                   <div>
-                    <p className="font-display-serif text-lg font-semibold">{circle.name}</p>
-                    <p className="mt-0.5 text-sm text-ink-soft">{circle.description}</p>
-                    <p className="mt-1 text-xs text-ink-faint">
+                    <p className="font-display-serif text-lg font-semibold text-charcoal">
+                      {circle.name}
+                    </p>
+                    <p className="mt-0.5 text-sm text-stone">{circle.description}</p>
+                    <p className="mt-1 text-xs text-taupe">
                       {circle.memberCount} member{circle.memberCount === 1 ? "" : "s"}
                     </p>
                   </div>
-                  <Button
-                    variant={joined ? "secondary" : "primary"}
+                  <ToggleButton
+                    active={joined}
+                    activeLabel="Joined"
+                    inactiveLabel="Join"
                     onClick={() => {
                       if (joined) {
                         leave.mutate({ slug: circle.slug });
@@ -193,9 +208,7 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
                         join.mutate({ slug: circle.slug });
                       }
                     }}
-                  >
-                    {joined ? "Joined" : "Join"}
-                  </Button>
+                  />
                 </div>
               );
             })}
@@ -205,34 +218,36 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
 
       {(data?.creators.length ?? 0) > 0 && (
         <div className="mt-8">
-          <p className="kicker mb-3">Creators</p>
+          <p className="font-ui mb-3 text-xs font-bold uppercase tracking-[0.14em] text-coral">
+            Creators
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             {data!.creators.map((creator) => {
               const following = followedIds.has(creator.id);
               return (
                 <div
                   key={creator.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper p-4"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-white p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <Avatar name={creator.displayName} url={creator.avatarUrl} />
+                    <AvatarBubble name={creator.displayName} url={creator.avatarUrl} />
                     <div>
-                      <p className="font-semibold">{creator.displayName}</p>
+                      <p className="font-semibold text-charcoal">{creator.displayName}</p>
                       {creator.handle && (
-                        <p className="text-xs text-ink-faint">@{creator.handle}</p>
+                        <p className="text-xs text-taupe">@{creator.handle}</p>
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant={following ? "secondary" : "primary"}
+                  <ToggleButton
+                    active={following}
+                    activeLabel="Following"
+                    inactiveLabel="Follow"
                     onClick={() =>
                       following
                         ? unfollow.mutate({ id: creator.id })
                         : follow.mutate({ id: creator.id })
                     }
-                  >
-                    {following ? "Following" : "Follow"}
-                  </Button>
+                  />
                 </div>
               );
             })}
@@ -241,16 +256,14 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
       )}
 
       <div className="mt-10 flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          Back
-        </Button>
+        <BackLink onClick={onBack} />
         <div className="flex items-center gap-4">
-          <p className="text-sm text-ink-soft">
+          <p className="text-sm text-stone">
             {totalFollows} followed{totalFollows < 3 && ` — ${3 - totalFollows} to go`}
           </p>
-          <Button disabled={totalFollows < 3} onClick={onDone}>
+          <CoralButton type="button" disabled={totalFollows < 3} onClick={onDone}>
             Continue
-          </Button>
+          </CoralButton>
         </div>
       </div>
 
@@ -268,6 +281,32 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
         />
       )}
     </section>
+  );
+}
+
+function ToggleButton({
+  active,
+  activeLabel,
+  inactiveLabel,
+  onClick,
+}: {
+  active: boolean;
+  activeLabel: string;
+  inactiveLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`font-ui shrink-0 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+        active
+          ? "border-hairline bg-white text-stone hover:border-stone"
+          : "border-coral bg-coral text-white hover:opacity-90"
+      }`}
+    >
+      {active ? activeLabel : inactiveLabel}
+    </button>
   );
 }
 
@@ -294,11 +333,11 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   const error = updateMe.error ?? complete.error;
 
   return (
-    <section className="mx-auto max-w-md">
-      <h1 className="font-display-serif text-center text-3xl font-semibold">
+    <section className="mx-auto max-w-md rounded-2xl border border-hairline bg-white p-6 sm:p-10">
+      <h1 className="font-display-serif text-center text-3xl font-semibold text-charcoal">
         Sign your work
       </h1>
-      <p className="mt-2 text-center text-sm text-ink-soft">
+      <p className="mt-2 text-center text-sm text-stone">
         Your handle is how the community knows you.
       </p>
       <div className="mt-8 space-y-4">
@@ -312,8 +351,8 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
           title="3-24 characters: lowercase letters, numbers, underscores"
         />
         <div>
-          <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-ink">
-            One-line bio <span className="font-normal text-ink-faint">(optional)</span>
+          <label htmlFor="bio" className="mb-1.5 block text-sm font-medium text-charcoal">
+            One-line bio <span className="font-normal text-taupe">(optional)</span>
           </label>
           <textarea
             id="bio"
@@ -322,34 +361,22 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
             placeholder="Knitwear designer in Antwerp. Deadstock only."
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:border-crimson focus:outline-none"
+            className="w-full rounded-lg border border-hairline bg-white px-3.5 py-2.5 text-sm text-charcoal placeholder:text-taupe focus:border-coral focus:outline-none"
           />
         </div>
         {error && <p className="text-sm text-crimson">{error.message}</p>}
       </div>
       <div className="mt-10 flex items-center justify-between">
-        <Button variant="ghost" onClick={onBack}>
-          Back
-        </Button>
-        <Button
+        <BackLink onClick={onBack} />
+        <CoralButton
+          type="button"
           disabled={!/^[a-z0-9_]{3,24}$/.test(handle)}
           loading={updateMe.isPending || complete.isPending}
           onClick={finish}
         >
           Enter Centoire
-        </Button>
+        </CoralButton>
       </div>
     </section>
-  );
-}
-
-function Avatar({ name, url }: { name: string; url: string | null }) {
-  if (url) {
-    return <img src={url} alt="" className="size-10 rounded-full object-cover" />;
-  }
-  return (
-    <span className="flex size-10 items-center justify-center rounded-full bg-gold-tint font-display-serif text-lg font-semibold text-gold">
-      {name.charAt(0).toUpperCase()}
-    </span>
   );
 }

@@ -31,7 +31,7 @@ export function AuthDrawerCheckEmailStep({ email }: AuthDrawerCheckEmailStepProp
       {email && <p className="mt-3 text-sm font-semibold text-charcoal">{maskEmail(email)}</p>}
 
       <div className="mt-10 w-full">
-        <CoralButton type="button" onClick={() => window.location.assign("mailto:")}>
+        <CoralButton type="button" className="w-full" onClick={() => window.location.assign("mailto:")}>
           Open Email App
         </CoralButton>
       </div>

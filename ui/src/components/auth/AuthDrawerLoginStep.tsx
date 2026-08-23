@@ -62,7 +62,7 @@ export function AuthDrawerLoginStep({ onClose, onSwitchToSignup }: AuthDrawerLog
             required
           />
           {login.error && <p className="text-sm text-crimson">{login.error.message}</p>}
-          <CoralButton type="submit" loading={login.isPending}>
+          <CoralButton type="submit" className="w-full" loading={login.isPending}>
             Log In
           </CoralButton>
         </form>
