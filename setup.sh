@@ -4,9 +4,11 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/centoire-community}"
 SERVICE_NAME="${SERVICE_NAME:-centoire-community-backend}"
 NGINX_SITE="${NGINX_SITE:-centoire-community-5175}"
+DOMAIN_NGINX_SITE="${DOMAIN_NGINX_SITE:-centoire-community-domain}"
 PUBLIC_PORT="${PUBLIC_PORT:-5175}"
 BACKEND_PORT="${BACKEND_PORT:-8002}"
 ENV_FILE="/etc/centoire-community/backend.env"
+FRONTEND_ENV="/etc/centoire-community/frontend.env"
 UPLOAD_DIR="/var/lib/centoire-community/uploads"
 DEPLOY_USER="${DEPLOY_USER:-dsehgal}"
 DEPLOY_WRAPPER="/usr/local/sbin/deploy-centoire-community"
@@ -30,6 +32,11 @@ test -d "$APP_DIR/backend"
 test -d "$APP_DIR/ui"
 test -f "$ENV_FILE"
 
+install -d -m 0700 /etc/centoire-community
+if [ ! -f "$FRONTEND_ENV" ]; then
+  printf '%s\n' 'VITE_AI_SEARCH_ENABLED=false' > "$FRONTEND_ENV"
+fi
+chmod 0600 "$FRONTEND_ENV"
 mkdir -p "$UPLOAD_DIR"
 chmod 0755 "$UPLOAD_DIR"
 chmod 0600 "$ENV_FILE"
@@ -98,6 +105,48 @@ server {
 EOF
 
 ln -sfn "/etc/nginx/sites-available/${NGINX_SITE}" "/etc/nginx/sites-enabled/${NGINX_SITE}"
+
+echo "==> Configuring Centoire Community domain HTTP site"
+cat > "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name centoire.com www.centoire.com;
+
+    root ${APP_DIR}/ui/dist;
+    index index.html;
+
+    client_max_body_size 12M;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+    }
+
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /assets/ {
+        try_files \$uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+
+ln -sfn "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" "/etc/nginx/sites-enabled/${DOMAIN_NGINX_SITE}"
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME"
 

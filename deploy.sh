@@ -7,9 +7,15 @@ UI_DIR="$APP_DIR/ui"
 SERVICE_NAME="${SERVICE_NAME:-centoire-community-backend}"
 PUBLIC_PORT="${PUBLIC_PORT:-5175}"
 BACKEND_PORT="${BACKEND_PORT:-8002}"
+FRONTEND_ENV="${FRONTEND_ENV:-/etc/centoire-community/frontend.env}"
 
 if [ ! -f /etc/centoire-community/backend.env ]; then
   echo "Missing /etc/centoire-community/backend.env"
+  exit 1
+fi
+
+if [ ! -f "$FRONTEND_ENV" ]; then
+  echo "Missing $FRONTEND_ENV"
   exit 1
 fi
 
@@ -25,6 +31,9 @@ cd "$UI_DIR"
 npm ci
 
 echo "==> Building UI"
+set -a
+. "$FRONTEND_ENV"
+set +a
 VITE_API_BASE_URL="" npm run build
 
 test -f "$BACKEND_DIR/dist/server.js"

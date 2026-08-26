@@ -75,12 +75,16 @@ Pushes to `main` run `.github/workflows/deploy-production.yml`. The repository n
 the `CENTOIRE_COMMUNITY_SSH_HOST`, `CENTOIRE_COMMUNITY_SSH_USER`, and
 `CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY` GitHub Actions secrets. Runtime secrets are kept
 only on the VM in `/etc/centoire-community/backend.env`.
+Non-secret Vite build settings are stored in
+`/etc/centoire-community/frontend.env`; production currently sets
+`VITE_AI_SEARCH_ENABLED=false`.
 The SSH user has passwordless sudo access only to the root-owned
 `/usr/local/sbin/deploy-centoire-community` wrapper.
 
 The initial HTTP deployment uses `COOKIE_SECURE=false`. Change `CLIENT_ORIGIN` to the
 final HTTPS URL and set `COOKIE_SECURE=true` when a domain and TLS certificate are
-configured.
+configured. The `centoire-community-domain` nginx site can be enabled before DNS
+cutover; issue the certificate only after `centoire.com` resolves to the VM.
 
 ## Architecture notes
 

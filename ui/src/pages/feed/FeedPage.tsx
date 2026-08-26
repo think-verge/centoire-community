@@ -8,6 +8,8 @@ import { useGetFeedDiscoverInfinite, useGetFeedForYouInfinite } from "../../lib/
 import { useAuth } from "../../lib/auth-context";
 import type { AgentSearchFilters, PostCard } from "../../lib/api/generated/model";
 
+const AI_SEARCH_ENABLED = import.meta.env.VITE_AI_SEARCH_ENABLED === "true";
+
 export function FeedPage() {
   const { user } = useAuth();
   const location = useLocation();
@@ -34,7 +36,7 @@ export function FeedPage() {
     },
     {
       query: {
-        enabled: Boolean(agentFilters),
+        enabled: AI_SEARCH_ENABLED && Boolean(agentFilters),
         initialPageParam: undefined,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
       },
@@ -49,9 +51,11 @@ export function FeedPage() {
 
   return (
     <div className="px-4 py-8 sm:px-6">
-      <div className="mb-6">
-        <AgentSearchBar onResult={setAgentFilters} />
-      </div>
+      {AI_SEARCH_ENABLED && (
+        <div className="mb-6">
+          <AgentSearchBar onResult={setAgentFilters} />
+        </div>
+      )}
 
       {agentFilters ? (
         <div className="mb-6 flex flex-wrap items-center gap-2">
