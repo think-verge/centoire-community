@@ -106,8 +106,82 @@ EOF
 
 ln -sfn "/etc/nginx/sites-available/${NGINX_SITE}" "/etc/nginx/sites-enabled/${NGINX_SITE}"
 
-echo "==> Configuring Centoire Community domain HTTP site"
-cat > "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" <<EOF
+if [ -f /etc/letsencrypt/live/centoire.com/fullchain.pem ]; then
+  echo "==> Configuring Centoire Community HTTPS domain site"
+  cat > "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name centoire.com www.centoire.com;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root ${APP_DIR}/ui/dist;
+        try_files \$uri =404;
+    }
+
+    location / {
+        return 301 https://centoire.com\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name www.centoire.com;
+
+    ssl_certificate /etc/letsencrypt/live/centoire.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/centoire.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://centoire.com\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name centoire.com;
+
+    ssl_certificate /etc/letsencrypt/live/centoire.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/centoire.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root ${APP_DIR}/ui/dist;
+    index index.html;
+
+    client_max_body_size 12M;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 120s;
+    }
+
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:${BACKEND_PORT};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    location /assets/ {
+        try_files \$uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+}
+EOF
+else
+  echo "==> Configuring Centoire Community HTTP domain site"
+  cat > "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" <<EOF
 server {
     listen 80;
     listen [::]:80;
@@ -145,6 +219,7 @@ server {
     }
 }
 EOF
+fi
 
 ln -sfn "/etc/nginx/sites-available/${DOMAIN_NGINX_SITE}" "/etc/nginx/sites-enabled/${DOMAIN_NGINX_SITE}"
 systemctl daemon-reload

@@ -60,4 +60,8 @@ done
 
 curl -sf "http://127.0.0.1:${PUBLIC_PORT}/" >/dev/null
 curl -sf "http://127.0.0.1:${PUBLIC_PORT}/api/v1/health" >/dev/null
+if [ -f /etc/letsencrypt/live/centoire.com/fullchain.pem ]; then
+  curl -sf --resolve centoire.com:443:127.0.0.1 https://centoire.com/ >/dev/null
+  curl -sf --resolve centoire.com:443:127.0.0.1 https://centoire.com/api/v1/health >/dev/null
+fi
 echo "==> Centoire Community deployment complete"

@@ -81,10 +81,10 @@ Non-secret Vite build settings are stored in
 The SSH user has passwordless sudo access only to the root-owned
 `/usr/local/sbin/deploy-centoire-community` wrapper.
 
-The initial HTTP deployment uses `COOKIE_SECURE=false`. Change `CLIENT_ORIGIN` to the
-final HTTPS URL and set `COOKIE_SECURE=true` when a domain and TLS certificate are
-configured. The `centoire-community-domain` nginx site can be enabled before DNS
-cutover; issue the certificate only after `centoire.com` resolves to the VM.
+Production is served at `https://centoire.com`; `www` and HTTP requests redirect to
+the canonical HTTPS origin. The backend uses `CLIENT_ORIGIN=https://centoire.com`
+and `COOKIE_SECURE=true`. The `centoire-community-domain` nginx site preserves this
+configuration whenever the Let's Encrypt certificate is present.
 
 ## Architecture notes
 
