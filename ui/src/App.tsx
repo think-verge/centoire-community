@@ -19,7 +19,7 @@ import { DraftsPage } from "./pages/compose/DraftsPage";
 import { DiscoverPage } from "./pages/feed/DiscoverPage";
 import { FeedPage } from "./pages/feed/FeedPage";
 import { FollowingPage } from "./pages/feed/FollowingPage";
-import { LandingPage } from "./pages/marketing/LandingPage";
+import { ComingSoonPage } from "./pages/marketing/ComingSoonPage";
 import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
 import { PostDetailPage } from "./pages/post/PostDetailPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
@@ -31,7 +31,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<ComingSoonPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
