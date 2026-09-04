@@ -33,9 +33,17 @@ const TAGS: Array<{ name: string; category: "style" | "craft" | "business" | "cu
   { name: "Street Style", category: "culture", description: "What people actually wear" },
   { name: "Fashion History", category: "culture", description: "Archives, houses, and movements" },
   { name: "Editorial", category: "culture", description: "Fashion photography and magazines" },
+  { name: "Art", category: "culture", description: "Contemporary art, exhibitions, and market" },
+  { name: "Design", category: "craft", description: "Graphic, industrial, and interior design" },
+  { name: "Architecture", category: "craft", description: "Buildings, interiors, and spatial design" },
+  { name: "Beauty", category: "style", description: "Skincare, makeup, and beauty trends" },
+  { name: "Luxury", category: "culture", description: "Luxury brands, heritage, and lifestyle" },
+  { name: "Photography", category: "culture", description: "Fashion and art photography" },
+  { name: "Technology", category: "business", description: "Tech trends, startups, and innovation" },
 ];
 
-const SOURCES: Array<{ name: string; siteUrl: string; feedUrl: string; tagSlugs: string[] }> = [
+const SOURCES: Array<{ name: string; siteUrl: string; feedUrl: string; tagSlugs: string[]; active?: boolean }> = [
+  // ── Already seeded originals ──────────────────────────────────────────────
   { name: "Business of Fashion", siteUrl: "https://www.businessoffashion.com", feedUrl: "https://www.businessoffashion.com/arc/outboundfeeds/rss/?outputType=xml", tagSlugs: ["retail", "supply-chain", "branding"] },
   { name: "Hypebeast", siteUrl: "https://hypebeast.com", feedUrl: "https://hypebeast.com/feed", tagSlugs: ["streetwear", "sneakers", "street-style"] },
   { name: "Highsnobiety", siteUrl: "https://www.highsnobiety.com", feedUrl: "https://www.highsnobiety.com/feed/", tagSlugs: ["streetwear", "sneakers"] },
@@ -43,6 +51,75 @@ const SOURCES: Array<{ name: string; siteUrl: string; feedUrl: string; tagSlugs:
   { name: "The Fashion Law", siteUrl: "https://www.thefashionlaw.com", feedUrl: "https://www.thefashionlaw.com/feed/", tagSlugs: ["retail", "branding", "supply-chain"] },
   { name: "Vogue Runway", siteUrl: "https://www.vogue.com", feedUrl: "https://www.vogue.com/feed/rss", tagSlugs: ["runway", "womenswear", "editorial"] },
   { name: "Sourcing Journal", siteUrl: "https://sourcingjournal.com", feedUrl: "https://sourcingjournal.com/feed/", tagSlugs: ["supply-chain", "textiles", "sustainability"] },
+
+  // ── Fashion Business ──────────────────────────────────────────────────────
+  { name: "Vogue Business", siteUrl: "https://www.voguebusiness.com", feedUrl: "https://www.voguebusiness.com/rss", tagSlugs: ["runway", "retail", "branding"] },
+  { name: "WWD", siteUrl: "https://wwd.com", feedUrl: "https://wwd.com/feed/", tagSlugs: ["retail", "branding", "runway"] },
+  { name: "Fashion United", siteUrl: "https://fashionunited.com", feedUrl: "https://fashionunited.com/rss.xml", tagSlugs: ["retail", "supply-chain"] },
+  { name: "Glossy", siteUrl: "https://www.glossy.co", feedUrl: "https://www.glossy.co/feed/", tagSlugs: ["retail", "branding", "fashion-tech"] },
+
+  // ── Fashion Editorial ─────────────────────────────────────────────────────
+  { name: "Harper's Bazaar", siteUrl: "https://www.harpersbazaar.com", feedUrl: "https://www.harpersbazaar.com/rss/all.xml/", tagSlugs: ["runway", "editorial", "womenswear"] },
+  { name: "Elle", siteUrl: "https://www.elle.com", feedUrl: "https://www.elle.com/rss/all.xml/", tagSlugs: ["runway", "editorial", "womenswear"] },
+  { name: "Vanity Fair", siteUrl: "https://www.vanityfair.com", feedUrl: "https://www.vanityfair.com/feed/rss", tagSlugs: ["editorial", "runway", "luxury"] },
+  { name: "Marie Claire", siteUrl: "https://www.marieclaire.com", feedUrl: "https://www.marieclaire.com/rss/all.xml/", tagSlugs: ["editorial", "womenswear", "beauty"] },
+  { name: "L'Officiel USA", siteUrl: "https://www.lofficielusa.com", feedUrl: "https://www.lofficielusa.com/feed", tagSlugs: ["runway", "couture", "editorial"] },
+  { name: "Who What Wear", siteUrl: "https://www.whowhatwear.com", feedUrl: "https://www.whowhatwear.com/rss", tagSlugs: ["womenswear", "retail", "street-style"] },
+  { name: "Cosmopolitan", siteUrl: "https://www.cosmopolitan.com", feedUrl: "https://www.cosmopolitan.com/rss/all.xml/", tagSlugs: ["womenswear", "beauty", "editorial"] },
+
+  // ── Menswear ──────────────────────────────────────────────────────────────
+  { name: "GQ", siteUrl: "https://www.gq.com", feedUrl: "https://www.gq.com/feed/rss", tagSlugs: ["menswear", "runway", "luxury"] },
+  { name: "Esquire", siteUrl: "https://www.esquire.com", feedUrl: "https://www.esquire.com/rss/all.xml/", tagSlugs: ["menswear", "luxury", "editorial"] },
+  { name: "Robb Report", siteUrl: "https://robbreport.com", feedUrl: "https://robbreport.com/feed/", tagSlugs: ["menswear", "luxury"] },
+
+  // ── Youth / Culture / Photography ─────────────────────────────────────────
+  { name: "Dazed", siteUrl: "https://www.dazeddigital.com", feedUrl: "https://www.dazeddigital.com/rss", tagSlugs: ["editorial", "photography", "street-style"] },
+  { name: "i-D", siteUrl: "https://i-d.vice.com", feedUrl: "https://i-d.vice.com/en_us/rss", tagSlugs: ["editorial", "photography", "street-style"] },
+
+  // ── Trend Forecasting ─────────────────────────────────────────────────────
+  { name: "Heuritech", siteUrl: "https://heuritech.com", feedUrl: "https://heuritech.com/feed/", tagSlugs: ["fashion-tech", "sustainability"] },
+
+  // ── Art ───────────────────────────────────────────────────────────────────
+  { name: "Artsy", siteUrl: "https://www.artsy.net", feedUrl: "https://www.artsy.net/rss/news", tagSlugs: ["art", "editorial"] },
+  { name: "Artnet News", siteUrl: "https://news.artnet.com", feedUrl: "https://news.artnet.com/feed/", tagSlugs: ["art", "luxury"] },
+  { name: "Artforum", siteUrl: "https://www.artforum.com", feedUrl: "https://www.artforum.com/feed/", tagSlugs: ["art", "editorial"] },
+  { name: "Hyperallergic", siteUrl: "https://hyperallergic.com", feedUrl: "https://hyperallergic.com/feed/", tagSlugs: ["art", "editorial"] },
+
+  // ── Design ────────────────────────────────────────────────────────────────
+  { name: "Creative Boom", siteUrl: "https://www.creativeboom.com", feedUrl: "https://www.creativeboom.com/feed/", tagSlugs: ["art", "design", "photography"] },
+  { name: "It's Nice That", siteUrl: "https://www.itsnicethat.com", feedUrl: "https://www.itsnicethat.com/rss", tagSlugs: ["design", "art", "editorial"] },
+  { name: "Dezeen", siteUrl: "https://www.dezeen.com", feedUrl: "https://www.dezeen.com/feed/", tagSlugs: ["design", "architecture", "fashion-tech"] },
+  { name: "Designboom", siteUrl: "https://www.designboom.com", feedUrl: "https://www.designboom.com/feed/", tagSlugs: ["design", "art", "architecture"] },
+
+  // ── Beauty ────────────────────────────────────────────────────────────────
+  { name: "Allure", siteUrl: "https://www.allure.com", feedUrl: "https://www.allure.com/feed/rss", tagSlugs: ["beauty", "editorial"] },
+  { name: "Beauty Independent", siteUrl: "https://www.beautyindependent.com", feedUrl: "https://www.beautyindependent.com/feed/", tagSlugs: ["beauty", "retail", "branding"] },
+
+  // ── Technology ────────────────────────────────────────────────────────────
+  { name: "MIT Technology Review", siteUrl: "https://www.technologyreview.com", feedUrl: "https://www.technologyreview.com/feed/", tagSlugs: ["fashion-tech", "technology"] },
+  { name: "TechCrunch", siteUrl: "https://techcrunch.com", feedUrl: "https://techcrunch.com/feed/", tagSlugs: ["technology", "fashion-tech"] },
+  { name: "WIRED", siteUrl: "https://www.wired.com", feedUrl: "https://www.wired.com/feed/rss", tagSlugs: ["technology", "editorial"] },
+
+  // ── Sustainable Fashion & Textiles ────────────────────────────────────────
+  { name: "Good On You", siteUrl: "https://goodonyou.eco", feedUrl: "https://goodonyou.eco/feed/", tagSlugs: ["sustainability", "retail", "branding"] },
+  { name: "EcoCult", siteUrl: "https://ecocult.com", feedUrl: "https://ecocult.com/feed/", tagSlugs: ["sustainability", "textiles"] },
+  { name: "Fashion Revolution", siteUrl: "https://www.fashionrevolution.org", feedUrl: "https://www.fashionrevolution.org/feed/", tagSlugs: ["sustainability", "supply-chain"] },
+  { name: "Textile Exchange", siteUrl: "https://textileexchange.org", feedUrl: "https://textileexchange.org/feed/", tagSlugs: ["textiles", "sustainability", "supply-chain"] },
+  { name: "Ecotextile News", siteUrl: "https://www.ecotextile.com", feedUrl: "https://www.ecotextile.com/rss/news.xml", tagSlugs: ["textiles", "sustainability", "supply-chain"] },
+
+  // ── Indian Fashion ────────────────────────────────────────────────────────
+  { name: "Vogue India", siteUrl: "https://www.vogue.in", feedUrl: "https://www.vogue.in/feed/rss", tagSlugs: ["womenswear", "runway", "editorial"] },
+  { name: "Grazia India", siteUrl: "https://www.graziaindia.com", feedUrl: "https://www.graziaindia.com/feed/", tagSlugs: ["womenswear", "beauty", "editorial"] },
+
+  // ── Inactive — no public RSS or subscription-only (activate via Admin UI) ─
+  { name: "SSENSE", siteUrl: "https://www.ssense.com", feedUrl: "https://www.ssense.com/en-us/editorial/rss", tagSlugs: ["luxury", "editorial", "menswear"], active: false },
+  { name: "WGSN", siteUrl: "https://www.wgsn.com", feedUrl: "https://www.wgsn.com/feed", tagSlugs: ["fashion-tech", "retail"], active: false },
+  { name: "Numero", siteUrl: "https://www.numero.com", feedUrl: "https://www.numero.com/en/rss", tagSlugs: ["couture", "editorial", "photography"], active: false },
+  { name: "Fashion Snoops", siteUrl: "https://www.fashionsnoops.com", feedUrl: "https://www.fashionsnoops.com/feed", tagSlugs: ["fashion-tech", "retail"], active: false },
+  { name: "Pinterest Predicts", siteUrl: "https://business.pinterest.com", feedUrl: "https://business.pinterest.com/en/pinterest-predicts/feed", tagSlugs: ["street-style", "retail"], active: false },
+  { name: "Google Trends", siteUrl: "https://trends.google.com", feedUrl: "https://trends.google.com/trends/hottrends/atom/feed", tagSlugs: ["fashion-tech", "retail"], active: false },
+  { name: "Lyst", siteUrl: "https://www.lyst.com", feedUrl: "https://www.lyst.com/news/feed", tagSlugs: ["retail", "branding"], active: false },
+  { name: "L'Officiel India", siteUrl: "https://www.lofficielindia.com", feedUrl: "https://www.lofficielindia.com/feed", tagSlugs: ["couture", "editorial", "luxury"], active: false },
 ];
 
 const CIRCLES: Array<{ name: string; description: string; tagSlugs: string[]; rules: string[] }> = [
@@ -121,7 +198,7 @@ async function main(): Promise<void> {
           feedUrl: s.feedUrl,
           faviconUrl: `https://www.google.com/s2/favicons?domain=${new URL(s.siteUrl).hostname}&sz=64`,
           tags: s.tagSlugs.map((slug) => tagBySlug.get(slug)).filter(Boolean),
-          active: true,
+          active: s.active ?? true,
           createdBy: admin._id,
         },
       },

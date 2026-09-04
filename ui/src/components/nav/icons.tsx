@@ -159,3 +159,90 @@ export function GridIcon({ className }: IconProps) {
     </svg>
   );
 }
+export function BriefcaseIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+      <line x1="12" y1="12" x2="12" y2="12.01" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function ArtIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="9.5" r="1.5" fill="currentColor" stroke="none" />
+      <path d="M8 15c1-2 7-2 8 0" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function RocketIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <path d="M12 2C6.5 2 4 7 4 12H3l-1 4 4-1v-1c0-5 2.5-9 6-9s6 4 6 9v1l4 1-1-4h-1c0-5-2.5-10-8-10z" strokeLinejoin="round" />
+      <path d="M9 21c0-2 1.5-3 3-3s3 1 3 3" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function ResearchIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.35-4.35" strokeLinecap="round" />
+      <path d="M11 8v6M8 11h6" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function FactoryIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <path d="M2 20V8l6 4V8l6 4V4l8 4v12H2z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function CertIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <circle cx="12" cy="10" r="4" />
+      <path d="M9 21 12 18l3 3V15.5a4 4 0 0 1-6 0V21z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function AiToolsIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" strokeLinecap="round" />
+      <path d="M9 10l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+export function SupportIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v.01" strokeLinecap="round" strokeWidth="2.5" />
+      <path d="M12 13a2 2 0 0 0 0-4 2 2 0 0 0-2-2" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function MenuIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
+      <line x1="3" y1="12" x2="21" y2="12" strokeLinecap="round" />
+      <line x1="3" y1="18" x2="21" y2="18" strokeLinecap="round" />
+    </svg>
+  );
+}
+export function MicIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
+      <rect x="9" y="2" width="6" height="12" rx="3" />
+      <path d="M5 10a7 7 0 0 0 14 0" strokeLinecap="round" />
+      <line x1="12" y1="19" x2="12" y2="22" strokeLinecap="round" />
+    </svg>
+  );
+}

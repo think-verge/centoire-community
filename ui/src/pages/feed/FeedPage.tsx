@@ -1,138 +1,215 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { AgentSearchBar } from "../../components/agent/AgentSearchBar";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
-import { CATEGORY_LABELS } from "../../lib/categoryTaxonomy";
-import { useGetFeedDiscoverInfinite, useGetFeedForYouInfinite } from "../../lib/api/generated/feed/feed";
+import { PostCard } from "../../components/PostCard";
+import { FeaturedBanner } from "../../components/FeaturedBanner";
+import {
+  useGetFeedDiscoverInfinite,
+  useGetFeedDiscover,
+  useGetFeedForYouInfinite,
+} from "../../lib/api/generated/feed/feed";
+import type { GetFeedDiscoverParams } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
-import type { AgentSearchFilters, PostCard } from "../../lib/api/generated/model";
+import type { PostCard as PostCardType } from "../../lib/api/generated/model";
 
-const AI_SEARCH_ENABLED = import.meta.env.VITE_AI_SEARCH_ENABLED === "true";
+type TabKey = "all" | "editorial" | "must_reads" | "latest" | "following" | "trending" | "fashion" | "art";
+
+const MAIN_TABS: { key: TabKey; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "editorial", label: "Editorial Picks" },
+  { key: "must_reads", label: "Must Reads" },
+  { key: "latest", label: "Latest News" },
+];
+
+const MORE_TABS: { key: TabKey; label: string }[] = [
+  { key: "following", label: "Following" },
+  { key: "trending", label: "Trending" },
+  { key: "fashion", label: "Fashion" },
+  { key: "art", label: "Art" },
+];
 
 export function FeedPage() {
   const { user } = useAuth();
   const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [feedPath] = useState(() => location.pathname + location.search);
-  const [agentFilters, setAgentFilters] = useState<AgentSearchFilters | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [moreOpen, setMoreOpen] = useState(false);
 
+  const isAll = activeTab === "all";
+
+  // Main "for you" infinite feed (used for "All" tab)
   const forYou = useGetFeedForYouInfinite(undefined, {
     query: {
-      enabled: !agentFilters,
+      enabled: isAll,
       initialPageParam: undefined,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     },
   });
 
-  const agentResults = useGetFeedDiscoverInfinite(
-    {
-      sort: agentFilters?.sort ?? undefined,
-      category: agentFilters?.category ?? undefined,
-      subcategory: agentFilters?.subcategory ?? undefined,
-      tag: agentFilters?.tag?.slug,
-      country: agentFilters?.country ?? undefined,
-      q: agentFilters?.q ?? undefined,
+  // Discover with params for non-all tabs
+  const discoverParams = tabToDiscoverParams(activeTab);
+  const discoverInfinite = useGetFeedDiscoverInfinite(discoverParams, {
+    query: {
+      enabled: !isAll,
+      initialPageParam: undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     },
-    {
-      query: {
-        enabled: AI_SEARCH_ENABLED && Boolean(agentFilters),
-        initialPageParam: undefined,
-        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-      },
-    },
+  });
+
+  // Sectioned data for "All" tab — editorial picks (trending) and latest news
+  const editorialPicks = useGetFeedDiscover(
+    { sort: "trending" },
+    { query: { enabled: isAll } },
+  );
+  const latestNews = useGetFeedDiscover(
+    { sort: "new" },
+    { query: { enabled: isAll } },
   );
 
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = agentFilters
-    ? agentResults
-    : forYou;
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = isAll
+    ? forYou
+    : discoverInfinite;
 
   const posts = data?.pages.flatMap((page) => page.items) ?? [];
+  const editorialPosts = editorialPicks.data?.items ?? [];
+  const latestPosts = latestNews.data?.items ?? [];
+
+  const allMoreKeys = MORE_TABS.map((t) => t.key);
+  const activeMoreTab = allMoreKeys.includes(activeTab) ? activeTab : null;
 
   return (
-    <div className="px-4 py-8 sm:px-6">
-      {AI_SEARCH_ENABLED && (
-        <div className="mb-6">
-          <AgentSearchBar onResult={setAgentFilters} />
-        </div>
-      )}
-
-      {agentFilters ? (
-        <div className="mb-6 flex flex-wrap items-center gap-2">
-          {agentFilters.category && (
-            <FilterChip label={CATEGORY_LABELS[agentFilters.category]} />
-          )}
-          {agentFilters.subcategory && <FilterChip label={agentFilters.subcategory} />}
-          {agentFilters.tag && <FilterChip label={agentFilters.tag.name} />}
-          {agentFilters.country && <FilterChip label={agentFilters.country} />}
-          {agentFilters.q && <FilterChip label={`"${agentFilters.q}"`} />}
-          <button
-            type="button"
-            onClick={() => setAgentFilters(null)}
-            className="ml-1 text-sm font-semibold text-ink-soft underline hover:text-ink"
-          >
-            Clear search
-          </button>
-        </div>
-      ) : (
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <p className="kicker mb-1">For you</p>
-            <h1 className="font-display-serif text-3xl font-semibold">
-              {greeting()}, {user?.displayName.split(" ")[0]}
-            </h1>
-          </div>
-          <Link
-            to="/settings"
-            className="hidden text-sm text-ink-soft hover:text-ink sm:block"
-          >
-            Tune your feed
-          </Link>
-        </div>
-      )}
-      <MasonryFeed
-        posts={posts}
-        isLoading={isLoading}
-        hasNextPage={Boolean(hasNextPage)}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
-        emptyState={
-          agentFilters ? (
-            <div className="rounded-xl border border-dashed border-line p-12 text-center">
-              <p className="font-display-serif text-2xl font-semibold">No matches</p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
-                Nothing fits that search yet. Try rephrasing, or clear it to go back to your
-                feed.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-line p-12 text-center">
-              <p className="font-display-serif text-2xl font-semibold">
-                Your feed is warming up
-              </p>
-              <p className="mx-auto mt-2 max-w-md text-sm text-ink-soft">
-                Posts matching your interests, circles, and follows land here. Explore
-                Discover to find something great, or write the first post yourself.
-              </p>
-              <div className="mt-6 flex justify-center gap-3">
-                <Link
-                  to="/discover"
-                  className="rounded-lg bg-crimson px-4 py-2 text-sm font-semibold text-ink-inverse hover:bg-crimson-deep"
-                >
-                  Explore Discover
-                </Link>
-                <Link
-                  to="/compose"
-                  className="rounded-lg border border-line bg-paper px-4 py-2 text-sm font-semibold text-ink hover:border-ink-soft"
-                >
-                  Write a post
-                </Link>
+    <div className="min-h-screen">
+      {/* Tab bar */}
+      <div className="sticky top-14 z-30 border-b border-[var(--color-hairline)] bg-white px-4 sm:px-6">
+        <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none">
+          {MAIN_TABS.map((tab) => (
+            <TabButton
+              key={tab.key}
+              label={tab.label}
+              active={activeTab === tab.key}
+              onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
+            />
+          ))}
+          <div className="relative">
+            <TabButton
+              label={activeMoreTab ? (MORE_TABS.find((t) => t.key === activeMoreTab)?.label ?? "+4 More") : "+4 More"}
+              active={Boolean(activeMoreTab)}
+              onClick={() => setMoreOpen((o) => !o)}
+            />
+            {moreOpen && (
+              <div className="absolute left-0 top-full z-40 mt-1 w-36 rounded-xl border border-[var(--color-hairline)] bg-white py-1 shadow-lg">
+                {MORE_TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
+                    className={`block w-full px-4 py-2 text-left font-ui text-sm ${
+                      activeTab === tab.key
+                        ? "font-semibold text-[var(--color-coral)]"
+                        : "text-[var(--color-stone)] hover:bg-[var(--color-sand)]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 py-6 sm:px-6">
+        {isAll ? (
+          <>
+            {/* Header */}
+            <div className="mb-6">
+              <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
+                For you
+              </p>
+              <h1 className="font-editorial mt-0.5 text-3xl italic text-[var(--color-charcoal)]">
+                {greeting()}, {user?.displayName.split(" ")[0]}
+              </h1>
             </div>
-          )
-        }
-      />
+
+            {/* Editorial Picks section */}
+            {(editorialPosts.length > 0 || editorialPicks.isLoading) && (
+              <section className="mb-8">
+                <SectionHeader label="Editorial Picks" to="/discover?sort=trending" />
+                {editorialPicks.isLoading ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <SkeletonCard key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {editorialPosts.slice(0, 6).map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onOpenPost={(p) => setSelectedSlug(p.slug)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Featured Jobs Banner */}
+            <FeaturedBanner />
+
+            {/* Latest News section */}
+            {(latestPosts.length > 0 || latestNews.isLoading) && (
+              <section className="mb-8">
+                <SectionHeader label="Latest News" to="/discover?sort=new" />
+                {latestNews.isLoading ? (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {Array.from({ length: 2 }).map((_, i) => (
+                      <SkeletonCard key={i} tall />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {latestPosts.slice(0, 4).map((post) => (
+                      <PostCard
+                        key={post.id}
+                        post={post}
+                        onOpenPost={(p) => setSelectedSlug(p.slug)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* For You infinite feed */}
+            <SectionHeader label="Your Feed" to="/settings" linkLabel="Tune feed" />
+            <MasonryFeed
+              posts={posts}
+              isLoading={isLoading}
+              hasNextPage={Boolean(hasNextPage)}
+              isFetchingNextPage={isFetchingNextPage}
+              fetchNextPage={fetchNextPage}
+              onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
+              emptyState={<EmptyFeed />}
+            />
+          </>
+        ) : (
+          /* Non-All tabs: plain infinite scroll */
+          <MasonryFeed
+            posts={posts}
+            isLoading={isLoading}
+            hasNextPage={Boolean(hasNextPage)}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
+            onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
+            emptyState={<EmptyFeed />}
+          />
+        )}
+      </div>
+
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}
@@ -144,12 +221,104 @@ export function FeedPage() {
   );
 }
 
-function FilterChip({ label }: { label: string }) {
+function TabButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
-    <span className="rounded-full border border-line bg-paper px-3 py-1 text-xs font-semibold text-ink-soft">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-sm font-medium transition-colors ${
+        active
+          ? "bg-[var(--color-coral)] text-white"
+          : "text-[var(--color-stone)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]"
+      }`}
+    >
       {label}
-    </span>
+    </button>
   );
+}
+
+function SectionHeader({
+  label,
+  to,
+  linkLabel = "VIEW ALL",
+}: {
+  label: string;
+  to: string;
+  linkLabel?: string;
+}) {
+  return (
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="font-editorial text-2xl italic text-[var(--color-charcoal)]">{label}</h2>
+      <Link
+        to={to}
+        className="font-ui text-xs font-semibold text-[var(--color-coral)] hover:underline"
+      >
+        {linkLabel}
+      </Link>
+    </div>
+  );
+}
+
+function SkeletonCard({ tall }: { tall?: boolean }) {
+  return (
+    <div className={`animate-pulse rounded-xl bg-[var(--color-sand)] ${tall ? "h-72" : "h-56"}`} />
+  );
+}
+
+function EmptyFeed() {
+  return (
+    <div className="rounded-xl border border-dashed border-[var(--color-hairline)] p-12 text-center">
+      <p className="font-editorial text-2xl italic text-[var(--color-charcoal)]">
+        Your feed is warming up
+      </p>
+      <p className="mx-auto mt-2 max-w-md font-ui text-sm text-[var(--color-stone)]">
+        Posts matching your interests, circles, and follows land here. Explore Discover to find
+        something great.
+      </p>
+      <div className="mt-6 flex justify-center gap-3">
+        <Link
+          to="/discover"
+          className="rounded-lg bg-[var(--color-coral)] px-4 py-2 font-ui text-sm font-semibold text-white hover:opacity-90"
+        >
+          Explore Discover
+        </Link>
+        <Link
+          to="/compose"
+          className="rounded-lg border border-[var(--color-hairline)] bg-white px-4 py-2 font-ui text-sm font-semibold text-[var(--color-charcoal)] hover:border-[var(--color-stone)]"
+        >
+          Write a post
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function tabToDiscoverParams(tab: TabKey): GetFeedDiscoverParams {
+  switch (tab) {
+    case "editorial":
+      return { sort: "trending" };
+    case "must_reads":
+      return { sort: "trending" };
+    case "latest":
+      return { sort: "new" };
+    case "trending":
+      return { sort: "trending" };
+    case "fashion":
+      return { category: "fashion" };
+    case "art":
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return { category: "art" as any };
+    default:
+      return {};
+  }
 }
 
 function greeting(): string {

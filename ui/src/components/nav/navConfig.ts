@@ -1,103 +1,84 @@
 import type { ComponentType } from "react";
 import type { Permission } from "../../lib/permissions";
-import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, POST_CATEGORIES } from "../../lib/categoryTaxonomy";
 import {
-  BeautyIcon,
+  AiToolsIcon,
+  ArtIcon,
+  BriefcaseIcon,
   BookmarkIcon,
-  BusinessIcon,
+  CertIcon,
   CirclesIcon,
-  CompassIcon,
   DraftIcon,
-  ExpertsIcon,
+  FactoryIcon,
   FashionIcon,
+  GridIcon,
+  HomeIcon,
   LifestyleIcon,
-  MediaIcon,
-  ShieldIcon,
-  TechIcon,
+  ResearchIcon,
+  RocketIcon,
+  SupportIcon,
   UserPlusIcon,
+  UsersIcon,
 } from "./icons";
 
 export type IconComponent = ComponentType<{ className?: string }>;
 
 export interface NavItem {
   key: string;
+  label: string;
   to: string;
-  label: string;
-  disabled?: boolean;
-}
-
-export interface NavSection {
-  key: string;
-  label: string;
-  icon: IconComponent;
-  /** Present on childless sections — rendered as a plain link, no accordion. */
-  to?: string;
-  children?: NavItem[];
-  /** Top-level placeholder (Experts, Media) — visible, non-interactive, "Soon" badge. */
+  icon?: IconComponent;
   disabled?: boolean;
   permission?: Permission;
+  /** If true, renders as a sub-item (indented) under a parent accordion */
+  isChild?: boolean;
 }
 
-function categoryChildren(category: (typeof POST_CATEGORIES)[number]): NavItem[] {
-  return [
-    { key: `${category}:all`, to: `/category/${category}`, label: `All ${CATEGORY_LABELS[category]}` },
-    ...CATEGORY_SUBCATEGORIES[category].map((sub) => ({
-      key: `${category}:${sub}`,
-      to: `/category/${category}?subcategory=${encodeURIComponent(sub)}`,
-      label: sub,
-    })),
-  ];
+export interface NavGroup {
+  key: string;
+  /** Section heading shown above the group */
+  label: string;
+  items: NavItem[];
 }
 
-export const NAV_SECTIONS: NavSection[] = [
+/** Categories accordion children — no subcategories, just top-level categories */
+export const CATEGORY_NAV_ITEMS: NavItem[] = [
+  { key: "cat:fashion", label: "Fashion", to: "/category/fashion", icon: FashionIcon, isChild: true },
+  { key: "cat:art", label: "Art", to: "/category/art", icon: ArtIcon, isChild: true },
+  { key: "cat:lifestyle", label: "Lifestyle", to: "/category/lifestyle", icon: LifestyleIcon, isChild: true },
+];
+
+export const NAV_GROUPS: NavGroup[] = [
   {
-    key: "discover",
-    label: "Discover",
-    icon: CompassIcon,
-    children: [
-      { key: "discover:for-you", to: "/feed", label: "For You" },
-      { key: "discover:following", to: "/following", label: "Following" },
-      { key: "discover:trending", to: "/discover?sort=trending", label: "Trending" },
-      { key: "discover:latest", to: "/discover?sort=new", label: "Latest" },
-      { key: "discover:top-stories", to: "/discover", label: "Top Stories", disabled: true },
-      { key: "discover:expert-voices", to: "/discover", label: "Expert Voices", disabled: true },
-      { key: "discover:trend-radar", to: "/discover", label: "Trend Radar", disabled: true },
-      { key: "discover:industry-pulse", to: "/discover", label: "Industry Pulse", disabled: true },
-      { key: "discover:recommended", to: "/discover", label: "Recommended", disabled: true },
+    key: "explore",
+    label: "Explore",
+    items: [
+      { key: "home", label: "Home", to: "/feed", icon: HomeIcon },
+      { key: "following", label: "Following", to: "/following", icon: UsersIcon },
+      // Categories is handled specially in DesktopSidebar as an accordion
+      { key: "categories", label: "Categories", to: "", icon: GridIcon },
+      { key: "circles", label: "Circles", to: "/circles", icon: CirclesIcon },
     ],
   },
-  { key: "fashion", label: "Fashion", icon: FashionIcon, children: categoryChildren("fashion") },
-  { key: "beauty", label: "Beauty", icon: BeautyIcon, children: categoryChildren("beauty") },
-  { key: "lifestyle", label: "Lifestyle", icon: LifestyleIcon, children: categoryChildren("lifestyle") },
   {
-    key: "ai_technology",
-    label: "AI & Technology",
-    icon: TechIcon,
-    children: categoryChildren("ai_technology"),
+    key: "exclusive",
+    label: "Centoire Exclusive",
+    items: [
+      { key: "excl:ai-tools", label: "AI & Industry Tools", to: "/exclusive/ai-tools", icon: AiToolsIcon },
+      { key: "excl:jobs", label: "Jobs", to: "/exclusive/jobs", icon: BriefcaseIcon },
+      { key: "excl:cert", label: "Certification", to: "/exclusive/certification", icon: CertIcon },
+      { key: "excl:startups", label: "Startup / Investors", to: "/exclusive/startups", icon: RocketIcon },
+      { key: "excl:research", label: "Research", to: "/exclusive/research", icon: ResearchIcon },
+      { key: "excl:buyers", label: "Buyer / Manufactures", to: "/exclusive/buyers", icon: FactoryIcon },
+    ],
   },
   {
-    key: "business_intelligence",
-    label: "Business & Intelligence",
-    icon: BusinessIcon,
-    children: categoryChildren("business_intelligence"),
-  },
-  { key: "experts", label: "Experts", icon: ExpertsIcon, disabled: true },
-  { key: "media", label: "Media", icon: MediaIcon, disabled: true },
-  { key: "circles", label: "Circles", icon: CirclesIcon, to: "/circles" },
-  { key: "bookmarks", label: "Bookmarks", icon: BookmarkIcon, to: "/bookmarks" },
-  { key: "drafts", label: "Drafts", icon: DraftIcon, to: "/drafts" },
-  {
-    key: "moderation",
-    label: "Moderation",
-    icon: ShieldIcon,
-    to: "/moderation",
-    permission: "moderation.review",
-  },
-  {
-    key: "invites",
-    label: "Invites",
-    icon: UserPlusIcon,
-    to: "/admin/invites",
-    permission: "user.invite",
+    key: "actions",
+    label: "Actions",
+    items: [
+      { key: "drafts", label: "Drafts", to: "/drafts", icon: DraftIcon },
+      { key: "bookmarks", label: "Bookmarks", to: "/bookmarks", icon: BookmarkIcon },
+      { key: "invites", label: "Invite Member", to: "/admin/invites", icon: UserPlusIcon, permission: "user.invite" },
+      { key: "support", label: "Support", to: "/support", icon: SupportIcon },
+    ],
   },
 ];

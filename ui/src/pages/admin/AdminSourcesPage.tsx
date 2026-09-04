@@ -197,7 +197,8 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
     const data = {
       ...form,
       tagIds,
-      category: category || null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      category: (category || null) as any,
       subcategory: category && subcategory ? subcategory : null,
     };
     if (isEdit && source) {

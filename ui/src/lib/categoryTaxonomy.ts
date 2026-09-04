@@ -2,6 +2,7 @@
 
 export const POST_CATEGORIES = [
   "fashion",
+  "art",
   "beauty",
   "lifestyle",
   "ai_technology",
@@ -12,6 +13,7 @@ export type PostCategoryValue = (typeof POST_CATEGORIES)[number];
 
 export const CATEGORY_LABELS: Record<PostCategoryValue, string> = {
   fashion: "Fashion",
+  art: "Art",
   beauty: "Beauty",
   lifestyle: "Lifestyle",
   ai_technology: "AI & Technology",
@@ -19,6 +21,15 @@ export const CATEGORY_LABELS: Record<PostCategoryValue, string> = {
 };
 
 export const CATEGORY_SUBCATEGORIES: Record<PostCategoryValue, string[]> = {
+  art: [
+    "Fine Art",
+    "Photography",
+    "Design",
+    "Architecture",
+    "Exhibitions & Museums",
+    "Art Market",
+    "Illustration & Graphic",
+  ],
   fashion: [
     "Fashion News",
     "Design & Creative",

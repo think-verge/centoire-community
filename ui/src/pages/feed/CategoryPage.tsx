@@ -58,7 +58,8 @@ function CategoryFeed({
   const subcategory = activeFilters.subcategory?.[0];
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useGetFeedCategoryInfinite(
-    category,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    category as any,
     { subcategory },
     {
       query: {
