@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import type { RightSidebarContext } from "./nav/RightSidebar";
 import { useLogout } from "../lib/api/generated/auth/auth";
 import { useAuth } from "../lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
@@ -10,9 +11,20 @@ import { MobileNav } from "./nav/MobileNav";
 import { MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
 import { NotificationBell } from "./NotificationBell";
 
+function getRightSidebarContext(pathname: string): RightSidebarContext | null {
+  if (pathname === "/feed") return { type: "feed" };
+  if (pathname === "/following") return { type: "following" };
+  if (pathname === "/discover") return { type: "discover" };
+  const m = pathname.match(/^\/category\/([^/]+)$/);
+  if (m) return { type: "category", category: m[1] };
+  return null;
+}
+
 export function AppShell() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const rightCtx = getRightSidebarContext(location.pathname);
   const queryClient = useQueryClient();
   const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
   const menuOpen = activeMenu === "account";
@@ -143,7 +155,7 @@ export function AppShell() {
           <Outlet />
         </main>
 
-        <RightSidebar />
+        {rightCtx && <RightSidebar context={rightCtx} />}
       </div>
 
       <MobileNav />
