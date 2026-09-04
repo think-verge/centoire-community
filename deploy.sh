@@ -26,6 +26,10 @@ npm ci
 echo "==> Building backend"
 npm run build
 
+echo "==> Cleaning removed UI source files"
+# scp does not delete files removed from the repo; remove them explicitly
+rm -f "$UI_DIR/src/components/nav/SidebarSection.tsx"
+
 echo "==> Installing UI dependencies"
 cd "$UI_DIR"
 npm ci
