@@ -3,7 +3,6 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { RightSidebarContext } from "./nav/RightSidebar";
 import { useLogout } from "../lib/api/generated/auth/auth";
 import { useAuth } from "../lib/auth-context";
-import { useQueryClient } from "@tanstack/react-query";
 import { hasPermission } from "../lib/permissions";
 import { DesktopSidebar } from "./nav/DesktopSidebar";
 import { RightSidebar } from "./nav/RightSidebar";
@@ -25,14 +24,14 @@ export function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const rightCtx = getRightSidebarContext(location.pathname);
-  const queryClient = useQueryClient();
   const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
   const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
       onSettled: () => {
-        queryClient.clear();
-        navigate("/");
+        // Force a full page redirect to completely wipe in-memory state
+        // and guarantee we don't get caught in a React Router race condition.
+        window.location.href = "/";
       },
     },
   });
