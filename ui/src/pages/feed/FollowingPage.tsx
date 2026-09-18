@@ -1,14 +1,12 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { useGetFeedFollowingInfinite } from "../../lib/api/generated/feed/feed";
 import type { PostCard } from "../../lib/api/generated/model";
 
 export function FollowingPage() {
-  const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [feedPath] = useState(() => location.pathname + location.search);
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedFollowingInfinite(undefined, {
       query: {
@@ -52,7 +50,6 @@ export function FollowingPage() {
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}
-          feedPath={feedPath}
           onClose={() => setSelectedSlug(null)}
         />
       )}
