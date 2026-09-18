@@ -13,6 +13,7 @@ export interface IPost extends Document {
   title: string;
   slug: string;
   content?: unknown;
+  contentHtml?: string;
   contentText?: string;
   excerpt: string;
   coverImageUrl?: string;
@@ -33,6 +34,7 @@ export interface IPost extends Document {
   reviewedBy?: Types.ObjectId;
   reviewedAt?: Date;
   rejectionReason?: string;
+  expiresAt?: Date;
   aiProcessed?: boolean;
   aiReadTimeMinutes?: number;
   aiCategory?: string;
@@ -58,6 +60,7 @@ const postSchema = new Schema<IPost>(
     title: { type: String, required: true, trim: true, maxlength: 200 },
     slug: { type: String, required: true, unique: true },
     content: { type: Schema.Types.Mixed },
+    contentHtml: { type: String },
     contentText: { type: String },
     excerpt: { type: String, default: "", maxlength: 300 },
     coverImageUrl: { type: String },
@@ -78,6 +81,7 @@ const postSchema = new Schema<IPost>(
     reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
     reviewedAt: { type: Date },
     rejectionReason: { type: String, maxlength: 500 },
+    expiresAt: { type: Date, index: true },
     aiProcessed: { type: Boolean, default: false },
     aiReadTimeMinutes: { type: Number },
     aiCategory: { type: String },

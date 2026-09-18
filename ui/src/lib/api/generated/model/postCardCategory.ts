@@ -15,6 +15,7 @@ export type PostCardCategory = typeof PostCardCategory[keyof typeof PostCardCate
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PostCardCategory = {
   fashion: 'fashion',
+  art: 'art',
   beauty: 'beauty',
   lifestyle: 'lifestyle',
   ai_technology: 'ai_technology',

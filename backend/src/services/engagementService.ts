@@ -54,6 +54,14 @@ export async function setVote(
   }
   await Model.updateOne({ _id: targetId }, { $inc: { [counterField(value)]: 1 } });
 
+  // Cancel expiry when a post receives its first upvote
+  if (targetType === "post" && value === 1 && !existing) {
+    void Post.updateOne(
+      { _id: targetId, origin: "aggregated", expiresAt: { $exists: true } },
+      { $unset: { expiresAt: "" } },
+    );
+  }
+
   // Reputation: only first-time upvotes on someone else's work award points
   if (value === 1 && !isSelfVote && target.authorId && !existing) {
     await reputationService.award(target.authorId, {
@@ -120,6 +128,11 @@ export async function setBookmark(
   if (!existing) {
     await Bookmark.create({ userId, postId, folderId: folderId ?? null });
     await Post.updateOne({ _id: postId }, { $inc: { bookmarkCount: 1 } });
+    // Cancel expiry when a post is bookmarked for the first time
+    void Post.updateOne(
+      { _id: postId, origin: "aggregated", expiresAt: { $exists: true } },
+      { $unset: { expiresAt: "" } },
+    );
   }
 }
 
@@ -219,6 +232,11 @@ export async function createComment(
     content,
   });
   await Post.updateOne({ _id: postId }, { $inc: { commentCount: 1 } });
+  // Cancel expiry when a post receives its first comment
+  void Post.updateOne(
+    { _id: postId, origin: "aggregated", expiresAt: { $exists: true } },
+    { $unset: { expiresAt: "" } },
+  );
   if (parentId) {
     await Comment.updateOne({ _id: parentId }, { $inc: { replyCount: 1 } });
   }

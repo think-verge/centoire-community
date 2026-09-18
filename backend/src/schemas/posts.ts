@@ -63,6 +63,7 @@ export const PostDetailSchema = registry.register(
   "PostDetail",
   PostCardSchema.extend({
     content: z.record(z.string(), z.unknown()).nullable(),
+    contentHtml: z.string().nullable(),
     viewCount: z.number(),
     rejectionReason: z.string().nullable(),
     authorFollowedByViewer: z.boolean(),

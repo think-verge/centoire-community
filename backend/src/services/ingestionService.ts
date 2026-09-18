@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import Parser from "rss-parser";
+import { extract } from "@extractus/article-extractor";
 import { Post } from "../models/Post.js";
 import { Source, type ISource } from "../models/Source.js";
 import { canonicalUrlHash } from "../utils/url-hash.js";
@@ -36,6 +37,25 @@ async function fetchFeedXml(url: string): Promise<string> {
 
 const OG_IMAGE_TIMEOUT_MS = 3_000;
 const MAX_ITEMS_PER_FETCH = 25;
+
+const ARTICLE_EXTRACT_TIMEOUT_MS = 10_000;
+const POST_TTL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
+
+async function extractArticleHtml(url: string): Promise<string | null> {
+  try {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), ARTICLE_EXTRACT_TIMEOUT_MS);
+    try {
+      const fetcher = (u: string) => fetch(u, { signal: ac.signal });
+      const article = await extract(url, {}, fetcher);
+      return (article as { content?: string } | null)?.content ?? null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
 
 export interface FetchStats {
   sourceId: string;
@@ -127,6 +147,18 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           country: country ?? undefined,
           publishedAt,
           readTimeMinutes: readTimeMinutes(excerpt),
+          expiresAt: new Date(Date.now() + POST_TTL_MS),
+        });
+
+        // Fire-and-forget: extract full article HTML and write back to the post
+        void extractArticleHtml(link).then((contentHtml) => {
+          if (contentHtml) {
+            const text = stripHtml(contentHtml);
+            Post.updateOne(
+              { _id: post._id },
+              { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
+            ).catch(() => {});
+          }
         });
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal

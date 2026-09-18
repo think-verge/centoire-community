@@ -16,6 +16,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
     "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@extractus/article-extractor": "^9.0.1",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-link": "^3.31.3",
+    "@tiptap/html": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "bcryptjs": "^3.0.2",
     "cheerio": "^1.0.0",
     "cloudinary": "^2.5.1",

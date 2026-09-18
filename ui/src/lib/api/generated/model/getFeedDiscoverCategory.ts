@@ -12,6 +12,7 @@ export type GetFeedDiscoverCategory = typeof GetFeedDiscoverCategory[keyof typeo
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetFeedDiscoverCategory = {
   fashion: 'fashion',
+  art: 'art',
   beauty: 'beauty',
   lifestyle: 'lifestyle',
   ai_technology: 'ai_technology',

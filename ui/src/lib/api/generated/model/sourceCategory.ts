@@ -15,6 +15,7 @@ export type SourceCategory = typeof SourceCategory[keyof typeof SourceCategory] 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SourceCategory = {
   fashion: 'fashion',
+  art: 'art',
   beauty: 'beauty',
   lifestyle: 'lifestyle',
   ai_technology: 'ai_technology',

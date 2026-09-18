@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { PostCard } from "../../components/PostCard";
@@ -31,9 +31,7 @@ const MORE_TABS: { key: TabKey; label: string }[] = [
 
 export function FeedPage() {
   const { user } = useAuth();
-  const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [feedPath] = useState(() => location.pathname + location.search);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -216,7 +214,6 @@ export function FeedPage() {
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}
-          feedPath={feedPath}
           onClose={() => setSelectedSlug(null)}
         />
       )}

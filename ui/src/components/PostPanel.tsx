@@ -127,10 +127,10 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
         />
       )}
 
-      {html ? (
+      {(html ?? post.contentHtml) ? (
         <div
           className="prose-editorial mt-6 text-[17px] leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: html }}
+          dangerouslySetInnerHTML={{ __html: (html ?? post.contentHtml)! }}
         />
       ) : post.externalUrl ? (
         <div className="mt-6 rounded-xl border border-line bg-paper p-6">

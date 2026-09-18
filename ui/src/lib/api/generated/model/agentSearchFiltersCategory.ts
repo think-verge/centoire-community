@@ -15,6 +15,7 @@ export type AgentSearchFiltersCategory = typeof AgentSearchFiltersCategory[keyof
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AgentSearchFiltersCategory = {
   fashion: 'fashion',
+  art: 'art',
   beauty: 'beauty',
   lifestyle: 'lifestyle',
   ai_technology: 'ai_technology',

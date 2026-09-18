@@ -34,12 +34,10 @@ export function CategoryPage() {
 
 function CategoryFeed({
   category,
-  feedPath,
   selectedSlug,
   onSelectSlug,
 }: {
   category: PostCategoryValue;
-  feedPath: string;
   selectedSlug: string | null;
   onSelectSlug: (slug: string | null) => void;
 }) {
@@ -106,7 +104,7 @@ function CategoryFeed({
         />
       </div>
       {selectedSlug && (
-        <PostDrawer slug={selectedSlug} feedPath={feedPath} onClose={() => onSelectSlug(null)} />
+        <PostDrawer slug={selectedSlug} onClose={() => onSelectSlug(null)} />
       )}
     </div>
   );

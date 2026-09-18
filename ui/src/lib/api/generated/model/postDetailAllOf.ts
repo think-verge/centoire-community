@@ -10,6 +10,8 @@ import type { PostDetailAllOfContent } from './postDetailAllOfContent';
 export type PostDetailAllOf = {
   /** @nullable */
   content: PostDetailAllOfContent;
+  /** @nullable */
+  contentHtml: string | null;
   viewCount: number;
   /** @nullable */
   rejectionReason: string | null;
