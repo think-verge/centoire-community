@@ -1,0 +1,24 @@
+name: centoire
+root: <%= ENV["PWD"] %>
+startup_window: control
+
+windows:
+  - backend:
+      panes:
+        - backend:
+          - make backend
+
+  - ui:
+      panes:
+        - ui:
+          - make ui
+
+  - agent:
+      panes:
+        - agent:
+          - make agent
+
+  - control:
+      panes:
+        - control:
+          - clear
