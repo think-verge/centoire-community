@@ -7,8 +7,9 @@ import { hasPermission } from "../lib/permissions";
 import { DesktopSidebar } from "./nav/DesktopSidebar";
 import { RightSidebar } from "./nav/RightSidebar";
 import { MobileNav } from "./nav/MobileNav";
-import { MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
+import { CameraIcon, MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
 import { NotificationBell } from "./NotificationBell";
+import logoDark from "../assets/landing/logo-dark.svg";
 
 function getRightSidebarContext(pathname: string): RightSidebarContext | null {
   if (pathname === "/feed") return { type: "feed" };
@@ -37,7 +38,7 @@ export function AppShell() {
   });
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[var(--color-sand)]">
       <header className="sticky top-0 z-40 border-b border-[var(--color-hairline)] bg-white">
         <div className="flex h-14 items-center gap-3 px-4 sm:px-5">
           {/* Hamburger stub */}
@@ -50,22 +51,19 @@ export function AppShell() {
           </button>
 
           {/* Logo */}
-          <Link
-            to="/feed"
-            className="font-editorial text-xl italic font-bold tracking-tight text-[var(--color-charcoal)] shrink-0"
-          >
-            Centoire
+          <Link to="/feed" className="shrink-0">
+            <img src={logoDark} alt="centoire" className="h-7 w-auto" />
           </Link>
 
           {/* Search bar */}
-          <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-[var(--color-sand)] px-4 py-2 sm:flex">
+          <div className="mx-4 hidden w-full flex-1 items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-white px-4 py-2 sm:flex">
             <SearchIcon className="size-4 shrink-0 text-[var(--color-taupe)]" />
             <button
               type="button"
               onClick={() => navigate("/search")}
               className="flex-1 text-left text-sm text-[var(--color-stone)]"
             >
-              Search…
+              What happened in fashion today?
             </button>
             <button
               type="button"
@@ -76,10 +74,10 @@ export function AppShell() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/search")}
-              className="shrink-0 rounded-full bg-[var(--color-coral)] px-3 py-0.5 font-ui text-xs font-bold text-white"
+              aria-label="Visual search"
+              className="shrink-0 text-[var(--color-taupe)] hover:text-[var(--color-stone)]"
             >
-              Ask
+              <CameraIcon className="size-4" />
             </button>
           </div>
 

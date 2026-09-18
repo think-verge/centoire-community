@@ -67,10 +67,10 @@ export function PostCard({
       )}
 
       <div className="p-4">
-        {/* Must Read badge (no more tag kicker links here) */}
+        {/* Centoire Pick / Must Read badge */}
         {post.authorIsCreator && (
           <span className="mb-2 inline-block rounded-full bg-[var(--color-coral)] px-2 py-0.5 font-ui text-[10px] font-semibold uppercase tracking-wide text-white">
-            Must Read
+            ✓ Centoire Pick
           </span>
         )}
 
