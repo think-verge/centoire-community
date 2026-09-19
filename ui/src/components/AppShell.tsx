@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { RightSidebarContext } from "./nav/RightSidebar";
 import { useLogout } from "../lib/api/generated/auth/auth";
@@ -26,6 +26,20 @@ export function AppShell() {
   const location = useLocation();
   const rightCtx = getRightSidebarContext(location.pathname);
   const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("q") ?? "";
+  });
+
+  // Keep header input in sync when URL changes (e.g. browser back/forward on /search)
+  useEffect(() => {
+    if (location.pathname === "/search") {
+      const params = new URLSearchParams(location.search);
+      setSearchQuery(params.get("q") ?? "");
+    } else {
+      setSearchQuery("");
+    }
+  }, [location.pathname, location.search]);
   const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
@@ -56,15 +70,33 @@ export function AppShell() {
           </Link>
 
           {/* Search bar */}
-          <div className="mx-4 hidden w-full flex-1 items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-white px-4 py-2 sm:flex">
+          <form
+            className="mx-4 hidden w-full flex-1 items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-white px-4 py-2 sm:flex focus-within:border-[var(--color-coral)]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              if (q) {
+                navigate(`/search?q=${encodeURIComponent(q)}`);
+              } else {
+                setSearchQuery("");
+                navigate("/feed");
+              }
+            }}
+          >
             <SearchIcon className="size-4 shrink-0 text-[var(--color-taupe)]" />
-            <button
-              type="button"
-              onClick={() => navigate("/search")}
-              className="flex-1 text-left text-sm text-[var(--color-stone)]"
-            >
-              What happened in fashion today?
-            </button>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                if (!val && location.pathname === "/search") {
+                  navigate("/feed");
+                }
+              }}
+              placeholder="What happened in fashion today?"
+              className="flex-1 bg-transparent text-sm text-[var(--color-charcoal)] placeholder:text-[var(--color-stone)] focus:outline-none"
+            />
             <button
               type="button"
               aria-label="Voice search"
@@ -79,7 +111,7 @@ export function AppShell() {
             >
               <CameraIcon className="size-4" />
             </button>
-          </div>
+          </form>
 
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-2 sm:ml-0">

@@ -14,6 +14,9 @@ import { inferCountry } from "./regionService.js";
 const parser = new Parser({
   timeout: 15_000,
   headers: { "User-Agent": "CentoireBot/0.1 (+https://centoire.app)" },
+  customFields: {
+    item: [["content:encoded", "content:encoded"]],
+  },
 });
 
 // Many real-world RSS feeds contain bare & instead of &amp; which breaks the XML parser.
@@ -119,6 +122,12 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
         continue;
       }
 
+      // Priority 1: use RSS body (content:encoded or content) if substantial (>500 chars)
+      // Many paywalled sites still publish full text in their RSS feed.
+      const rssBodyRaw = ((item as Record<string, unknown>)["content:encoded"] as string | undefined) ?? item.content ?? "";
+      const rssBodyStripped = stripHtml(String(rssBodyRaw));
+      const hasRssBody = rssBodyStripped.length > 500;
+
       const rawSummary = item.contentSnippet ?? item.content ?? item.summary ?? "";
       const excerpt = stripHtml(String(rawSummary)).slice(0, 300);
       const enclosureUrl = item.enclosure?.url;
@@ -137,7 +146,9 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           title: title.slice(0, 200),
           slug: slugifyWithId(title),
           excerpt,
-          contentText: excerpt,
+          // Use RSS body immediately if available; URL extraction fills in later otherwise
+          contentHtml: hasRssBody ? rssBodyRaw : undefined,
+          contentText: hasRssBody ? rssBodyStripped : excerpt,
           coverImageUrl,
           externalUrl: link,
           canonicalUrlHash: hash,
@@ -146,20 +157,25 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           subcategory: source.subcategory,
           country: country ?? undefined,
           publishedAt,
-          readTimeMinutes: readTimeMinutes(excerpt),
+          readTimeMinutes: readTimeMinutes(hasRssBody ? rssBodyStripped : excerpt),
           expiresAt: new Date(Date.now() + POST_TTL_MS),
         });
 
-        // Fire-and-forget: extract full article HTML and write back to the post
-        void extractArticleHtml(link).then((contentHtml) => {
-          if (contentHtml) {
-            const text = stripHtml(contentHtml);
-            Post.updateOne(
-              { _id: post._id },
-              { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
-            ).catch(() => {});
-          }
-        });
+        // Priority 2: fire-and-forget URL extraction when RSS body was insufficient
+        if (!hasRssBody) {
+          void extractArticleHtml(link).then((contentHtml) => {
+            if (contentHtml) {
+              console.log(`[ingestion] extracted ${contentHtml.length}c from ${link}`);
+              const text = stripHtml(contentHtml);
+              Post.updateOne(
+                { _id: post._id },
+                { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
+              ).catch(() => {});
+            } else {
+              console.warn(`[ingestion] extraction null for ${link}`);
+            }
+          });
+        }
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
         void fireAiProcessing(post._id.toString(), { origin: "aggregated", url: link });

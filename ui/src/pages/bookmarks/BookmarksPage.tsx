@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MasonryFeed } from "../../components/MasonryFeed";
+import { PostDrawer } from "../../components/PostDrawer";
 import { Button } from "../../components/Button";
 import {
   getListBookmarkFoldersQueryKey,
@@ -9,9 +10,11 @@ import {
   useListBookmarkFolders,
   useListBookmarks,
 } from "../../lib/api/generated/engagement/engagement";
+import type { PostCard as PostCardType } from "../../lib/api/generated/model";
 
 export function BookmarksPage() {
   const [folderId, setFolderId] = useState<string | undefined>(undefined);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
   const queryClient = useQueryClient();
@@ -111,6 +114,7 @@ export function BookmarksPage() {
           hasNextPage={false}
           isFetchingNextPage={false}
           fetchNextPage={() => undefined}
+          onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
           emptyState={
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">Nothing saved yet</p>
@@ -121,6 +125,13 @@ export function BookmarksPage() {
           }
         />
       </div>
+
+      {selectedSlug && (
+        <PostDrawer
+          slug={selectedSlug}
+          onClose={() => setSelectedSlug(null)}
+        />
+      )}
     </div>
   );
 }
