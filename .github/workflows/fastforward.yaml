@@ -7,6 +7,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   fast_forward_job:
@@ -29,7 +30,13 @@ jobs:
             });
             const approved = reviews.data.filter(r => r.state === 'APPROVED');
             if (approved.length === 0) {
-              core.setFailed('❌ Fast-forward blocked: at least 1 approval is required before merging.');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: '❌ **Fast-forward blocked:** This PR requires at least 1 approval from a code owner before it can be merged. Please request a review.',
+              });
+              core.setFailed('Fast-forward blocked: approval required.');
             }
 
       - name: Fast Forward PR
