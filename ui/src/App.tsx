@@ -14,6 +14,7 @@ import { BookmarksPage } from "./pages/bookmarks/BookmarksPage";
 import { CategoryPage } from "./pages/feed/CategoryPage";
 import { CircleDetailPage } from "./pages/circles/CircleDetailPage";
 import { CirclesPage } from "./pages/circles/CirclesPage";
+import { CreateCirclePage } from "./pages/circles/CreateCirclePage";
 import { ComposePage } from "./pages/compose/ComposePage";
 import { DraftsPage } from "./pages/compose/DraftsPage";
 import { DiscoverPage } from "./pages/feed/DiscoverPage";
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/following" element={<FollowingPage />} />
               <Route path="/discover" element={<DiscoverPage />} />
               <Route path="/category/:category" element={<CategoryPage />} />
+              <Route path="/circles/new" element={<CreateCirclePage />} />
               <Route path="/circles" element={<CirclesPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
               <Route path="/search" element={<SearchPage />} />
