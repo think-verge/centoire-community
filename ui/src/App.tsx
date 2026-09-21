@@ -22,7 +22,6 @@ import { FeedPage } from "./pages/feed/FeedPage";
 import { FollowingPage } from "./pages/feed/FollowingPage";
 import { ComingSoonPage } from "./pages/marketing/ComingSoonPage";
 import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
-import { PostDetailPage } from "./pages/post/PostDetailPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { SearchPage } from "./pages/search/SearchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
@@ -58,7 +57,6 @@ export default function App() {
               <Route path="/compose" element={<ComposePage />} />
               <Route path="/compose/:id" element={<ComposePage />} />
               <Route path="/drafts" element={<DraftsPage />} />
-              <Route path="/p/:slug" element={<PostDetailPage />} />
               <Route path="/u/:handle" element={<ProfilePage />} />
               <Route path="/t/:slug" element={<TagPage />} />
               <Route path="/c/:slug" element={<CircleDetailPage />} />

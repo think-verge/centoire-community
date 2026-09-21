@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
@@ -34,9 +34,7 @@ const DISCOVER_FILTER_CONFIG: FilterFieldDef[] = [
 ];
 
 export function DiscoverPage() {
-  const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [feedPath] = useState(() => location.pathname + location.search);
   const [params, setParams] = useSearchParams();
   const sort = (params.get("sort") as "trending" | "new") ?? "trending";
   const tag = params.get("tag") ?? undefined;
@@ -155,7 +153,6 @@ export function DiscoverPage() {
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}
-          feedPath={feedPath}
           onClose={() => setSelectedSlug(null)}
         />
       )}

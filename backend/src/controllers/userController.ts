@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { Post } from "../models/Post.js";
+import { User } from "../models/User.js";
 import { serializePostCard } from "../services/postSerializer.js";
 import * as userService from "../services/userService.js";
 import { serializeUser } from "../services/userSerializer.js";
@@ -55,4 +56,25 @@ export async function unfollow(req: Request, res: Response): Promise<void> {
 export async function promoteUser(req: Request, res: Response): Promise<void> {
   const user = await userService.promoteUser(req.user!.userId, req.params.id as string, req.body.role);
   res.json(serializeUser(user));
+}
+
+export async function getFeatured(req: Request, res: Response): Promise<void> {
+  const limit = Math.min(Number(req.query.limit) || 3, 10);
+  // Prefer creators/editors, fall back to all users sorted by follower count
+  let users = await User.find({ role: { $in: ["creator", "editor", "admin"] } })
+    .sort({ followerCount: -1 })
+    .limit(limit)
+    .lean();
+  if (users.length < limit) {
+    users = await User.find({}).sort({ followerCount: -1 }).limit(limit).lean();
+  }
+  const serialized = await Promise.all(
+    users.map(async (u) => {
+      const isFollowing = req.user
+        ? await userService.isFollowing(req.user.userId, u._id.toString())
+        : false;
+      return { ...serializeUser(u as any), isFollowing };
+    }),
+  );
+  res.json(serialized);
 }

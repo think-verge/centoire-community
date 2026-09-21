@@ -32,5 +32,6 @@ userRouter.patch(
   requirePermission("user.promote"),
   asyncHandler(userController.promoteUser),
 );
+userRouter.get("/featured", optionalAuth, asyncHandler(userController.getFeatured));
 userRouter.get("/:handle", optionalAuth, asyncHandler(userController.getByHandle));
 userRouter.get("/:handle/posts", optionalAuth, asyncHandler(userController.getUserPosts));

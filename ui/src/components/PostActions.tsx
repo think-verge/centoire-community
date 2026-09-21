@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useBookmarkPost,
   useListBookmarkFolders,
@@ -24,6 +25,7 @@ export function PostActions({
   onOpenModal?: () => void;
 }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const [voted, setVoted] = useState<1 | -1 | null>(
     (post.viewer.voted as 1 | -1 | null) ?? null,
@@ -35,10 +37,35 @@ export function PostActions({
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  const votePost = useVotePost();
-  const unvotePost = useUnvotePost();
-  const bookmarkPost = useBookmarkPost();
-  const unbookmarkPost = useUnbookmarkPost();
+  const invalidateFeeds = () => {
+    void queryClient.invalidateQueries({
+      predicate: (q) => typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("/feed"),
+    });
+    void queryClient.invalidateQueries({ queryKey: [`/posts/${post.slug}`] });
+  };
+
+  const votePost = useVotePost({ mutation: { onSuccess: invalidateFeeds } });
+  const unvotePost = useUnvotePost({ mutation: { onSuccess: invalidateFeeds } });
+  const bookmarkPost = useBookmarkPost({ mutation: { onSuccess: invalidateFeeds } });
+  const unbookmarkPost = useUnbookmarkPost({ mutation: { onSuccess: invalidateFeeds } });
+
+  // Sync local display state from props when feed refreshes with server truth,
+  // but only when no mutation is in flight (to avoid reverting optimistic updates).
+  useEffect(() => {
+    if (!votePost.isPending && !unvotePost.isPending) {
+      setVoted((post.viewer.voted as 1 | -1 | null) ?? null);
+      setUpvotes(post.upvoteCount);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.upvoteCount, post.viewer.voted]);
+
+  useEffect(() => {
+    if (!bookmarkPost.isPending && !unbookmarkPost.isPending) {
+      setBookmarked(post.viewer.bookmarked);
+      setSaves(post.bookmarkCount);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.bookmarkCount, post.viewer.bookmarked]);
   const { data: folderData } = useListBookmarkFolders({
     query: { enabled: pickerOpen },
   });

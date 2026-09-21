@@ -511,7 +511,7 @@ export function useGetFeedDiscover<TData = Awaited<ReturnType<typeof getFeedDisc
 
 
 export const getFeedCategory = (
-    category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+    category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams,
  signal?: AbortSignal
 ) => {
@@ -527,14 +527,14 @@ export const getFeedCategory = (
 
 
 
-export const getGetFeedCategoryInfiniteQueryKey = (category?: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+export const getGetFeedCategoryInfiniteQueryKey = (category?: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams,) => {
     return [
     'infinite', `/feed/category/${category}`, ...(params ? [params]: [])
     ] as const;
     }
 
-export const getGetFeedCategoryQueryKey = (category?: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+export const getGetFeedCategoryQueryKey = (category?: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams,) => {
     return [
     `/feed/category/${category}`, ...(params ? [params]: [])
@@ -542,7 +542,7 @@ export const getGetFeedCategoryQueryKey = (category?: 'fashion' | 'beauty' | 'li
     }
 
     
-export const getGetFeedCategoryInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+export const getGetFeedCategoryInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData, QueryKey, GetFeedCategoryParams['cursor']>>, }
 ) => {
 
@@ -566,7 +566,7 @@ export type GetFeedCategoryInfiniteQueryError = ErrorType<unknown>
 
 
 export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params: undefined |  GetFeedCategoryParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData, QueryKey, GetFeedCategoryParams['cursor']>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedCategory>>,
@@ -577,7 +577,7 @@ export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData, QueryKey, GetFeedCategoryParams['cursor']>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedCategory>>,
@@ -588,13 +588,13 @@ export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnTy
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData, QueryKey, GetFeedCategoryParams['cursor']>>, }
  , queryClient?: QueryClient
   ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnType<typeof getFeedCategory>>, GetFeedCategoryParams['cursor']>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData, QueryKey, GetFeedCategoryParams['cursor']>>, }
  , queryClient?: QueryClient 
  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -611,7 +611,7 @@ export function useGetFeedCategoryInfinite<TData = InfiniteData<Awaited<ReturnTy
 
 
 
-export const getGetFeedCategoryQueryOptions = <TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+export const getGetFeedCategoryQueryOptions = <TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData>>, }
 ) => {
 
@@ -635,7 +635,7 @@ export type GetFeedCategoryQueryError = ErrorType<unknown>
 
 
 export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params: undefined |  GetFeedCategoryParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedCategory>>,
@@ -646,7 +646,7 @@ export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCate
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getFeedCategory>>,
@@ -657,13 +657,13 @@ export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCate
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useGetFeedCategory<TData = Awaited<ReturnType<typeof getFeedCategory>>, TError = ErrorType<unknown>>(
- category: 'fashion' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
+ category: 'fashion' | 'art' | 'beauty' | 'lifestyle' | 'ai_technology' | 'business_intelligence',
     params?: GetFeedCategoryParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFeedCategory>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

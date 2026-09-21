@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
@@ -12,9 +12,7 @@ import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, isPostCategory, type PostCateg
 
 export function CategoryPage() {
   const { category } = useParams<{ category: string }>();
-  const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [feedPath] = useState(() => location.pathname + location.search);
 
   if (!category || !isPostCategory(category)) {
     return (
@@ -28,7 +26,6 @@ export function CategoryPage() {
   return (
     <CategoryFeed
       category={category}
-      feedPath={feedPath}
       selectedSlug={selectedSlug}
       onSelectSlug={setSelectedSlug}
     />
@@ -37,12 +34,10 @@ export function CategoryPage() {
 
 function CategoryFeed({
   category,
-  feedPath,
   selectedSlug,
   onSelectSlug,
 }: {
   category: PostCategoryValue;
-  feedPath: string;
   selectedSlug: string | null;
   onSelectSlug: (slug: string | null) => void;
 }) {
@@ -109,7 +104,7 @@ function CategoryFeed({
         />
       </div>
       {selectedSlug && (
-        <PostDrawer slug={selectedSlug} feedPath={feedPath} onClose={() => onSelectSlug(null)} />
+        <PostDrawer slug={selectedSlug} onClose={() => onSelectSlug(null)} />
       )}
     </div>
   );

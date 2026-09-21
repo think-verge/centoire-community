@@ -15,6 +15,7 @@ export type CreateSourceInputCategory = typeof CreateSourceInputCategory[keyof t
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const CreateSourceInputCategory = {
   fashion: 'fashion',
+  art: 'art',
   beauty: 'beauty',
   lifestyle: 'lifestyle',
   ai_technology: 'ai_technology',

@@ -170,6 +170,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -268,6 +269,10 @@
                   "nullable": true
                 }
               },
+              "contentHtml": {
+                "type": "string",
+                "nullable": true
+              },
               "viewCount": {
                 "type": "number"
               },
@@ -288,6 +293,7 @@
             },
             "required": [
               "content",
+              "contentHtml",
               "viewCount",
               "rejectionReason",
               "authorFollowedByViewer",
@@ -332,6 +338,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -389,6 +396,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -445,6 +453,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -1798,6 +1807,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -1875,6 +1885,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -1927,6 +1938,7 @@
             "nullable": true,
             "enum": [
               "fashion",
+              "art",
               "beauty",
               "lifestyle",
               "ai_technology",
@@ -3278,6 +3290,7 @@
               "type": "string",
               "enum": [
                 "fashion",
+                "art",
                 "beauty",
                 "lifestyle",
                 "ai_technology",
@@ -3350,6 +3363,7 @@
               "type": "string",
               "enum": [
                 "fashion",
+                "art",
                 "beauty",
                 "lifestyle",
                 "ai_technology",

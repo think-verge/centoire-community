@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { PostCard } from "../../components/PostCard";
@@ -17,7 +17,7 @@ type TabKey = "all" | "editorial" | "must_reads" | "latest" | "following" | "tre
 
 const MAIN_TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "editorial", label: "Editorial Picks" },
+  { key: "editorial", label: "Centoire Picks" },
   { key: "must_reads", label: "Must Reads" },
   { key: "latest", label: "Latest News" },
 ];
@@ -31,9 +31,7 @@ const MORE_TABS: { key: TabKey; label: string }[] = [
 
 export function FeedPage() {
   const { user } = useAuth();
-  const location = useLocation();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
-  const [feedPath] = useState(() => location.pathname + location.search);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -81,9 +79,22 @@ export function FeedPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Tab bar */}
-      <div className="sticky top-14 z-30 border-b border-[var(--color-hairline)] bg-white px-4 sm:px-6">
-        <div className="flex items-center gap-1 overflow-x-auto py-2 scrollbar-none">
+      {/* Welcome header */}
+      <div className="px-4 pt-6 pb-4 sm:px-6">
+        <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
+          For you
+        </p>
+        <h1 className="font-editorial mt-0.5 text-3xl italic text-[var(--color-charcoal)]">
+          {greeting()}, {user?.displayName.split(" ")[0]}
+        </h1>
+        <p className="mt-1 font-ui text-sm text-[var(--color-stone)]">
+          Here's what's trending in fashion today
+        </p>
+      </div>
+
+      {/* Tab bar — inline below the greeting */}
+      <div className="border-b border-[var(--color-hairline)] bg-[var(--color-sand)] px-4 sm:px-6">
+        <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-none">
           {MAIN_TABS.map((tab) => (
             <TabButton
               key={tab.key}
@@ -123,16 +134,6 @@ export function FeedPage() {
       <div className="px-4 py-6 sm:px-6">
         {isAll ? (
           <>
-            {/* Header */}
-            <div className="mb-6">
-              <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-                For you
-              </p>
-              <h1 className="font-editorial mt-0.5 text-3xl italic text-[var(--color-charcoal)]">
-                {greeting()}, {user?.displayName.split(" ")[0]}
-              </h1>
-            </div>
-
             {/* Editorial Picks section */}
             {(editorialPosts.length > 0 || editorialPicks.isLoading) && (
               <section className="mb-8">
@@ -213,7 +214,6 @@ export function FeedPage() {
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}
-          feedPath={feedPath}
           onClose={() => setSelectedSlug(null)}
         />
       )}
@@ -237,7 +237,7 @@ function TabButton({
       className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-sm font-medium transition-colors ${
         active
           ? "bg-[var(--color-coral)] text-white"
-          : "text-[var(--color-stone)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]"
+          : "border border-[var(--color-hairline)] bg-white text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
       }`}
     >
       {label}

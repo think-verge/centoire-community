@@ -127,7 +127,12 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
         />
       )}
 
-      {post.origin === "aggregated" && post.externalUrl ? (
+      {(html ?? post.contentHtml) ? (
+        <div
+          className="prose-editorial mt-6 text-[17px] leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: (html ?? post.contentHtml)! }}
+        />
+      ) : post.externalUrl ? (
         <div className="mt-6 rounded-xl border border-line bg-paper p-6">
           <p className="text-lg leading-relaxed text-ink-soft">{post.excerpt}</p>
           <a
@@ -139,15 +144,7 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
             Read the full story ↗
           </a>
         </div>
-      ) : (
-        html && (
-          <div
-            className="prose-editorial mt-6 text-[17px] leading-relaxed"
-            // TipTap JSON authored in-platform, rendered with the same extension set.
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        )
-      )}
+      ) : null}
 
       <footer className="mt-8 border-t border-line pt-6" ref={commentsRef} id="post-comments">
         <div className="mb-8 max-w-md">

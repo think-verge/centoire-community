@@ -80,6 +80,7 @@ export function serializePostDetail(
   return {
     ...serializePostCard(post, viewer),
     content: (post.content as Record<string, unknown>) ?? null,
+    contentHtml: post.contentHtml ?? null,
     viewCount: post.viewCount,
     rejectionReason: post.rejectionReason ?? null,
     authorFollowedByViewer: authorFollowedByViewer ?? false,

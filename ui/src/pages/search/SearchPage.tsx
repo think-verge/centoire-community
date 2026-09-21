@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import { PostCard } from "../../components/PostCard";
+import { PostDrawer } from "../../components/PostDrawer";
 import { useSearch } from "../../lib/api/generated/search/search";
+import type { PostCard as PostCardType } from "../../lib/api/generated/model";
 
 const TYPES = ["all", "posts", "people", "circles", "tags"] as const;
 type SearchType = (typeof TYPES)[number];
@@ -11,20 +13,16 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const type = (params.get("type") as SearchType) ?? "all";
-  const [input, setInput] = useState(q);
-
-  useEffect(() => {
-    setInput(q);
-  }, [q]);
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
   const { data, isLoading } = useSearch(
     { q, type },
     { query: { enabled: q.trim().length > 0 } },
   );
 
-  function submit(nextQ: string, nextType: SearchType = type) {
+  function submit(nextType: SearchType) {
     const next = new URLSearchParams();
-    if (nextQ.trim()) next.set("q", nextQ.trim());
+    if (q.trim()) next.set("q", q.trim());
     if (nextType !== "all") next.set("type", nextType);
     setParams(next, { replace: true });
   }
@@ -39,30 +37,9 @@ export function SearchPage() {
   return (
     <div className="px-4 py-8 sm:px-6">
       <p className="kicker mb-1">Search</p>
-      <h1 className="font-display-serif text-3xl font-semibold">Search Centoire</h1>
-
-      <form
-        className="mt-5 flex max-w-xl gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit(input);
-        }}
-      >
-        <input
-          type="search"
-          autoFocus
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Posts, people, circles, tags…"
-          className="w-full rounded-full border border-line bg-paper px-5 py-2.5 text-sm placeholder:text-ink-faint focus:border-crimson focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="rounded-full bg-crimson px-5 py-2.5 text-sm font-semibold text-ink-inverse hover:bg-crimson-deep"
-        >
-          Search
-        </button>
-      </form>
+      <h1 className="font-display-serif text-3xl font-semibold">
+        {q ? `Results for "${q}"` : "Search Centoire"}
+      </h1>
 
       {q && (
         <div className="mt-4 flex gap-2">
@@ -70,7 +47,7 @@ export function SearchPage() {
             <button
               key={value}
               type="button"
-              onClick={() => submit(q, value)}
+              onClick={() => submit(value)}
               aria-pressed={type === value}
               className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-colors ${
                 type === value
@@ -82,6 +59,12 @@ export function SearchPage() {
             </button>
           ))}
         </div>
+      )}
+
+      {!q && (
+        <p className="mt-4 text-sm text-ink-soft">
+          Use the search bar above to find posts, people, circles and tags.
+        </p>
       )}
 
       {isLoading && <p className="mt-8 text-ink-faint">Searching…</p>}
@@ -163,12 +146,20 @@ export function SearchPage() {
               <p className="kicker mb-3">Posts</p>
               <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
                 {data.posts.map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onOpenPost={(p: PostCardType) => setSelectedSlug(p.slug)}
+                  />
                 ))}
               </div>
             </section>
           )}
         </div>
+      )}
+
+      {selectedSlug && (
+        <PostDrawer slug={selectedSlug} onClose={() => setSelectedSlug(null)} />
       )}
     </div>
   );

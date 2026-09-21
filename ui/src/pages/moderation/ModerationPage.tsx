@@ -454,7 +454,6 @@ function QueueTab() {
       <PostDrawer
         slug={drawerSlug}
         onClose={closeDrawer}
-        syncUrl={false}
         headerActions={
           <ModerationDrawerActions
             onApprove={drawerApprove}

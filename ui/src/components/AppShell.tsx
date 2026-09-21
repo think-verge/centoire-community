@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { RightSidebarContext } from "./nav/RightSidebar";
 import { useLogout } from "../lib/api/generated/auth/auth";
@@ -7,8 +7,9 @@ import { hasPermission } from "../lib/permissions";
 import { DesktopSidebar } from "./nav/DesktopSidebar";
 import { RightSidebar } from "./nav/RightSidebar";
 import { MobileNav } from "./nav/MobileNav";
-import { MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
+import { CameraIcon, MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
 import { NotificationBell } from "./NotificationBell";
+import logoDark from "../assets/landing/logo-dark.svg";
 
 function getRightSidebarContext(pathname: string): RightSidebarContext | null {
   if (pathname === "/feed") return { type: "feed" };
@@ -25,11 +26,25 @@ export function AppShell() {
   const location = useLocation();
   const rightCtx = getRightSidebarContext(location.pathname);
   const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("q") ?? "";
+  });
 
   // Scroll to top on route change
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
+
+  // Keep header input in sync when URL changes (e.g. browser back/forward on /search)
+  useEffect(() => {
+    if (location.pathname === "/search") {
+      const params = new URLSearchParams(location.search);
+      setSearchQuery(params.get("q") ?? "");
+    } else {
+      setSearchQuery("");
+    }
+  }, [location.pathname, location.search]);
   const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
@@ -42,7 +57,7 @@ export function AppShell() {
   });
 
   return (
-    <div className="min-h-screen bg-[#F0F0F0]">
+    <div className="min-h-screen bg-[var(--color-sand)]">
       <header className="sticky top-0 z-40 border-b border-[var(--color-hairline)] bg-white">
         <div className="flex h-14 items-center gap-3 px-4 sm:px-5">
           {/* Hamburger stub */}
@@ -55,23 +70,38 @@ export function AppShell() {
           </button>
 
           {/* Logo */}
-          <Link
-            to="/feed"
-            className="font-editorial text-xl italic font-bold tracking-tight text-[var(--color-charcoal)] shrink-0"
-          >
-            Centoire
+          <Link to="/feed" className="shrink-0">
+            <img src={logoDark} alt="centoire" className="h-7 w-auto" />
           </Link>
 
           {/* Search bar */}
-          <div className="mx-auto hidden w-full max-w-md items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-[var(--color-sand)] px-4 py-2 sm:flex">
+          <form
+            className="mx-4 hidden w-full flex-1 items-center gap-2 rounded-full border border-[var(--color-hairline)] bg-white px-4 py-2 sm:flex focus-within:border-[var(--color-coral)]"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = searchQuery.trim();
+              if (q) {
+                navigate(`/search?q=${encodeURIComponent(q)}`);
+              } else {
+                setSearchQuery("");
+                navigate("/feed");
+              }
+            }}
+          >
             <SearchIcon className="size-4 shrink-0 text-[var(--color-taupe)]" />
-            <button
-              type="button"
-              onClick={() => navigate("/search")}
-              className="flex-1 text-left text-sm text-[var(--color-stone)]"
-            >
-              Search…
-            </button>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSearchQuery(val);
+                if (!val && location.pathname === "/search") {
+                  navigate("/feed");
+                }
+              }}
+              placeholder="What happened in fashion today?"
+              className="flex-1 bg-transparent text-sm text-[var(--color-charcoal)] placeholder:text-[var(--color-stone)] focus:outline-none"
+            />
             <button
               type="button"
               aria-label="Voice search"
@@ -81,12 +111,12 @@ export function AppShell() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/search")}
-              className="shrink-0 rounded-full bg-[var(--color-coral)] px-3 py-0.5 font-ui text-xs font-bold text-white"
+              aria-label="Visual search"
+              className="shrink-0 text-[var(--color-taupe)] hover:text-[var(--color-stone)]"
             >
-              Ask
+              <CameraIcon className="size-4" />
             </button>
-          </div>
+          </form>
 
           {/* Right actions */}
           <div className="ml-auto flex items-center gap-2 sm:ml-0">

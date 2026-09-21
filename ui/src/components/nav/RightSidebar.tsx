@@ -1,49 +1,17 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useListTags } from "../../lib/api/generated/tags/tags";
+import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
+import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
+import { apiClient } from "../../lib/api/http";
 import type { ListTagsCategory } from "../../lib/api/generated/model";
+import { AvatarBubble } from "../AppShell";
 
 export type RightSidebarContext =
   | { type: "feed" }
   | { type: "following" }
   | { type: "discover" }
   | { type: "category"; category: string };
-
-// ── Static placeholder data ────────────────────────────────────────────────
-
-const EDITORS_PICKS = [
-  { id: "1", title: "The quiet return of couture craftsmanship", author: "Editorial Team", readTime: 4 },
-  { id: "2", title: "How streetwear reshaped the luxury ladder", author: "Style Desk", readTime: 6 },
-  { id: "3", title: "Art fairs in 2026: who's buying, who's showing", author: "Arts Editor", readTime: 5 },
-];
-
-const CREATORS_BY_CATEGORY: Record<string, { id: string; name: string; role: string }[]> = {
-  fashion: [
-    { id: "1", name: "Aria Sharma", role: "Fashion Curator" },
-    { id: "2", name: "Leila Owusu", role: "Style Journalist" },
-    { id: "3", name: "Marcus Tan", role: "Runway Critic" },
-  ],
-  art: [
-    { id: "1", name: "Ethan Muro", role: "Art Director" },
-    { id: "2", name: "Soo-Yeon Kim", role: "Gallery Curator" },
-    { id: "3", name: "Rafael Neto", role: "Contemporary Artist" },
-  ],
-  lifestyle: [
-    { id: "1", name: "Priya Desai", role: "Lifestyle Editor" },
-    { id: "2", name: "James Olivier", role: "Wellness Writer" },
-    { id: "3", name: "Mia Larsen", role: "Design Journalist" },
-  ],
-  default: [
-    { id: "1", name: "Aria Sharma", role: "Fashion Curator" },
-    { id: "2", name: "Ethan Muro", role: "Art Director" },
-    { id: "3", name: "Leila Owusu", role: "Style Journalist" },
-  ],
-};
-
-const COLLECTION = [
-  "The power of slow fashion in a fast world",
-  "Building a second-skin wardrobe",
-  "Why photorealism is back in contemporary art",
-];
 
 // Category → tag category mapping for Trending Topics
 const CATEGORY_TAG_FILTER: Record<string, ListTagsCategory> = {
@@ -62,6 +30,24 @@ const CATEGORY_LABELS: Record<string, string> = {
   beauty: "Beauty",
 };
 
+type FeaturedUser = {
+  id: string;
+  displayName: string;
+  handle: string;
+  avatarUrl: string | null;
+  role: string;
+  followerCount: number;
+  isFollowing: boolean;
+};
+
+function useFeaturedUsers() {
+  return useQuery<FeaturedUser[]>({
+    queryKey: ["users", "featured"],
+    queryFn: () => apiClient.get("/users/featured?limit=3").then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function RightSidebar({ context }: { context: RightSidebarContext }) {
@@ -75,8 +61,17 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
     { query: {} },
   );
 
-  const creators: { id: string; name: string; role: string }[] =
-    (category ? CREATORS_BY_CATEGORY[category] : undefined) ?? CREATORS_BY_CATEGORY.default;
+  const { data: latestPostsData } = useGetFeedDiscover({ sort: "trending" });
+  const latestPosts = latestPostsData?.items?.slice(0, 3) ?? [];
+
+  const { data: featuredUsers = [], refetch: refetchCreators } = useFeaturedUsers();
+
+  const followMutation = useFollowUser({
+    mutation: { onSuccess: () => refetchCreators() },
+  });
+  const unfollowMutation = useUnfollowUser({
+    mutation: { onSuccess: () => refetchCreators() },
+  });
 
   return (
     <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 flex-col gap-6 overflow-y-auto border-l border-[var(--color-hairline)] bg-white px-5 py-5 xl:flex">
@@ -102,13 +97,13 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
         </>
       )}
 
-      {/* Editor's Picks — only on feed/discover/following */}
+      {/* Latest Posts — only on feed/discover/following */}
       {!isCategory && (
         <>
           <section>
             <div className="mb-3 flex items-center justify-between">
               <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-                Editor's Picks
+                Latest Posts
               </p>
               <Link
                 to="/discover"
@@ -118,18 +113,40 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
               </Link>
             </div>
             <ul className="flex flex-col gap-3">
-              {EDITORS_PICKS.map((item) => (
-                <li key={item.id}>
-                  <Link to="/discover" className="group block">
-                    <p className="line-clamp-2 text-sm font-medium leading-snug text-[var(--color-charcoal)] group-hover:text-[var(--color-coral)]">
-                      {item.title}
-                    </p>
-                    <p className="mt-0.5 font-ui text-[11px] text-[var(--color-taupe)]">
-                      {item.author} · {item.readTime} min
-                    </p>
-                  </Link>
-                </li>
-              ))}
+              {latestPosts.length > 0
+                ? latestPosts.map((post) => (
+                    <li key={post.id}>
+                      <Link to={post.externalUrl ?? `/p/${post.slug}`} className="group flex gap-2.5">
+                        {post.coverImageUrl ? (
+                          <img
+                            src={post.coverImageUrl}
+                            alt=""
+                            className="h-10 w-12 shrink-0 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-12 shrink-0 rounded bg-[var(--color-sand)]" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="line-clamp-2 text-sm font-medium leading-snug text-[var(--color-charcoal)] group-hover:text-[var(--color-coral)]">
+                            {post.title}
+                          </p>
+                          <p className="mt-0.5 font-ui text-[11px] text-[var(--color-taupe)]">
+                            {post.author?.displayName} · {post.readTimeMinutes} min
+                          </p>
+                        </div>
+                      </Link>
+                    </li>
+                  ))
+                : /* skeleton */
+                  [0, 1, 2].map((i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <div className="h-10 w-12 shrink-0 animate-pulse rounded bg-[var(--color-sand)]" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 animate-pulse rounded bg-[var(--color-sand)]" />
+                        <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--color-sand)]" />
+                      </div>
+                    </li>
+                  ))}
             </ul>
           </section>
           <div className="h-px bg-[var(--color-hairline)]" />
@@ -143,25 +160,33 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
         </p>
         {(tags as { id: string; slug: string; name: string }[]).length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {(tags as { id: string; slug: string; name: string }[]).slice(0, 12).map((tag) => (
+            {(tags as { id: string; slug: string; name: string }[]).slice(0, 12).map((tag, i) => (
               <Link
                 key={tag.id}
                 to={`/t/${tag.slug}`}
-                className="rounded-full border border-[var(--color-hairline)] px-3 py-1 font-ui text-[11px] text-[var(--color-stone)] transition-colors hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
+                className={`rounded-full border px-3 py-1 font-ui text-[11px] transition-colors ${
+                  i === 0
+                    ? "border-[var(--color-coral)] bg-[var(--color-coral)] text-white"
+                    : "border-[var(--color-hairline)] text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
+                }`}
               >
-                {tag.name}
+                #{tag.name}
               </Link>
             ))}
           </div>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {["Haute Couture", "Streetwear", "Sustainable", "Runway", "Art Basel", "Luxury"].map(
-              (name) => (
+            {["StreetStyle", "FashionWeek", "Minimalist", "Accessories", "Denim", "Luxury"].map(
+              (name, i) => (
                 <span
                   key={name}
-                  className="rounded-full border border-[var(--color-hairline)] px-3 py-1 font-ui text-[11px] text-[var(--color-stone)]"
+                  className={`rounded-full border px-3 py-1 font-ui text-[11px] ${
+                    i === 0
+                      ? "border-[var(--color-coral)] bg-[var(--color-coral)] text-white"
+                      : "border-[var(--color-hairline)] text-[var(--color-stone)]"
+                  }`}
                 >
-                  {name}
+                  #{name}
                 </span>
               ),
             )}
@@ -171,63 +196,50 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
 
       <div className="h-px bg-[var(--color-hairline)]" />
 
-      {/* Creators to Watch */}
+      {/* Top Creators */}
       <section>
-        <p className="mb-3 font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-          {isCategory && categoryLabel ? `Creators in ${categoryLabel}` : "Creators to Watch"}
-        </p>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
+            {isCategory && categoryLabel ? `Creators in ${categoryLabel}` : "Top Creators"}
+          </p>
+          <Link
+            to="/discover"
+            className="font-ui text-[10px] font-semibold text-[var(--color-coral)] hover:underline"
+          >
+            VIEW ALL
+          </Link>
+        </div>
         <ul className="flex flex-col gap-3">
-          {creators.map((creator) => (
+          {featuredUsers.map((creator) => (
             <li key={creator.id} className="flex items-center gap-2.5">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-sand)] font-ui text-sm font-semibold text-[var(--color-stone)]">
-                {creator.name.charAt(0)}
-              </span>
+              <AvatarBubble name={creator.displayName} url={creator.avatarUrl} size="size-8" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-[var(--color-charcoal)]">
-                  {creator.name}
+                  {creator.displayName}
                 </p>
-                <p className="font-ui text-[11px] text-[var(--color-taupe)]">{creator.role}</p>
+                <p className="font-ui text-[11px] capitalize text-[var(--color-taupe)]">{creator.role}</p>
               </div>
               <button
                 type="button"
-                className="shrink-0 rounded-full border border-[var(--color-coral)] px-2.5 py-0.5 font-ui text-[11px] font-semibold text-[var(--color-coral)] transition-colors hover:bg-[var(--color-coral)] hover:text-white"
+                onClick={() => {
+                  if (creator.isFollowing) {
+                    unfollowMutation.mutate({ id: creator.id });
+                  } else {
+                    followMutation.mutate({ id: creator.id });
+                  }
+                }}
+                className={`shrink-0 rounded-full border px-2.5 py-0.5 font-ui text-[11px] font-semibold transition-colors ${
+                  creator.isFollowing
+                    ? "border-[var(--color-hairline)] text-[var(--color-stone)] hover:border-red-300 hover:text-red-500"
+                    : "border-[var(--color-coral)] text-[var(--color-coral)] hover:bg-[var(--color-coral)] hover:text-white"
+                }`}
               >
-                Follow
+                {creator.isFollowing ? "Following" : "Follow"}
               </button>
             </li>
           ))}
         </ul>
       </section>
-
-      {/* Your Collection — only on non-category pages */}
-      {!isCategory && (
-        <>
-          <div className="h-px bg-[var(--color-hairline)]" />
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-                Your Collection
-              </p>
-              <Link
-                to="/bookmarks"
-                className="font-ui text-[10px] font-semibold text-[var(--color-coral)] hover:underline"
-              >
-                VIEW ALL
-              </Link>
-            </div>
-            <ul className="flex flex-col gap-2">
-              {COLLECTION.map((title) => (
-                <li key={title} className="flex items-start gap-2">
-                  <span className="mt-0.5 size-3.5 shrink-0 rounded-sm border border-[var(--color-hairline)]" />
-                  <p className="line-clamp-2 text-xs leading-snug text-[var(--color-stone)]">
-                    {title}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
-      )}
     </aside>
   );
 }
