@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import type { RightSidebarContext } from "./nav/RightSidebar";
 import { useLogout } from "../lib/api/generated/auth/auth";
@@ -25,6 +25,11 @@ export function AppShell() {
   const location = useLocation();
   const rightCtx = getRightSidebarContext(location.pathname);
   const [activeMenu, setActiveMenu] = useState<"account" | "bell" | null>(null);
+
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
   const menuOpen = activeMenu === "account";
   const logout = useLogout({
     mutation: {
@@ -37,7 +42,7 @@ export function AppShell() {
   });
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F0F0F0]">
       <header className="sticky top-0 z-40 border-b border-[var(--color-hairline)] bg-white">
         <div className="flex h-14 items-center gap-3 px-4 sm:px-5">
           {/* Hamburger stub */}

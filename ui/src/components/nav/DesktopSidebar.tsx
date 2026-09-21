@@ -3,11 +3,12 @@ import { NavLink, useLocation } from "react-router-dom";
 import { hasPermission } from "../../lib/permissions";
 import { useAuth } from "../../lib/auth-context";
 import { CATEGORY_NAV_ITEMS, NAV_GROUPS } from "./navConfig";
-import { ChevronDownIcon } from "./icons";
+import { ChevronDownIcon, PanelLeftCloseIcon } from "./icons";
 
 export function DesktopSidebar() {
   const { user } = useAuth();
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(() =>
     location.pathname.startsWith("/category/"),
   );
@@ -15,7 +16,9 @@ export function DesktopSidebar() {
   return (
     <nav
       aria-label="Primary"
-      className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 flex-col overflow-y-auto border-r border-[var(--color-hairline)] bg-white px-3 py-5 md:flex"
+      className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-[var(--color-hairline)] bg-white py-5 transition-all duration-300 md:flex ${
+        isCollapsed ? "w-[72px] px-2" : "w-60 px-3"
+      }`}
     >
       {NAV_GROUPS.map((group, gi) => {
         const visibleItems = group.items.filter(
@@ -26,9 +29,22 @@ export function DesktopSidebar() {
         return (
           <div key={group.key} className={gi > 0 ? "mt-5" : ""}>
             {/* Section label */}
-            <p className="mb-1.5 px-3 font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-              {group.label}
-            </p>
+            <div className={`mb-1.5 flex items-center ${isCollapsed ? "justify-center" : "justify-between px-3"}`}>
+              {!isCollapsed && (
+                <p className="font-ui text-[15px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
+                  {group.label}
+                </p>
+              )}
+              {gi === 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsCollapsed(!isCollapsed)}
+                  className="rounded p-1 text-[var(--color-taupe)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]"
+                >
+                  <PanelLeftCloseIcon className={`size-7 transition-transform ${isCollapsed ? "rotate-180" : ""}`} />
+                </button>
+              )}
+            </div>
 
             {gi > 0 && gi === 1 && (
               <div className="mb-3 h-px bg-[var(--color-hairline)]" />
@@ -41,16 +57,23 @@ export function DesktopSidebar() {
                     <li key={item.key}>
                       <button
                         type="button"
-                        onClick={() => setCategoriesOpen((o) => !o)}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-stone)] transition-colors hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]"
+                        onClick={() => {
+                          if (isCollapsed) setIsCollapsed(false);
+                          setCategoriesOpen((o) => !o);
+                        }}
+                        className={`flex w-full items-center rounded-lg transition-colors ${
+                          isCollapsed ? "justify-center p-2 w-10 h-10 mx-auto" : "gap-2.5 px-3 py-2"
+                        } text-sm font-medium text-[var(--color-stone)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]`}
                       >
                         {item.icon && <item.icon className="size-4 shrink-0" />}
-                        <span className="flex-1 text-left">{item.label}</span>
-                        <ChevronDownIcon
-                          className={`size-3.5 shrink-0 transition-transform ${categoriesOpen ? "rotate-180" : ""}`}
-                        />
+                        {!isCollapsed && <span className="flex-1 text-left whitespace-nowrap">{item.label}</span>}
+                        {!isCollapsed && (
+                          <ChevronDownIcon
+                            className={`size-3.5 shrink-0 transition-transform ${categoriesOpen ? "rotate-180" : ""}`}
+                          />
+                        )}
                       </button>
-                      {categoriesOpen && (
+                      {categoriesOpen && !isCollapsed && (
                         <ul className="mt-0.5 flex flex-col gap-0.5 pl-4">
                           {CATEGORY_NAV_ITEMS.map((cat) => (
                             <li key={cat.key}>
@@ -81,7 +104,9 @@ export function DesktopSidebar() {
                       to={item.to}
                       end={item.to === "/feed"}
                       className={({ isActive }) =>
-                        `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        `flex items-center rounded-lg transition-colors overflow-hidden ${
+                          isCollapsed ? "justify-center p-2 w-10 h-10 mx-auto" : "gap-2.5 px-3 py-2 w-full"
+                        } text-sm font-medium ${
                           isActive
                             ? "bg-[var(--color-sand)] font-semibold text-[var(--color-coral)]"
                             : "text-[var(--color-stone)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]"
@@ -89,7 +114,7 @@ export function DesktopSidebar() {
                       }
                     >
                       {item.icon && <item.icon className="size-4 shrink-0" />}
-                      {item.label}
+                      {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
                     </NavLink>
                   </li>
                 );
