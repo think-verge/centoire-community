@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import {
   useCompleteOnboarding,
@@ -19,11 +19,20 @@ const CATEGORY_LABELS: Record<Tag["category"], string> = {
 };
 
 export function OnboardingPage() {
-  const [step, setStep] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepParam = parseInt(searchParams.get("step") || "1", 10);
+  const currentStep = isNaN(stepParam) || stepParam < 1 || stepParam > 3 ? 1 : stepParam;
+  
+  // 0-indexed step for array indexing
+  const step = currentStep - 1;
+
+  function setStep(newStepIndex: number) {
+    setSearchParams({ step: (newStepIndex + 1).toString() });
+  }
 
   return (
     <main className="min-h-screen w-full bg-[#ECEBE7] flex flex-col py-8 px-4 sm:px-8">
-      <div className={`w-full max-w-[840px] ${step === 3 ? "h-[720px]" : "h-[640px]"} max-h-[calc(100vh-4rem)] my-auto mx-auto bg-white px-8 sm:px-14 pt-10 pb-10 sm:pb-12 border border-[#E5E5E5] shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-col transition-[height] duration-300 ease-in-out`}>
+      <div className={`w-full max-w-[840px] ${step === 2 ? "h-[760px]" : "h-[640px]"} max-h-[calc(100vh-4rem)] my-auto mx-auto bg-white px-8 sm:px-14 pt-10 pb-10 sm:pb-12 border border-[#E5E5E5] shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-col transition-[height] duration-300 ease-in-out`}>
         {/* Top Logo */}
         <div className="flex justify-center mb-8 sm:mb-10 shrink-0">
           <img src={logoDark} alt="Centoire" className="h-8 sm:h-9 w-auto" />
@@ -31,10 +40,10 @@ export function OnboardingPage() {
 
         <header className="mb-5 sm:mb-6 flex items-center justify-between shrink-0">
           <div className="rounded-full bg-[#FCEEE8] px-2.5 py-1 font-ui text-[12px] font-black uppercase tracking-tight text-[#E5552D]">
-            STEP {step + 1} OF 4
+            STEP {step + 1} OF 3
           </div>
           <div className="flex items-center gap-1.5">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 className={`h-1 rounded-full transition-colors ${i === step ? "w-[26px] bg-[#D85834]" : "w-[14px] bg-[#F6D9D0]"
@@ -44,120 +53,15 @@ export function OnboardingPage() {
           </div>
         </header>
 
-        {step === 0 && <RoleStep onDone={() => setStep(1)} />}
-        {step === 1 && <InterestsStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
-        {step === 2 && <FollowStep onDone={() => setStep(3)} onBack={() => setStep(1)} />}
-        {step === 3 && <ProfileStep onBack={() => setStep(2)} />}
+        {step === 0 && <InterestsStep onDone={() => setStep(1)} />}
+        {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
+        {step === 2 && <ProfileStep onBack={() => setStep(1)} />}
       </div>
     </main>
   );
 }
 
-function RoleStep({ onDone }: { onDone: () => void }) {
-  const [selectedRole, setSelectedRole] = useState<string | null>("creator");
-
-  const roles = [
-    {
-      id: "explorer",
-      title: "Explorer",
-      description: "I browse and discover trends",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <circle cx="12" cy="12" r="9" />
-          <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "creator",
-      title: "Creator",
-      description: "I curate and publish content",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "professional",
-      title: "Professional",
-      description: "I work in fashion or luxury",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <rect x="3" y="8" width="18" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M16 8V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="8" y1="8" x2="8" y2="21" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="16" y1="8" x2="16" y2="21" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-  ];
-
-  return (
-    <section className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-        <h1 className="font-editorial text-[32px] sm:text-[34px] font-normal text-charcoal leading-tight">
-          How are you planning to use Centoire?
-        </h1>
-        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14.5px] leading-[1.6] pr-0">
-          We customize your broadsheet feed, archival access, and collection dispatches according to your specific professional or personal focus.
-        </p>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {roles.map((role) => {
-            const active = selectedRole === role.id;
-            return (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => setSelectedRole(role.id)}
-                className={`group flex flex-col items-center justify-center px-2 py-6 sm:px-3 sm:py-6 transition-all duration-200 outline-none cursor-pointer text-left rounded-none
-                ${active
-                    ? "border border-[#D85834] bg-white shadow-[0_20px_24px_-12px_rgba(0,0,0,0.25)]"
-                    : "border border-[#E5E5E5] bg-white shadow-[0_12px_16px_-8px_rgba(0,0,0,0.1)] hover:border-[#D4D4D4] hover:shadow-[0_16px_20px_-10px_rgba(0,0,0,0.15)]"
-                  }`}
-              >
-                <div
-                  className={`flex items-center justify-center size-[60px] sm:size-[64px] rounded-[16px] mb-5 transition-colors ${active ? "bg-[#FCE5DA] text-[#D85834]" : "bg-[#EBEBEB] text-[#111111]"
-                    }`}
-                >
-                  {role.icon}
-                </div>
-                <h3 className="font-editorial text-[22px] sm:text-[24px] font-bold text-charcoal mb-1.5 text-center">
-                  {role.title}
-                </h3>
-                <p className="font-ui font-normal text-[13px] sm:text-[14px] text-[#737373] text-center leading-normal">
-                  {role.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="pt-6 border-t border-[#F2EDE4] flex justify-end shrink-0">
-        <button
-          type="button"
-          disabled={!selectedRole}
-          onClick={onDone}
-          className={`font-ui text-[13px] font-bold uppercase tracking-wider px-8 py-3.5 transition-colors flex items-center gap-2.5 ${selectedRole
-            ? "bg-[#111111] text-white hover:bg-black cursor-pointer"
-            : "bg-[#D4D4D8] text-white cursor-not-allowed"
-            }`}
-        >
-          CONTINUE
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function InterestsStep({ onDone, onBack }: { onDone: () => void, onBack: () => void }) {
+function InterestsStep({ onDone }: { onDone: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(),
   );
@@ -238,10 +142,7 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void, onBack: () => v
         </div>
       </div>
 
-      <div className="pt-6 border-t border-[#F2EDE4] flex items-center justify-between shrink-0">
-        <button type="button" onClick={onBack} className="font-ui text-[14px] font-bold text-charcoal hover:opacity-70">
-          Back
-        </button>
+      <div className="pt-6 border-t border-[#F2EDE4] flex items-center justify-end shrink-0">
         <div className="flex items-center gap-5">
           <p className="text-[14px] font-ui text-[#9B9B9B]">
             Pick atleast 3
@@ -448,6 +349,7 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>("creator");
   const fileRef = useRef<HTMLInputElement>(null);
   const updateMe = useUpdateMe();
   const complete = useCompleteOnboarding({
@@ -458,6 +360,44 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
       },
     },
   });
+
+  const roles = [
+    {
+      id: "explorer",
+      title: "Explorer",
+      description: "I browse and discover trends",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: "creator",
+      title: "Creator",
+      description: "I curate and publish content",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: "professional",
+      title: "Professional",
+      description: "I work in fashion or luxury",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <rect x="3" y="8" width="18" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 8V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="8" y1="8" x2="8" y2="21" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="16" y1="8" x2="16" y2="21" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+  ];
 
   async function handleAvatar(file: File) {
     setAvatarUploading(true);
@@ -480,7 +420,7 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   const isMockError = handle === 'pranjulsingh92' || handle === 'centoire_team';
   const isError = isMockError || !!error;
   const isValidHandle = /^[a-z0-9_]{3,24}$/.test(handle);
-  const canSubmit = isValidHandle && !isError && !updateMe.isPending && !complete.isPending;
+  const canSubmit = isValidHandle && !isError && !updateMe.isPending && !complete.isPending && selectedRole;
 
   return (
     <section className="flex flex-col flex-1 min-h-0">
@@ -567,6 +507,31 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                 className={`w-full border px-4 py-3 text-[15px] outline-none bg-white transition-colors ${isError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-hairline text-charcoal focus:border-stone"
                   }`}
               />
+            </div>
+
+            <div className="mb-6">
+              <label className="font-ui text-[13px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+                HOW WILL YOU USE CENTOIRE?
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedRole || ""}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full appearance-none border border-hairline px-4 py-3 pr-10 text-[15px] text-charcoal outline-none bg-white focus:border-stone cursor-pointer"
+                >
+                  <option value="" disabled>Select your role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.title} — {role.description}
+                    </option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#737373]">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
 
             <div>
