@@ -1,0 +1,541 @@
+- generic [ref=f8e1]:
+  - generic [ref=f8e5]:
+    - heading "Canva editor" [active] [level=1] [ref=f8e7]
+    - generic [ref=f8e10]:
+      - paragraph [ref=f8e12]:
+        - link "Skip navigation" [ref=f8e13] [cursor=pointer]:
+          - /url: "#_r_0_2"
+      - paragraph [ref=f8e16]:
+        - link "Skip to main content" [ref=f8e17] [cursor=pointer]:
+          - /url: "#_r_0_3"
+      - generic [ref=f8e19]:
+        - banner [ref=f8e20]:
+          - menubar "Main" [ref=f8e22]:
+            - group "Document controls" [ref=f8e24]:
+              - menuitem "Go home" [ref=f8e27] [cursor=pointer]:
+                - generic: (opens in a new tab or window)
+              - menuitem "File" [ref=f8e35] [cursor=pointer]
+              - menuitem "Editing" [ref=f8e39] [cursor=pointer]
+            - group "Share and publish" [ref=f8e45]:
+              - generic [ref=f8e47]:
+                - button "Devyansh Sehgal" [ref=f8e49] [cursor=pointer]
+                - button "Baiji (You)" [ref=f8e51] [cursor=pointer]
+              - menuitem "View all comments" [ref=f8e53] [cursor=pointer]
+              - menuitem "Share" [ref=f8e59] [cursor=pointer]
+              - menuitem "Sign up" [ref=f8e62] [cursor=pointer]
+        - note [ref=f8e66]:
+          - generic [ref=f8e68]:
+            - generic [ref=f8e70]: By editing or interacting with this design, you agree to Canva’s Terms of Use and acknowledge our Privacy Policy
+            - button "Dismiss" [ref=f8e73] [cursor=pointer]
+        - generic [ref=f8e76]:
+          - complementary [ref=f8e77]:
+            - heading "Side Panel" [level=2] [ref=f8e79]
+            - tablist "Side Panel" [ref=f8e86]:
+              - tab "Templates" [selected] [ref=f8e87] [cursor=pointer]
+              - tab "Elements" [ref=f8e92] [cursor=pointer]
+              - tab "Text" [ref=f8e97] [cursor=pointer]
+              - tab [ref=f8e102] [cursor=pointer]:
+                - generic "Uploads" [ref=f8e103]:
+                  - generic "Uploads" [ref=f8e106]
+              - tab "Tools" [ref=f8e110] [cursor=pointer]
+              - tab "Apps" [ref=f8e115] [cursor=pointer]
+            - tabpanel "Templates" [ref=f8e125]:
+              - generic [ref=f8e126]:
+                - search [ref=f8e130]:
+                  - textbox "Describe your ideal design" [ref=f8e145]
+                - region [ref=f8e163]:
+                  - generic [ref=f8e181]:
+                    - generic [ref=f8e183]:
+                      - group "Orange and Black Bold Grunge Digital Marketing Presentation" [ref=f8e190]:
+                        - button "Open template item page" [ref=f8e191] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e196] [cursor=pointer]
+                        - generic [ref=f8e200]:
+                          - generic [aria-hidden] [ref=f8e201]: 1 of 10
+                          - generic [ref=f8e202]: 10 slides
+                      - group "Cream and Pink Leaves Project Presentation" [ref=f8e209]:
+                        - button "Open template item page" [ref=f8e210] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e215] [cursor=pointer]
+                        - generic [ref=f8e219]:
+                          - generic [aria-hidden] [ref=f8e220]: 1 of 10
+                          - generic [ref=f8e221]: 10 slides
+                    - generic [ref=f8e223]:
+                      - group "Simple Presentation in Pink Lilac Pastel Blobs Basic Style" [ref=f8e230]:
+                        - button "Open template item page" [ref=f8e231] [cursor=pointer]
+                        - generic [ref=f8e233]:
+                          - img "Simple Presentation in Pink Lilac Pastel Blobs Basic Style"
+                        - button "Show details popup" [ref=f8e236] [cursor=pointer]
+                        - button "play preview" [ref=f8e241] [cursor=pointer]
+                      - group "Blue Professional Geometric Presentation" [ref=f8e249]:
+                        - button "Open template item page" [ref=f8e250] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e255] [cursor=pointer]
+                        - generic [ref=f8e259]:
+                          - generic [aria-hidden] [ref=f8e260]: 1 of 10
+                          - generic [ref=f8e261]: 10 slides
+                    - generic [ref=f8e263]:
+                      - group "Blue Modern Elegant Presentation" [ref=f8e270]:
+                        - button "Open template item page" [ref=f8e271] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e276] [cursor=pointer]
+                        - generic [ref=f8e280]:
+                          - generic [aria-hidden] [ref=f8e281]: 1 of 10
+                          - generic [ref=f8e282]: 10 slides
+                      - group "Blue & white company profile presentation" [ref=f8e289]:
+                        - button "Open template item page" [ref=f8e290] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e295] [cursor=pointer]
+                        - generic [ref=f8e299]:
+                          - generic [aria-hidden] [ref=f8e300]: 1 of 15
+                          - generic [ref=f8e301]: 15 slides
+                    - generic [ref=f8e303]:
+                      - group "Green and Yellow Typographic Aesthetic Nature Presentation" [ref=f8e310]:
+                        - button "Open template item page" [ref=f8e311] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e316] [cursor=pointer]
+                        - generic [ref=f8e320]:
+                          - generic [aria-hidden] [ref=f8e321]: 1 of 15
+                          - generic [ref=f8e322]: 15 slides
+                      - group "Black White Grunge Project Presentation" [ref=f8e329]:
+                        - button "Open template item page" [ref=f8e330] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e335] [cursor=pointer]
+                        - generic [ref=f8e339]:
+                          - generic [aria-hidden] [ref=f8e340]: 1 of 10
+                          - generic [ref=f8e341]: 10 slides
+                    - generic [ref=f8e343]:
+                      - group "Red and Pink Bold Pitch Deck Presentation" [ref=f8e350]:
+                        - button "Open template item page" [ref=f8e351] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e356] [cursor=pointer]
+                        - generic [ref=f8e360]:
+                          - generic [aria-hidden] [ref=f8e361]: 1 of 10
+                          - generic [ref=f8e362]: 10 slides
+                      - group "Green and Blue Classy Elegant Technology Group Project Presentation" [ref=f8e369]:
+                        - button "Open template item page" [ref=f8e370] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e375] [cursor=pointer]
+                        - generic [ref=f8e379]:
+                          - generic [aria-hidden] [ref=f8e380]: 1 of 10
+                          - generic [ref=f8e381]: 10 slides
+                    - generic [ref=f8e383]:
+                      - group "Red and Black Bold Modern Digital Marketing Presentation" [ref=f8e390]:
+                        - button "Open template item page" [ref=f8e391] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e396] [cursor=pointer]
+                        - generic [ref=f8e400]:
+                          - generic [aria-hidden] [ref=f8e401]: 1 of 10
+                          - generic [ref=f8e402]: 10 slides
+                      - group "Black and Grey 3D Shapes Tech Company Presentation" [ref=f8e409]:
+                        - button "Open template item page" [ref=f8e410] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e415] [cursor=pointer]
+                        - generic [ref=f8e419]:
+                          - generic [aria-hidden] [ref=f8e420]: 1 of 15
+                          - generic [ref=f8e421]: 15 slides
+                    - generic [ref=f8e423]:
+                      - group "White Red and Black Simple Professional Minimalist Pitch Deck Company Presentation" [ref=f8e430]:
+                        - button "Open template item page" [ref=f8e431] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e436] [cursor=pointer]
+                        - generic [ref=f8e440]:
+                          - generic [aria-hidden] [ref=f8e441]: 1 of 12
+                          - generic [ref=f8e442]: 12 slides
+                      - group "Brown and White Minimalist Fashion Presentation" [ref=f8e449]:
+                        - button "Open template item page" [ref=f8e450] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e455] [cursor=pointer]
+                        - generic [ref=f8e459]:
+                          - generic [aria-hidden] [ref=f8e460]: 1 of 10
+                          - generic [ref=f8e461]: 10 slides
+                    - generic [ref=f8e463]:
+                      - group "Pink Floral Watercolor Project Presentation" [ref=f8e470]:
+                        - button "Open template item page" [ref=f8e471] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e476] [cursor=pointer]
+                        - generic [ref=f8e480]:
+                          - generic [aria-hidden] [ref=f8e481]: 1 of 10
+                          - generic [ref=f8e482]: 10 slides
+                      - group "White Blue and Grey Modern Startup Pitch Deck Presentation" [ref=f8e489]:
+                        - button "Open template item page" [ref=f8e490] [cursor=pointer]
+                        - button "Show details popup" [ref=f8e495] [cursor=pointer]
+                        - generic [ref=f8e499]:
+                          - generic [aria-hidden] [ref=f8e500]: 1 of 14
+                          - generic [ref=f8e501]: 14 slides
+            - button "Collapse" [ref=f8e505] [cursor=pointer]
+          - generic [ref=f8e507]:
+            - generic:
+              - button "Canvas entry point"
+            - main "Canvas" [ref=f8e508]:
+              - generic [ref=f8e510]:
+                - generic [ref=f8e512]:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - application
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic [aria-hidden]:
+                                          - generic:
+                                            - paragraph [ref=f8e523]: centoire · 2026
+                                            - paragraph [ref=f8e530]: Centoire
+                                            - generic [ref=f8e532]:
+                                              - paragraph [ref=f8e539]:
+                                                - generic [ref=f8e540]: Competitive Analysis
+                                              - paragraph [ref=f8e547]:
+                                                - generic [ref=f8e548]: How Centoire stands apart from 9 competing platforms across content, community, intelligence, sourcing, and jobs.
+                                        - application "Canvas content":
+                                          - group "Page 1":
+                                            - group "Centoire":
+                                              - paragraph: Centoire
+                                            - group "centoire · 2026":
+                                              - paragraph: centoire · 2026
+                                            - group "Group":
+                                              - generic: 2 elements, To start navigating the group contents, press Enter
+                                              - group "Competitive Analysis":
+                                                - paragraph:
+                                                  - strong: Competitive Analysis
+                                              - group "How Centoire stands apart from 9 competing platforms across content, community, intelligence, sou...":
+                                                - paragraph:
+                                                  - strong: How Centoire stands apart from 9 competing platforms across content, community, intelligence, sourcing, and jobs.
+                - navigation "Page" [ref=f8e549]:
+                  - generic [ref=f8e556]:
+                    - heading "Page Thumbnails" [level=2] [ref=f8e558]
+                    - paragraph [ref=f8e560]:
+                      - link "Skip to end of page thumbnails" [ref=f8e561] [cursor=pointer]:
+                        - /url: "#page-navigator-end"
+                    - generic [ref=f8e569]:
+                      - list "Pages" [ref=f8e570]:
+                        - listitem [ref=f8e571]:
+                          - generic [ref=f8e573]:
+                            - generic [ref=f8e577] [cursor=pointer]:
+                              - button "Page 1" [ref=f8e578]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "1"
+                                      - paragraph: "-"
+                                      - textbox "Page title" [ref=f8e592]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e595] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e597] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e599] [cursor=pointer]
+                        - listitem [ref=f8e601]:
+                          - generic [ref=f8e603]:
+                            - generic [ref=f8e607] [cursor=pointer]:
+                              - button "Page 2" [ref=f8e608]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "2"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e623] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e625] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e627] [cursor=pointer]
+                        - listitem [ref=f8e629]:
+                          - generic [ref=f8e631]:
+                            - generic [ref=f8e635] [cursor=pointer]:
+                              - button "Page 3" [ref=f8e636]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "3"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e651] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e653] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e655] [cursor=pointer]
+                        - listitem [ref=f8e657]:
+                          - generic [ref=f8e659]:
+                            - generic [ref=f8e663] [cursor=pointer]:
+                              - button "Page 4" [ref=f8e664]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "4"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e682] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e684] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e686] [cursor=pointer]
+                        - listitem [ref=f8e688]:
+                          - generic [ref=f8e690]:
+                            - generic [ref=f8e694] [cursor=pointer]:
+                              - button "Page 5" [ref=f8e695]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "5"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e710] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e712] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e714] [cursor=pointer]
+                        - listitem [ref=f8e716]:
+                          - generic [ref=f8e718]:
+                            - generic [ref=f8e722] [cursor=pointer]:
+                              - button "Page 6" [ref=f8e723]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "6"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e738] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e740] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e742] [cursor=pointer]
+                        - listitem [ref=f8e744]:
+                          - generic [ref=f8e746]:
+                            - generic [ref=f8e750] [cursor=pointer]:
+                              - button "Page 7" [ref=f8e751]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "7"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e766] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e768] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e770] [cursor=pointer]
+                        - listitem [ref=f8e772]:
+                          - generic [ref=f8e774]:
+                            - generic [ref=f8e778] [cursor=pointer]:
+                              - button "Page 8" [ref=f8e779]
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - generic:
+                                        - generic:
+                                          - generic:
+                                            - generic:
+                                              - button "Page options"
+                                - generic:
+                                  - generic:
+                                    - generic:
+                                      - paragraph: "8"
+                                      - paragraph: "-"
+                                      - generic:
+                                        - textbox "Page title" [disabled]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - button "Add" [ref=f8e794] [cursor=pointer]
+                                    - menu:
+                                      - menuitem "Add page" [ref=f8e796] [cursor=pointer]
+                                      - menuitem "Add transition" [ref=f8e798] [cursor=pointer]
+                        - listitem [ref=f8e800]:
+                          - generic [ref=f8e801]:
+                            - button "Page 9" [ref=f8e807] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "9"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e816]
+                        - listitem [ref=f8e817]:
+                          - generic [ref=f8e818]:
+                            - button "Page 10" [ref=f8e824] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "10"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e833]
+                        - listitem [ref=f8e834]:
+                          - generic [ref=f8e835]:
+                            - button "Page 11" [ref=f8e841] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "11"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e850]
+                        - listitem [ref=f8e851]:
+                          - generic [ref=f8e852]:
+                            - button "Page 12" [ref=f8e858] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "12"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e867]
+                        - listitem [ref=f8e868]:
+                          - generic [ref=f8e869]:
+                            - button "Page 13" [ref=f8e875] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "13"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e884]
+                        - listitem [ref=f8e885]:
+                          - generic [ref=f8e886]:
+                            - button "Page 14" [ref=f8e892] [cursor=pointer]
+                            - generic:
+                              - generic:
+                                - generic:
+                                  - generic:
+                                    - paragraph: "14"
+                                    - paragraph: "-"
+                                    - paragraph [ref=f8e901]
+                      - button "Add page" [ref=f8e908] [cursor=pointer]
+                    - paragraph [ref=f8e912]:
+                      - link "Back to start of page thumbnails" [ref=f8e913] [cursor=pointer]:
+                        - /url: "#page-navigator-start"
+            - contentinfo [ref=f8e915]:
+              - generic [ref=f8e916]:
+                - generic [ref=f8e917]:
+                  - button "Notes" [ref=f8e921] [cursor=pointer]
+                  - button "Duration" [ref=f8e926] [cursor=pointer]
+                  - button "Show timer" [ref=f8e932] [cursor=pointer]:
+                    - generic [ref=f8e934]: Timer
+                - generic [ref=f8e935]:
+                  - combobox "Zoom options" [ref=f8e942] [cursor=pointer]:
+                    - generic [ref=f8e943]: 37%
+                  - button "Pages" [expanded] [ref=f8e948] [cursor=pointer]
+                  - button "1/14" [ref=f8e954] [cursor=pointer]
+                  - button "Grid view" [ref=f8e960] [cursor=pointer]
+                  - button "Present full screen" [ref=f8e965] [cursor=pointer]
+                  - button "Help" [ref=f8e973] [cursor=pointer]
+  - generic [ref=f8e975]: Canvas
+  - generic [aria-hidden] [ref=f8e976]: The canvas is where your design is. To navigate into the page, press Enter. To navigate into groups or elements on the page, press Enter again. Press tab to move to the next page, group, or element. To operate the toolbar, use the “⌘F1” key. If an element is selected, move it using the arrow keys; rotate using the “,” key and “.” key; and resize using the arrow keys with the “⌘” key. All of these keys can be modified with the “⇧” key to increase increment.
+  - generic [aria-hidden] [ref=f8e977]: Use left and right arrow keys to select pages. Use Home and End to jump to the first or last page.
+  - generic [aria-hidden] [ref=f8e978]: Add page
+  - generic [aria-hidden] [ref=f8e979]: Add transition
+  - generic [aria-hidden] [ref=f8e980]: Add page
+  - generic [aria-hidden] [ref=f8e981]: Add page
+  - generic [aria-hidden] [ref=f8e982]: Add transition
+  - generic [aria-hidden] [ref=f8e983]: Add page
+  - generic [aria-hidden] [ref=f8e984]: Add transition
+  - generic [aria-hidden] [ref=f8e985]: Add page
+  - generic [aria-hidden] [ref=f8e986]: Add transition
+  - generic [aria-hidden] [ref=f8e987]: Add page
+  - generic [aria-hidden] [ref=f8e988]: Add transition
+  - generic [aria-hidden] [ref=f8e989]: Add page
+  - generic [aria-hidden] [ref=f8e990]: Add transition
+  - generic [aria-hidden] [ref=f8e991]: Add page
+  - generic [aria-hidden] [ref=f8e992]: Add transition
+  - generic [aria-hidden] [ref=f8e993]: Add page
+  - generic [aria-hidden] [ref=f8e994]: Add transition
+  - generic [ref=f8e995]: The main navigation contains buttons for document level options. To switch between buttons, use the left and right keys and to activate, press Enter. To skip to the canvas, press “⌘F2”.
+  - generic [aria-hidden] [ref=f8e996]: Notes
+  - generic [aria-hidden] [ref=f8e997]: Show timer
+  - generic [aria-hidden] [ref=f8e998]: Zoom
+  - generic [aria-hidden] [ref=f8e999]: Hide page thumbnails
+  - generic [aria-hidden] [ref=f8e1000]: Go to page
+  - generic [aria-hidden] [ref=f8e1001]: Grid view
+  - generic [aria-hidden] [ref=f8e1002]: Go home
+  - generic [aria-hidden] [ref=f8e1003]: Help
+  - generic [aria-hidden] [ref=f8e1004]: Present full screen
+  - generic [ref=f8e1005]: The side panel is where you can apply templates or add elements. To skip to the canvas, press “⌘F2”.
+  - generic [aria-hidden] [ref=f8e1006]: Collapse
+  - generic [aria-hidden] [ref=f8e1007]: Share
+  - generic [ref=f8e1008]: This button opens the menu with all the options to share and print your design.
