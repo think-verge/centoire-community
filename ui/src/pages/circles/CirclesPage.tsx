@@ -218,7 +218,7 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
               ))}
             </div>
             <span className="font-ui text-[11px] font-medium text-[#555555]">
-              {content.members}
+              {members}
             </span>
           </div>
           <button className="text-[#8A8A8A] hover:text-[#111111] transition-colors">
