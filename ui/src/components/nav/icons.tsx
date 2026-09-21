@@ -246,6 +246,15 @@ export function MicIcon({ className }: IconProps) {
     </svg>
   );
 }
+export function PanelLeftCloseIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className={className} aria-hidden>
+      <rect x="4.5" y="4.5" width="15" height="15" rx="3" ry="3" />
+      <line x1="9.5" y1="4.5" x2="9.5" y2="19.5" />
+      <path d="M8 10.5L6 12l2 1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 export function CameraIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>

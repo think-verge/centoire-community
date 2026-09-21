@@ -31,6 +31,11 @@ export function AppShell() {
     return params.get("q") ?? "";
   });
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // Keep header input in sync when URL changes (e.g. browser back/forward on /search)
   useEffect(() => {
     if (location.pathname === "/search") {
