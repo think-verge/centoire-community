@@ -8,6 +8,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  actions: write
 
 jobs:
   fast_forward_job:
@@ -101,3 +102,30 @@ jobs:
             * The PR has the required approvals
             * Your commits satisfy any required signing rules
           production_branch: main
+
+      # Pushes made with the default GITHUB_TOKEN (as fast-forward-js-action does above)
+      # do not trigger other workflows' `push` events, per GitHub's recursion-prevention
+      # rule — so Deploy Production never fires after an /ff merge unless we dispatch it
+      # explicitly. workflow_dispatch is exempt from that rule, which is why this works.
+      - name: Trigger production deploy
+        if: steps.ff-action.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            try {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'deploy-production.yml',
+                ref: 'main',
+              });
+            } catch (error) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: `⚠️ Fast-forward succeeded, but triggering \`Deploy Production\` failed: ${error.message}. Please run it manually via the Actions tab.`,
+              });
+              core.setFailed(`Failed to trigger deploy: ${error.message}`);
+            }
