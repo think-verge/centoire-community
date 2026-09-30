@@ -7,16 +7,11 @@ import {
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
-import type { Tag } from "../../lib/api/generated/model";
+
 import { useAuth } from "../../lib/auth-context";
 import logoDark from "../../assets/landing/logo-dark.svg";
 
-const CATEGORY_LABELS: Record<Tag["category"], string> = {
-  style: "STYLE",
-  craft: "CRAFT",
-  business: "BUSINESS",
-  culture: "CULTURE",
-};
+
 
 export function OnboardingPage() {
   const navigate = useNavigate();
