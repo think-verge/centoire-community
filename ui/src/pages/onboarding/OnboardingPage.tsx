@@ -448,11 +448,15 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
 
   async function finish() {
     setIsSettingUp(true);
-    // Demo Mode: We skip the actual API calls so you can test the loader animation!
-    // await updateMe.mutateAsync({
-    //   data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
-    // });
-    // complete.mutate();
+    try {
+      await updateMe.mutateAsync({
+        data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+      });
+      complete.mutate();
+    } catch (e) {
+      // Revert setup state if submission fails
+      setIsSettingUp(false);
+    }
   }
 
   const error = updateMe.error ?? complete.error;
