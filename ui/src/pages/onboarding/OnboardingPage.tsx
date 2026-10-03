@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import {
@@ -6,6 +6,7 @@ import {
   useSetInterests,
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
+import { useListTags } from "../../lib/api/generated/tags/tags";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
 import { useAuth } from "../../lib/auth-context";
@@ -64,36 +65,9 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
   const setInterests = useSetInterests({
     mutation: {
       onSuccess: onDone,
-      onError: () => onDone(), // Proceed anyway since we are using hardcoded tags
     },
   });
-
-  const tags = useMemo(() => {
-    return [
-      { id: '11111111-1111-1111-1111-111111111111', name: 'Startups' },
-      { id: '22222222-2222-2222-2222-222222222222', name: 'Sustainability' },
-      { id: '33333333-3333-3333-3333-333333333333', name: 'Innovation' },
-      { id: '44444444-4444-4444-4444-444444444444', name: 'Business' },
-      { id: '55555555-5555-5555-5555-555555555555', name: 'Culture' },
-      { id: '66666666-6666-6666-6666-666666666666', name: 'Design' },
-      { id: '77777777-7777-7777-7777-777777777777', name: 'Art' },
-      { id: '88888888-8888-8888-8888-888888888888', name: 'Lifestyle' },
-      { id: '99999999-9999-9999-9999-999999999999', name: 'Technology' },
-      { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Media' },
-      { id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Community' },
-      { id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Business' },
-      { id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Culture' },
-      { id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', name: 'Design' },
-      { id: 'ffffffff-ffff-ffff-ffff-ffffffffffff', name: 'Lifestyle' },
-      { id: '00000000-0000-0000-0000-000000000001', name: 'Media' },
-      { id: '00000000-0000-0000-0000-000000000002', name: 'Community' },
-      { id: '00000000-0000-0000-0000-000000000003', name: 'Startups' },
-      { id: '00000000-0000-0000-0000-000000000004', name: 'Innovation' },
-      { id: '00000000-0000-0000-0000-000000000005', name: 'Sustainability' },
-      { id: '00000000-0000-0000-0000-000000000006', name: 'Technology' },
-      { id: '00000000-0000-0000-0000-000000000007', name: 'Art' },
-    ] as const;
-  }, []);
+  const { data: tags } = useListTags();
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -115,7 +89,7 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
         </p>
 
         <div className="mt-10 flex flex-wrap gap-x-2 gap-y-3">
-          {tags.map((tag) => {
+          {(tags ?? []).map((tag) => {
             const active = selected.has(tag.id);
             return (
               <button
@@ -134,6 +108,11 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
         </div>
       </div>
 
+      {setInterests.error && (
+        <p className="font-ui text-[12px] font-medium text-[#E15A3A] pt-2">
+          {setInterests.error.message}
+        </p>
+      )}
       <div className="pt-6 border-t border-[#F2EDE4] flex items-center justify-between shrink-0">
         <button
           type="button"
@@ -452,18 +431,16 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
       await updateMe.mutateAsync({
         data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
       });
-      complete.mutate();
+      await complete.mutateAsync();
     } catch (e) {
       // Revert setup state if submission fails
       setIsSettingUp(false);
     }
   }
 
-  const error = updateMe.error ?? complete.error;
-  const isMockError = handle === 'pranjulsingh92' || handle === 'centoire_team';
-  const isError = isMockError || !!error;
+  const handleError = updateMe.error;
   const isValidHandle = /^[a-z0-9_]{3,24}$/.test(handle);
-  const canSubmit = isValidHandle && !isError && !updateMe.isPending && !complete.isPending && selectedRole;
+  const canSubmit = isValidHandle && !updateMe.isPending && !complete.isPending && selectedRole;
 
   if (isSettingUp) {
     return (
@@ -592,10 +569,10 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                 <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373]">
                   CURATOR HANDLE
                 </label>
-                {isError && handle.length > 0 ? (
-                  <span className="font-ui text-[12px] font-medium text-[#E15A3A]">Handle already existed</span>
+                {handleError ? (
+                  <span className="font-ui text-[12px] font-medium text-[#E15A3A]">{handleError.message}</span>
                 ) : (
-                  handle.length >= 3 && !isError && (
+                  handle.length >= 3 && (
                     <span className="font-ui text-[12px] font-medium text-[#10B981]">Handle is available</span>
                   )
                 )}
@@ -605,7 +582,7 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                 placeholder="Enter your username"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                className={`w-full border rounded-none px-4 py-2.5 text-[14px] outline-none bg-white transition-colors ${isError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4]"
+                className={`w-full border rounded-none px-4 py-2.5 text-[14px] outline-none bg-white transition-colors ${handleError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4]"
                   }`}
               />
             </div>
@@ -660,6 +637,11 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+      {complete.error && (
+        <p className="font-ui text-[12px] font-medium text-[#E15A3A] pb-2">
+          {complete.error.message}
+        </p>
+      )}
       <div className="pt-6 border-t border-hairline flex items-center justify-between shrink-0">
         <button type="button" onClick={onBack} className="font-ui text-sm font-semibold text-charcoal hover:opacity-70">
           Back
