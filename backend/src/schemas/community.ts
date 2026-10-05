@@ -69,6 +69,9 @@ export const CreateCircleInputSchema = registry.register(
     tagNames: z.array(z.string().trim().min(1).max(40)).max(5).optional(),
     avatarUrl: z.string().url().optional(),
     coverImageUrl: z.string().url().optional(),
+  }).refine((c) => (c.tagIds?.length ?? 0) + (c.tagNames?.length ?? 0) >= 1, {
+    message: "Pick at least one topic",
+    path: ["tagIds"],
   }),
 );
 

@@ -20,6 +20,11 @@ describe("CreateCircleInputSchema", () => {
     expect(() => CreateCircleInputSchema.parse({ ...base, tagIds: ["custom-design"] })).toThrow();
   });
 
+  it("requires at least one topic", () => {
+    expect(() => CreateCircleInputSchema.parse(base)).toThrow(/at least one topic/);
+    expect(() => CreateCircleInputSchema.parse({ ...base, tagIds: [], tagNames: [] })).toThrow();
+  });
+
   it("caps each tag list at 5", () => {
     const names = ["a", "b", "c", "d", "e", "f"];
     expect(() => CreateCircleInputSchema.parse({ ...base, tagNames: names })).toThrow();

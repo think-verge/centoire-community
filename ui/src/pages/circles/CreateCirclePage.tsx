@@ -18,6 +18,7 @@ export function CreateCirclePage() {
   const [isPrivate, setIsPrivate] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [topicError, setTopicError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -64,11 +65,16 @@ export function CreateCirclePage() {
       setCustomTags((prev) => [...prev, { id: id as string, name }]);
     }
     if (!tagIds.includes(id)) setTagIds((prev) => [...prev, id as string]);
+    setTopicError(null);
     setTopicInput("");
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (tagIds.length === 0) {
+      setTopicError("Pick at least one topic for your circle.");
+      return;
+    }
     const customIds = new Set(customTags.map((t) => t.id));
     createCircle.mutate({
       data: {
@@ -187,7 +193,7 @@ export function CreateCirclePage() {
 
             {/* Topics */}
             <div>
-              <label className="block font-ui text-[14px] font-bold text-[#111111] mb-2">Topics</label>
+              <label className="block font-ui text-[14px] font-bold text-[#111111] mb-2">Topics <span className="text-[#E5552D]">*</span></label>
               <div className="w-full rounded-[10px] border border-[#D0D0D0] bg-white px-3 py-2 min-h-[50px] flex flex-wrap items-center gap-2">
                 {[...(tags || []), ...customTags].filter(t => tagIds.includes(t.id)).map(tag => (
                   <span key={tag.id} className="flex items-center gap-1.5 bg-[#F5F5F5] rounded-full px-3.5 py-1.5 font-ui text-[13px] font-medium text-[#111111]">
@@ -222,6 +228,10 @@ export function CreateCirclePage() {
                 </datalist>
               </div>
             </div>
+
+            {topicError && (
+              <p className="-mt-4 font-ui text-[12px] text-[#E5552D]">{topicError}</p>
+            )}
 
             {/* Who can join? */}
             <div>
@@ -288,7 +298,7 @@ export function CreateCirclePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createCircle.isPending || uploading}
+                  disabled={createCircle.isPending || uploading || tagIds.length === 0}
                   className="rounded-full bg-[#E5552D] px-5 py-3 font-ui text-[13px] font-bold text-white hover:bg-[#CC4824] transition-colors disabled:opacity-50 flex items-center gap-2 shadow-[0_2px_8px_rgba(229,85,45,0.3)]"
                 >
                   {createCircle.isPending ? "Creating..." : "Create Circle"}

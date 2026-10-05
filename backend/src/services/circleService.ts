@@ -48,6 +48,10 @@ export async function getViewerRole(
 const MAX_CIRCLE_TAGS = 5;
 const MAX_SLUG_ATTEMPTS = 8;
 
+function escapeRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function isDuplicateKey(err: unknown): boolean {
   return (err as { code?: number }).code === 11000;
 }
@@ -73,6 +77,7 @@ async function resolveTagIds(input: { tagIds?: string[]; tagNames?: string[] }):
     ),
   );
   for (const tag of tags) ids.add(tag._id.toString());
+  if (ids.size < 1) throw new ApiError(422, "tags: pick at least one topic");
   if (ids.size > MAX_CIRCLE_TAGS) {
     throw new ApiError(422, `tags: a circle can have at most ${MAX_CIRCLE_TAGS} topics`);
   }
@@ -92,15 +97,19 @@ export async function createCircle(
     coverImageUrl?: string;
   },
 ): Promise<ICircle> {
+  const name = input.name.trim();
+  if (await Circle.exists({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } })) {
+    throw new ApiError(409, "A circle with this name already exists");
+  }
   const tags = await resolveTagIds(input);
-  const baseSlug = slugify(input.name);
+  const baseSlug = slugify(name);
 
   for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt++) {
     const slug = attempt === 1 ? baseSlug : `${baseSlug}-${attempt}`;
     let circle: ICircle;
     try {
       circle = await Circle.create({
-        name: input.name,
+        name,
         slug,
         description: input.description,
         about: input.about,
