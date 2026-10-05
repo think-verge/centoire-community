@@ -6,15 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListCirclesParams = {
-/**
- * @minLength 1
- */
-q?: string;
-tag?: string;
-/**
- * @minimum 1
- * @maximum 100
- */
-limit?: number;
-};
+export interface PostFullContent {
+  /** @nullable */
+  contentHtml: string | null;
+  source: string;
+}

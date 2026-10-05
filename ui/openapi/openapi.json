@@ -303,6 +303,22 @@
           }
         ]
       },
+      "PostFullContent": {
+        "type": "object",
+        "properties": {
+          "contentHtml": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contentHtml",
+          "source"
+        ]
+      },
       "CreatePostInput": {
         "type": "object",
         "properties": {
@@ -743,6 +759,25 @@
           "clientId"
         ]
       },
+      "FeedPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PostCard"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
       "Tag": {
         "type": "object",
         "properties": {
@@ -959,7 +994,17 @@
           "tagIds": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "pattern": "^[a-f\\d]{24}$"
+            },
+            "maxItems": 5
+          },
+          "tagNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
             },
             "maxItems": 5
           },
@@ -1218,25 +1263,6 @@
         },
         "required": [
           "name"
-        ]
-      },
-      "FeedPage": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PostCard"
-            }
-          },
-          "nextCursor": {
-            "type": "string",
-            "nullable": true
-          }
-        },
-        "required": [
-          "items",
-          "nextCursor"
         ]
       },
       "InvitePreview": {
@@ -1554,6 +1580,82 @@
       "UpdatePolicyInput": {
         "type": "object",
         "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "enum": [
+                    "author",
+                    "author_role",
+                    "source",
+                    "origin",
+                    "ai_category",
+                    "ai_tags",
+                    "ai_quality_score",
+                    "ai_is_spam",
+                    "clickbait"
+                  ]
+                },
+                "operator": {
+                  "type": "string",
+                  "enum": [
+                    "equals",
+                    "not_equals",
+                    "any_of",
+                    "not_any_of",
+                    "greater_than",
+                    "less_than"
+                  ]
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "boolean"
+                      }
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "key",
+                "operator",
+                "values"
+              ]
+            }
+          },
+          "logic": {
+            "type": "string",
+            "enum": [
+              "and",
+              "or"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "auto_approve",
+              "auto_reject"
+            ]
+          },
+          "priority": {
+            "type": "integer"
+          },
           "active": {
             "type": "boolean"
           },
@@ -2735,7 +2837,8 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1
             },
             "required": false,
             "name": "q",
@@ -2747,6 +2850,16 @@
             },
             "required": false,
             "name": "tag",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "required": false,
+            "name": "limit",
             "in": "query"
           }
         ],
@@ -2787,6 +2900,36 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Circle"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Could not allocate a unique handle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -2854,6 +2997,16 @@
           "204": {
             "description": "Joined"
           },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Circle not found",
             "content": {
@@ -2884,6 +3037,26 @@
         "responses": {
           "204": {
             "description": "Left"
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Circle not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Owners cannot leave",
@@ -2983,6 +3156,46 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PostDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/posts/{slug}/full-content": {
+      "get": {
+        "tags": [
+          "posts"
+        ],
+        "operationId": "getPostFullContent",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Extracted full article content, fetching on demand if needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFullContent"
                 }
               }
             }
@@ -3853,23 +4066,40 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
             },
             "required": true,
             "name": "slug",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Posts in this circle",
+            "description": "A page of posts in this circle",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PostCard"
-                  }
+                  "$ref": "#/components/schemas/FeedPage"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Circle not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -3920,6 +4150,16 @@
                       "user"
                     ]
                   }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Circle not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

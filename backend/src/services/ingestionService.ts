@@ -44,7 +44,7 @@ const MAX_ITEMS_PER_FETCH = 25;
 const ARTICLE_EXTRACT_TIMEOUT_MS = 10_000;
 const POST_TTL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
-async function extractArticleHtml(url: string): Promise<string | null> {
+export async function extractArticleHtml(url: string): Promise<string | null> {
   try {
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), ARTICLE_EXTRACT_TIMEOUT_MS);
@@ -69,7 +69,7 @@ export interface FetchStats {
   error?: string;
 }
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return cheerio.load(html).text().replace(/\s+/g, " ").trim();
 }
 

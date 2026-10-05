@@ -4,19 +4,21 @@ import { useCreateCircle } from "../../lib/api/generated/circles/circles";
 import { useListTags } from "../../lib/api/generated/tags/tags";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const MAX_TOPICS = 5;
+
 export function CreateCirclePage() {
   const navigate = useNavigate();
   const { data: tags } = useListTags();
   
   const [form, setForm] = useState({ name: "", description: "" });
-  const [tagIds, setTagIds] = useState<string[]>(["custom-design"]);
-  const [customTags, setCustomTags] = useState<{id: string, name: string}[]>([
-    { id: "custom-design", name: "Design" }
-  ]);
+  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [customTags, setCustomTags] = useState<{id: string, name: string}[]>([]);
   const [topicInput, setTopicInput] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const createCircle = useCreateCircle({
@@ -31,29 +33,49 @@ export function CreateCirclePage() {
     .replace(/(^-|-$)/g, "");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      const formData = new FormData();
-      formData.append("file", file);
-      try {
-        setUploading(true);
-        const { url } = await uploadImage({ file });
-        setAvatarUrl(url);
-      } catch (err) {
-        console.error("Failed to upload image", err);
-      } finally {
-        setUploading(false);
-      }
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploadError(null);
+    if (file.size > MAX_AVATAR_BYTES) {
+      setUploadError("Image is too large. Please choose one under 5 MB.");
+      return;
+    }
+    try {
+      setUploading(true);
+      const { url } = await uploadImage({ file });
+      setAvatarUrl(url);
+    } catch {
+      setUploadError("Couldn't upload that image. Please try again.");
+    } finally {
+      setUploading(false);
     }
   };
 
+  function addTopic() {
+    const name = topicInput.trim().replace(/,+$/, "").trim();
+    if (!name || tagIds.length >= MAX_TOPICS) return;
+    const existing = [...(tags || []), ...customTags].find(
+      (t) => t.name.toLowerCase() === name.toLowerCase(),
+    );
+    let id = existing?.id;
+    if (!id) {
+      id = `custom-${Date.now()}`;
+      setCustomTags((prev) => [...prev, { id: id as string, name }]);
+    }
+    if (!tagIds.includes(id)) setTagIds((prev) => [...prev, id as string]);
+    setTopicInput("");
+  }
+
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    const customIds = new Set(customTags.map((t) => t.id));
     createCircle.mutate({
       data: {
         name: form.name,
         description: form.description,
-        tagIds,
+        tagIds: tagIds.filter((id) => !customIds.has(id)),
+        tagNames: customTags.filter((t) => tagIds.includes(t.id)).map((t) => t.name),
         avatarUrl: avatarUrl || undefined,
         // isPrivate is just local state as agreed
       },
@@ -109,6 +131,7 @@ export function CreateCirclePage() {
                 <p className="font-ui text-[12px] text-[#8A8A8A]">
                   Choose a square image that makes your Circle easy to recognize. JPG or PNG, up to 5 MB.
                 </p>
+                {uploadError && <p className="mt-2 font-ui text-[12px] text-[#E5552D]">{uploadError}</p>}
               </div>
             </div>
 
@@ -126,24 +149,19 @@ export function CreateCirclePage() {
                 className="w-full rounded-[10px] border border-[#D0D0D0] bg-white px-4 py-3 font-ui text-[14px] placeholder:text-[#A3A3A3] focus:border-[#999999] focus:outline-none transition-colors"
               />
               <p className="mt-2 font-ui text-[12px] text-[#8A8A8A]">
-                Choose a clear, memorable name. 40 characters maximum.
+                Choose a clear, memorable name. 60 characters maximum.
               </p>
             </div>
 
             {/* Circle handle */}
             <div>
               <label htmlFor="handle" className="block font-ui text-[14px] font-bold text-[#111111] mb-2">Circle handle</label>
-              <div className="relative flex items-center">
-                <span className="absolute left-4 font-ui text-[14px] text-[#A3A3A3] pointer-events-none">
-                  centoire.com/circles/material-matters
-                </span>
-                <input
-                  id="handle"
-                  value={slugifiedHandle}
-                  readOnly
-                  className="w-full rounded-[10px] border border-[#D0D0D0] bg-white pl-[150px] pr-4 py-3 font-ui text-[14px] text-[#A3A3A3] focus:outline-none"
-                />
-              </div>
+              <input
+                id="handle"
+                value={`centoire.com/c/${slugifiedHandle || "your-circle"}`}
+                readOnly
+                className="w-full rounded-[10px] border border-[#D0D0D0] bg-white px-4 py-3 font-ui text-[14px] text-[#A3A3A3] focus:outline-none"
+              />
               <p className="mt-2 font-ui text-[12px] text-[#8A8A8A]">
                 Your Circle's unique address on Centoire.
               </p>
@@ -184,48 +202,24 @@ export function CreateCirclePage() {
                 
                 <input 
                   type="text"
-                  placeholder="Add up to 5 topics..."
+                  placeholder="Add up to 5 topics, press Enter..."
                   value={topicInput}
                   onChange={(e) => setTopicInput(e.target.value)}
-                  onBlur={() => {
-                    if (topicInput.trim() && tagIds.length < 5) {
-                      const name = topicInput.trim();
-                      const existing = [...(tags || []), ...customTags].find(t => t.name.toLowerCase() === name.toLowerCase());
-                      let newId: string;
-                      if (existing?.id) {
-                        newId = existing.id;
-                      } else {
-                        newId = `custom-${Date.now()}`;
-                        setCustomTags(prev => [...prev, { id: newId, name }]);
-                      }
-                      if (!tagIds.includes(newId)) {
-                        setTagIds(prev => [...prev, newId]);
-                      }
-                      setTopicInput("");
-                    }
-                  }}
+                  list="topic-suggestions"
+                  onBlur={addTopic}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+                    if (e.key === "Enter" || e.key === ",") {
                       e.preventDefault();
-                      if (topicInput.trim() && tagIds.length < 5) {
-                        const name = topicInput.trim();
-                        const existing = [...(tags || []), ...customTags].find(t => t.name.toLowerCase() === name.toLowerCase());
-                        let newId: string;
-                        if (existing?.id) {
-                          newId = existing.id;
-                        } else {
-                          newId = `custom-${Date.now()}`;
-                          setCustomTags(prev => [...prev, { id: newId, name }]);
-                        }
-                        if (!tagIds.includes(newId)) {
-                          setTagIds(prev => [...prev, newId]);
-                        }
-                        setTopicInput("");
-                      }
+                      addTopic();
                     }
                   }}
                   className="bg-transparent font-ui text-[14px] placeholder:text-[#A3A3A3] text-[#111111] focus:outline-none flex-1 min-w-[150px] ml-1"
                 />
+                <datalist id="topic-suggestions">
+                  {(tags ?? []).map((t) => (
+                    <option key={t.id} value={t.name} />
+                  ))}
+                </datalist>
               </div>
             </div>
 
@@ -267,6 +261,12 @@ export function CreateCirclePage() {
                 </label>
               </div>
             </div>
+
+            {isPrivate && (
+              <p className="font-ui text-[12px] text-[#8A8A8A]">
+                Private circles aren't available yet. Your circle will be open to everyone for now.
+              </p>
+            )}
 
             {createCircle.error && (
               <p className="text-sm text-[#E5552D] font-ui bg-[#FFF5F2] p-3 rounded-md">

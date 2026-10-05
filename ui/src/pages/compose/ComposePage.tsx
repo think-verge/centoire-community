@@ -4,7 +4,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/Button";
 import {
   createPost,
@@ -20,13 +20,14 @@ import { useAuth } from "../../lib/auth-context";
 
 export function ComposePage() {
   const { id: routeId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [postId, setPostId] = useState<string | null>(routeId ?? null);
   const [title, setTitle] = useState("");
   const [tagIds, setTagIds] = useState<string[]>([]);
-  const [circleId, setCircleId] = useState<string>("");
+  const [circleId, setCircleId] = useState<string>(searchParams.get("circle") ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);

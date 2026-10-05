@@ -23,6 +23,8 @@ export interface CreateCircleInput {
   rules?: string[];
   /** @maxItems 5 */
   tagIds?: string[];
+  /** @maxItems 5 */
+  tagNames?: string[];
   avatarUrl?: string;
   coverImageUrl?: string;
 }

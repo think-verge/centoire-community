@@ -267,6 +267,15 @@ export async function categoryFeed(
   return keysetPublishedFeed(base, cursor, userId);
 }
 
+/** Newest-first published posts of a single circle, keyset-paginated. */
+export async function circleFeed(
+  circleId: Types.ObjectId,
+  cursor: string | undefined,
+  userId?: string,
+): Promise<FeedPage> {
+  return keysetPublishedFeed({ status: "published", circleId }, cursor, userId);
+}
+
 export async function following(userId: string, cursor?: string): Promise<FeedPage> {
   const [followedIds, circleIds] = await Promise.all([
     userService.getFollowedUserIds(userId),

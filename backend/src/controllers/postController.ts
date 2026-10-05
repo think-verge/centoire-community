@@ -57,6 +57,15 @@ export async function getBySlug(req: Request, res: Response): Promise<void> {
   res.json(serializePostDetail(post, viewer, authorFollowedByViewer));
 }
 
+export async function getFullContent(req: Request, res: Response): Promise<void> {
+  const result = await postService.getFullContent(
+    req.params.slug as string,
+    req.user?.userId,
+    req.user?.role,
+  );
+  res.json(result);
+}
+
 export async function myDrafts(req: Request, res: Response): Promise<void> {
   const drafts = await postService.listDrafts(req.user!.userId);
   res.json(drafts.map((d) => serializePostCard(d)));
