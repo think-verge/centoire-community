@@ -133,9 +133,9 @@ function CircleCarousel({ title, circles }: { title: string; circles: Circle[] }
         ref={scrollRef}
         className="flex gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory"
       >
-        {circles.map((circle, index) => (
-          <div key={`${circle.id}-${index}`} className="snap-start shrink-0">
-            <CircleCard circle={circle} index={index} />
+        {circles.map((circle) => (
+          <div key={circle.id} className="snap-start shrink-0">
+            <CircleCard circle={circle} />
           </div>
         ))}
       </div>
@@ -143,7 +143,7 @@ function CircleCarousel({ title, circles }: { title: string; circles: Circle[] }
   );
 }
 
-function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
+function CircleCard({ circle }: { circle: Circle }) {
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(Boolean(circle.viewerRole));
   const [members, setMembers] = useState(circle.memberCount);
