@@ -13,12 +13,12 @@ backend:
 
 ## Start the Jobs API in watch mode (port 8010). No-op until apps/jobs/api exists.
 jobs-api:
-	@if [ -d apps/jobs/api ]; then npm run dev -w @centoire/jobs-api; \
-	else echo "jobs-api: apps/jobs/api not created yet (planned for P6), nothing to run"; fi
+	@if [ -f apps/jobs/api/src/server.ts ]; then npm run dev -w @centoire/jobs-api; \
+	else echo "jobs-api: apps/jobs/api/src/server.ts not created yet, nothing to run"; fi
 
 ## Start the Jobs web app (port 5174). No-op until apps/jobs/web exists.
 jobs-web:
-	@if [ -d apps/jobs/web ]; then npm run dev -w @centoire/jobs-web; \
+	@if [ -f apps/jobs/web/index.html ]; then npm run dev -w @centoire/jobs-web; \
 	else echo "jobs-web: apps/jobs/web not created yet (planned for P4/P7), nothing to run"; fi
 
 ## Create venv and install Python deps if needed

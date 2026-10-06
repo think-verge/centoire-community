@@ -1,4 +1,23 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+dotenv.config();
+
+/**
+ * Local dev convenience: borrow the keys that must match core (database cluster, session secret,
+ * internal secret) from backend/.env when this app has no value of its own. Never PORT/HOST.
+ * Skipped in production, where /etc/centoire-community/jobs-api.env is the source of truth.
+ */
+if (process.env.NODE_ENV !== "production") {
+  const backendEnv = fileURLToPath(new URL("../../../../../backend/.env", import.meta.url));
+  if (existsSync(backendEnv)) {
+    const shared = dotenv.parse(readFileSync(backendEnv));
+    for (const key of ["MONGODB_URI", "JWT_SECRET", "JWT_PUBLIC_KEY", "AI_INTERNAL_SECRET"]) {
+      if (process.env[key] === undefined && shared[key]) process.env[key] = shared[key];
+    }
+  }
+}
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? "development",

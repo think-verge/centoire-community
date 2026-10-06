@@ -1,0 +1,4 @@
+@import "tailwindcss";
+@import "@centoire/theme";
+/* Tailwind skips workspace symlinks, so scan the shared kit's classes explicitly. */
+@source "../../../../packages/ui/src";

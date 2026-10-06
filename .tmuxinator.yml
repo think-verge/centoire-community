@@ -12,9 +12,12 @@ windows:
           - make jobs-api
 
   - ui:
+      layout: even-horizontal
       panes:
         - ui:
           - make ui
+        - jobs-web:
+          - make jobs-web
 
   - agent:
       panes:
