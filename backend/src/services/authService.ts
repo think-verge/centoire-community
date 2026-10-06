@@ -15,11 +15,17 @@ const RESET_TTL_MS = 60 * 60 * 1000;
 const googleClient = env.GOOGLE_CLIENT_ID ? new OAuth2Client(env.GOOGLE_CLIENT_ID) : null;
 
 export function signSessionToken(user: IUser): string {
-  return jwt.sign(
-    { userId: user._id.toString(), email: user.email, role: user.role },
-    env.JWT_SECRET,
-    { expiresIn: "7d" },
-  );
+  const claims = { userId: user._id.toString(), email: user.email, role: user.role };
+  if (env.JWT_PRIVATE_KEY) {
+    // RS256 so mini-app processes can verify with the public key only (see /auth/.well-known/jwks.json).
+    return jwt.sign(claims, env.JWT_PRIVATE_KEY, {
+      algorithm: "RS256",
+      expiresIn: "7d",
+      keyid: env.JWT_KEY_ID,
+      issuer: "centoire",
+    });
+  }
+  return jwt.sign(claims, env.JWT_SECRET, { expiresIn: "7d" });
 }
 
 function newToken(): string {

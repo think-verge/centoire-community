@@ -17,6 +17,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
     "@asteasolutions/zod-to-openapi": "^7.3.4",
+    "@centoire/contracts": "*",
+    "@centoire/server-kit": "*",
     "@extractus/article-extractor": "^9.0.1",
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-link": "^3.31.3",

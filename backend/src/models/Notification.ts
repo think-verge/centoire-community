@@ -1,6 +1,8 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
+import { JOBS_EVENTS, type JobsEvent } from "@centoire/contracts";
 
 export type NotificationType =
+  | JobsEvent
   | "user.followed"
   | "post.upvoted"
   | "comment.upvoted"
@@ -18,6 +20,10 @@ export interface INotification extends Document {
   targetPostId?: Types.ObjectId;
   targetCommentId?: Types.ObjectId;
   targetUserId?: Types.ObjectId;
+  /** Which app produced the notification; mini-app ones carry their own text and link. */
+  app: "core" | "jobs";
+  message?: string;
+  link?: string;
   readAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -38,9 +44,13 @@ const notificationSchema = new Schema<INotification>(
         "comment.mentioned",
         "post.approved",
         "post.rejected",
+        ...JOBS_EVENTS,
       ],
       required: true,
     },
+    app: { type: String, enum: ["core", "jobs"], default: "core" },
+    message: { type: String, maxlength: 300 },
+    link: { type: String, maxlength: 500 },
     targetPostId: { type: Schema.Types.ObjectId, ref: "Post" },
     targetCommentId: { type: Schema.Types.ObjectId, ref: "Comment" },
     targetUserId: { type: Schema.Types.ObjectId, ref: "User" },

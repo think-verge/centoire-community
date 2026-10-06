@@ -75,6 +75,7 @@ export default function App() {
                 path="/exclusive/jobs"
                 element={
                   <ExclusivePage
+                    appId="jobs"
                     title="Jobs"
                     description="Curated job openings at top brands, creative studios, and agencies — updated weekly."
                   />

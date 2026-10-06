@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { PostCard } from "../../components/PostCard";
-import { FeaturedBanner } from "../../components/FeaturedBanner";
+import { MiniAppBanners } from "../../components/MiniAppBanners";
 import {
   useGetFeedDiscoverInfinite,
   useGetFeedDiscover,
@@ -158,8 +158,8 @@ export function FeedPage() {
               </section>
             )}
 
-            {/* Featured Jobs Banner */}
-            <FeaturedBanner />
+            {/* Mini-app promos (Jobs, ...) */}
+            <MiniAppBanners />
 
             {/* Latest News section */}
             {(latestPosts.length > 0 || latestNews.isLoading) && (

@@ -19,28 +19,24 @@ if [ ! -f "$FRONTEND_ENV" ]; then
   exit 1
 fi
 
-echo "==> Installing backend dependencies"
-cd "$BACKEND_DIR"
-rm -rf node_modules
-npm ci
-
-echo "==> Building backend"
-npm run build
-
 echo "==> Cleaning removed UI source files"
 # scp does not delete files removed from the repo; remove them explicitly
 rm -f "$UI_DIR/src/components/nav/SidebarSection.tsx"
 
-echo "==> Installing UI dependencies"
-cd "$UI_DIR"
-rm -rf node_modules
+echo "==> Installing workspace dependencies"
+cd "$APP_DIR"
+# Per-project node_modules from before the workspace migration would shadow the hoisted ones.
+rm -rf node_modules "$BACKEND_DIR/node_modules" "$UI_DIR/node_modules"
 npm ci
+
+echo "==> Building backend"
+npm run build -w backend
 
 echo "==> Building UI"
 set -a
 . "$FRONTEND_ENV"
 set +a
-VITE_API_BASE_URL="" npm run build
+VITE_API_BASE_URL="" npm run build -w ui
 
 test -f "$BACKEND_DIR/dist/server.js"
 test -f "$UI_DIR/dist/index.html"

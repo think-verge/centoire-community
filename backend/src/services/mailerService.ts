@@ -4,6 +4,7 @@ interface Mailer {
   sendVerification(to: string, link: string): Promise<void>;
   sendPasswordReset(to: string, link: string): Promise<void>;
   sendInvite(to: string, link: string, role: string): Promise<void>;
+  sendNotification(to: string, subject: string, message: string, link: string): Promise<void>;
 }
 
 // ─── HTML shell ───────────────────────────────────────────────────────────────
@@ -157,6 +158,9 @@ const consoleMailer: Mailer = {
   async sendInvite(to, link, role) {
     console.log(`[mail] invite (${role}) ${to}: ${link}`);
   },
+  async sendNotification(to, subject, _message, link) {
+    console.log(`[mail] ${subject} ${to}: ${link}`);
+  },
 };
 
 // ─── Resend transport ─────────────────────────────────────────────────────────
@@ -209,6 +213,20 @@ const resendMailer: Mailer = {
         "You're invited to Centoire",
         "You've been selected as a Creator on Centoire. Accept your invite to get started.",
         inviteBody(link, role),
+      ),
+    );
+  },
+
+  async sendNotification(to, subject, message, link) {
+    await sendViaResend(
+      to,
+      subject,
+      emailShell(
+        subject,
+        message,
+        `<h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:700;color:#1A1A1A;">${subject}</h1>
+         <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:16px;color:#555555;line-height:1.6;">${message}</p>
+         ${ctaButton("Open in Centoire", link)}`,
       ),
     );
   },

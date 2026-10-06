@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ExternalNavLink } from "@centoire/ui";
 import { NavLink, useLocation } from "react-router-dom";
 import { hasPermission } from "../../lib/permissions";
 import { useAuth } from "../../lib/auth-context";
@@ -113,6 +114,28 @@ export function DesktopSidebar() {
                           ))}
                         </ul>
                       )}
+                    </li>
+                  );
+                }
+
+                if (item.href) {
+                  return (
+                    <li key={item.key}>
+                      <ExternalNavLink
+                        href={item.href}
+                        title={collapsed ? item.label : `${item.label} (opens in a new tab)`}
+                        className={`flex items-center rounded-lg transition-colors overflow-hidden ${
+                          collapsed ? "justify-center p-2 w-10 h-10 mx-auto" : "gap-2.5 px-3 py-2 w-full"
+                        } text-sm font-medium text-[var(--color-stone)] hover:bg-[var(--color-sand)] hover:text-[var(--color-charcoal)]`}
+                      >
+                        {item.icon && <item.icon className="size-4 shrink-0" />}
+                        {!collapsed && (
+                          <>
+                            <span className="whitespace-nowrap">{item.label}</span>
+                            <span aria-hidden className="ml-auto text-xs text-[var(--color-taupe)]">↗</span>
+                          </>
+                        )}
+                      </ExternalNavLink>
                     </li>
                   );
                 }

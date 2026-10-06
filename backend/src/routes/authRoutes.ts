@@ -23,6 +23,8 @@ const authLimiter = rateLimit({
 
 export const authRouter = Router();
 
+authRouter.get("/.well-known/jwks.json", authController.jwks);
+
 authRouter.post(
   "/signup",
   authLimiter,

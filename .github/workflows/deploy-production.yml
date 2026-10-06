@@ -25,7 +25,7 @@ jobs:
           host: ${{ secrets.CENTOIRE_COMMUNITY_SSH_HOST }}
           username: ${{ secrets.CENTOIRE_COMMUNITY_SSH_USER }}
           key: ${{ secrets.CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY }}
-          source: "backend,ui,deploy.sh,setup.sh"
+          source: "package.json,package-lock.json,backend,ui,deploy.sh,setup.sh"
           target: /var/www/centoire-community
           strip_components: 0
           overwrite: true

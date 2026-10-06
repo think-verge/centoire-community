@@ -1,20 +1,10 @@
 import type { Request, Response } from "express";
 import { env } from "../config/env.js";
+import { publicJwks } from "../services/jwks.js";
 import * as authService from "../services/authService.js";
 import * as inviteService from "../services/inviteService.js";
 import { serializeUser } from "../services/userSerializer.js";
-import type { IUser } from "../models/User.js";
-
-const COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
-function setSessionCookie(res: Response, user: IUser): void {
-  res.cookie("token", authService.signSessionToken(user), {
-    httpOnly: true,
-    secure: env.COOKIE_SECURE,
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE_MS,
-  });
-}
+import { clearSessionCookie, setSessionCookie, usesLegacySession } from "../services/sessionCookie.js";
 
 export async function signup(req: Request, res: Response): Promise<void> {
   const user = await authService.signup(req.body);
@@ -36,12 +26,14 @@ export async function google(req: Request, res: Response): Promise<void> {
 }
 
 export async function logout(_req: Request, res: Response): Promise<void> {
-  res.clearCookie("token");
+  clearSessionCookie(res);
   res.status(204).end();
 }
 
 export async function me(req: Request, res: Response): Promise<void> {
   const user = await authService.getMe(req.user!.userId);
+  // Migrate pre-SSO sessions to the shared cookie without forcing a re-login.
+  if (usesLegacySession(req)) setSessionCookie(res, user);
   res.json(serializeUser(user, { private: true }));
 }
 
@@ -74,4 +66,8 @@ export function googleEnabled(_req: Request, res: Response): void {
 export async function getInvitePreview(req: Request, res: Response): Promise<void> {
   const preview = await inviteService.previewInvite(req.params.token as string);
   res.json(preview);
+}
+
+export function jwks(_req: Request, res: Response): void {
+  res.json(publicJwks());
 }

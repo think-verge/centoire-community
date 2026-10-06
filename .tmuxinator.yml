@@ -4,9 +4,12 @@ startup_window: control
 
 windows:
   - backend:
+      layout: even-horizontal
       panes:
-        - backend:
+        - core-api:
           - make backend
+        - jobs-api:
+          - make jobs-api
 
   - ui:
       panes:
