@@ -1,65 +1,20 @@
 import type { NextFunction, Request, Response } from "express";
-import jwt from "jsonwebtoken";
+import { createAuthMiddleware, createTokenVerifier, ApiError } from "@centoire/server-kit";
 import { env } from "../config/env.js";
-import { hasPermission, type Permission } from "../config/permissions.js";
-import type { UserRole } from "../models/User.js";
-import { ApiError } from "../utils/api-error.js";
 
-export interface AuthPayload {
-  userId: string;
-  email: string;
-  role: UserRole;
-}
+export type { AuthPayload } from "@centoire/contracts";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthPayload;
-    }
-  }
-}
+/** Core accepts HS256 (legacy/dev) and RS256 (when a key pair is configured) tokens. */
+export const verifySessionToken = createTokenVerifier({
+  hs256Secret: env.JWT_SECRET,
+  publicKeyPem: env.JWT_PUBLIC_KEY || undefined,
+});
 
-function readToken(req: Request): string | undefined {
-  return req.cookies?.token as string | undefined;
-}
-
-function verifyToken(token: string): AuthPayload {
-  try {
-    return jwt.verify(token, env.JWT_SECRET) as AuthPayload;
-  } catch {
-    throw new ApiError(401, "Invalid or expired session");
-  }
-}
-
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
-  const token = readToken(req);
-  if (!token) throw new ApiError(401, "Authentication required");
-  req.user = verifyToken(token);
-  next();
-}
-
-export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
-  const token = readToken(req);
-  if (token) {
-    try {
-      req.user = jwt.verify(token, env.JWT_SECRET) as AuthPayload;
-    } catch {
-      // invalid token on an optional route: treat as logged out
-    }
-  }
-  next();
-}
+export const { requireAuth, optionalAuth, requirePermission } =
+  createAuthMiddleware(verifySessionToken);
 
 export function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) throw new ApiError(401, "Authentication required");
   if (req.user.role !== "admin") throw new ApiError(403, "Admin access required");
   next();
-}
-
-export function requirePermission(permission: Permission) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
-    if (!req.user) throw new ApiError(401, "Authentication required");
-    if (!hasPermission(req.user.role, permission)) throw new ApiError(403, "Insufficient permissions");
-    next();
-  };
 }

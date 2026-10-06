@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useGetGoogleConfig, useLoginWithGoogle } from "../lib/api/generated/auth/auth";
 import { useAuth } from "../lib/auth-context";
+import { usePostAuthRedirect } from "../lib/postAuth";
 
 declare global {
   interface Window {
@@ -35,13 +35,13 @@ export function loadGsiScript(): Promise<void> {
 export function GoogleButton() {
   const { data: config } = useGetGoogleConfig();
   const { refresh } = useAuth();
-  const navigate = useNavigate();
+  const goAfterAuth = usePostAuthRedirect();
   const containerRef = useRef<HTMLDivElement>(null);
   const googleLogin = useLoginWithGoogle({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/feed");
+        goAfterAuth();
       },
     },
   });

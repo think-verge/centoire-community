@@ -15,6 +15,20 @@ export const env = {
   MONGODB_URI: required("MONGODB_URI", "mongodb://127.0.0.1:27017/centoire"),
   JWT_SECRET: required("JWT_SECRET", "dev-secret-change-me"),
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN ?? "http://localhost:5173",
+  /** Every origin allowed to call the API with credentials (main app + mini-app frontends). */
+  CLIENT_ORIGINS: (process.env.CLIENT_ORIGINS ?? process.env.CLIENT_ORIGIN ?? "http://localhost:5173,http://localhost:5174")
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean),
+  /** ".centoire.com" in production so mini-app subdomains share the session; unset in dev. */
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
+  /** RS256 key pair (PEM, "\n" escaped ok). When set, sessions are RS256 and published via JWKS. */
+  JWT_PRIVATE_KEY: (process.env.JWT_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
+  JWT_PUBLIC_KEY: (process.env.JWT_PUBLIC_KEY ?? "").replace(/\\n/g, "\n"),
+  JWT_KEY_ID: process.env.JWT_KEY_ID ?? "centoire-1",
+  /** Mini-app database the core polls for outbox events. */
+  JOBS_DB_NAME: process.env.JOBS_DB_NAME ?? "centoire_jobs",
+  JOBS_PUBLIC_URL: process.env.JOBS_PUBLIC_URL ?? "http://localhost:5174",
   COOKIE_SECURE: process.env.COOKIE_SECURE
     ? process.env.COOKIE_SECURE === "true"
     : process.env.NODE_ENV === "production",

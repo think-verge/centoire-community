@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { ExternalNavLink } from "@centoire/ui";
 import { hasPermission } from "../../lib/permissions";
 import { useAuth } from "../../lib/auth-context";
 import { CATEGORY_NAV_ITEMS, NAV_GROUPS } from "./navConfig";
@@ -58,6 +59,17 @@ export function MoreSheet({ onClose }: Props) {
                             ))}
                           </div>
                         </div>
+                      );
+                    }
+                    if (item.href) {
+                      return (
+                        <ExternalNavLink
+                          key={item.key}
+                          href={item.href}
+                          className="block rounded-lg px-3 py-1.5 text-sm text-[var(--color-stone)] hover:text-[var(--color-charcoal)]"
+                        >
+                          {item.label} <span aria-hidden className="text-xs text-[var(--color-taupe)]">↗</span>
+                        </ExternalNavLink>
                       );
                     }
                     return (

@@ -3,6 +3,7 @@ import { connectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { startIngestionCron } from "./workers/rssCron.js";
 import { startCleanupCron } from "./workers/cleanupCron.js";
+import { startOutboxPoller } from "./workers/outboxPoller.js";
 
 async function main(): Promise<void> {
   await connectDb();
@@ -12,6 +13,7 @@ async function main(): Promise<void> {
   });
   startIngestionCron();
   startCleanupCron();
+  startOutboxPoller("jobs", env.JOBS_DB_NAME);
 }
 
 main().catch((err) => {

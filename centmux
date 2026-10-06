@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tmux launcher for the centoire-community dev stack (ui, backend, agent).
+# tmux launcher for the centoire-community dev stack (ui, backend + jobs-api, agent).
 # Usage:
 #   ./centmux        start (or attach to) the dev session
 #   ./centmux kill   stop all services and tear down the session

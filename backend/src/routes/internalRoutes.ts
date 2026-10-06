@@ -1,6 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { env } from "../config/env.js";
+import { Types } from "mongoose";
+import type { UserSummary } from "@centoire/contracts";
 import { Post } from "../models/Post.js";
+import { User, type IUser } from "../models/User.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 
@@ -104,4 +107,37 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
+});
+
+// ─── Platform API for mini-app processes (jobs-api, ...) ──────────────────────
+
+function toSummary(user: IUser): UserSummary {
+  return {
+    id: user._id.toString(),
+    handle: user.handle ?? null,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl ?? null,
+    emailVerified: user.emailVerified,
+  };
+}
+
+const SUMMARY_FIELDS = "handle displayName avatarUrl emailVerified";
+const MAX_SUMMARY_IDS = 200;
+
+/** Batch lookup of public user data; unknown ids are simply absent from the result. */
+internalRouter.post("/users/summaries", async (req: Request, res: Response) => {
+  const ids = (Array.isArray(req.body?.ids) ? req.body.ids : [])
+    .filter((id: unknown): id is string => typeof id === "string" && Types.ObjectId.isValid(id))
+    .slice(0, MAX_SUMMARY_IDS);
+  const users = await User.find({ _id: { $in: ids } }).select(SUMMARY_FIELDS);
+  res.json(users.map(toSummary));
+});
+
+internalRouter.get("/users/by-handle/:handle", async (req: Request, res: Response) => {
+  const user = await User.findOne({ handle: String(req.params.handle).toLowerCase() }).select(SUMMARY_FIELDS);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  res.json(toSummary(user));
 });

@@ -1,4 +1,7 @@
 import { Types } from "mongoose";
+import { env } from "../config/env.js";
+import { User } from "../models/User.js";
+import { mailer } from "./mailerService.js";
 import { Notification, type INotification, type NotificationType } from "../models/Notification.js";
 import { onDomainEvent } from "../events/eventBus.js";
 import { decodeCursor, encodeCursor } from "../utils/cursor.js";
@@ -13,6 +16,9 @@ interface NotifyInput {
   targetPostId?: string;
   targetCommentId?: string;
   targetUserId?: string;
+  app?: "core" | "jobs";
+  message?: string;
+  link?: string;
 }
 
 async function notify(input: NotifyInput): Promise<void> {
@@ -47,6 +53,62 @@ onDomainEvent("post.approved", ({ postId, recipientId }) => {
 });
 onDomainEvent("post.rejected", ({ postId, recipientId }) => {
   void notify({ recipientId, type: "post.rejected", targetPostId: postId });
+});
+
+// Mini-app events arrive through the outbox poller (see workers/outboxPoller.ts) and carry
+// the text/link to show, because only the producing app knows its own routes.
+const jobsLink = (path: string) => `${env.JOBS_PUBLIC_URL}${path}`;
+
+async function emailUser(userId: string, subject: string, message: string, link: string): Promise<void> {
+  const user = await User.findById(userId).select("email");
+  if (user?.email) await mailer.sendNotification(user.email, subject, message, link).catch(() => undefined);
+}
+
+onDomainEvent("jobs.application.submitted", ({ actorId, recipientIds, jobId, jobTitle }) => {
+  const link = jobsLink(`/employer/jobs/${jobId}/applicants`);
+  const message = `New application for ${jobTitle}`;
+  for (const recipientId of recipientIds) {
+    void notify({ recipientId, actorId, type: "jobs.application.submitted", app: "jobs", message, link });
+    void emailUser(recipientId, message, message, link);
+  }
+});
+onDomainEvent("jobs.application.status_changed", ({ actorId, recipientId, applicationId, jobTitle, companyName, status }) => {
+  void notify({
+    recipientId,
+    actorId,
+    type: "jobs.application.status_changed",
+    app: "jobs",
+    message: `Your application for ${jobTitle} at ${companyName} is now ${status}`,
+    link: jobsLink(`/me/applications/${applicationId}`),
+  });
+});
+onDomainEvent("jobs.job.approved", ({ recipientId, jobId, jobTitle }) => {
+  void notify({
+    recipientId,
+    type: "jobs.job.approved",
+    app: "jobs",
+    message: `Your job "${jobTitle}" was approved and is live`,
+    link: jobsLink(`/jobs/${jobId}`),
+  });
+});
+onDomainEvent("jobs.job.rejected", ({ recipientId, jobId, jobTitle, reason }) => {
+  void notify({
+    recipientId,
+    type: "jobs.job.rejected",
+    app: "jobs",
+    message: `Your job "${jobTitle}" was not approved${reason ? `: ${reason}` : ""}`,
+    link: jobsLink(`/employer/jobs/${jobId}/edit`),
+  });
+});
+onDomainEvent("jobs.company.member_invited", ({ actorId, recipientId, companyName }) => {
+  void notify({
+    recipientId,
+    actorId,
+    type: "jobs.company.member_invited",
+    app: "jobs",
+    message: `You were added to ${companyName} on Centoire Jobs`,
+    link: jobsLink("/employer"),
+  });
 });
 
 const LIST_POPULATE = [

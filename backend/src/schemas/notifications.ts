@@ -1,3 +1,4 @@
+import { JOBS_EVENTS } from "@centoire/contracts";
 import { registry, z, jsonResponse } from "./registry.js";
 
 const NotificationTypeEnum = z.enum([
@@ -9,6 +10,7 @@ const NotificationTypeEnum = z.enum([
   "comment.mentioned",
   "post.approved",
   "post.rejected",
+  ...JOBS_EVENTS,
 ]);
 
 const NotificationActorSchema = z.object({
@@ -31,6 +33,9 @@ export const NotificationSchema = registry.register(
     type: NotificationTypeEnum,
     actor: NotificationActorSchema.nullable(),
     targetPost: NotificationTargetPostSchema.nullable(),
+    app: z.enum(["core", "jobs"]),
+    message: z.string().nullable(),
+    link: z.string().nullable(),
     readAt: z.string().nullable(),
     createdAt: z.string(),
   }),

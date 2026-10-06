@@ -87,6 +87,7 @@ export * from './moderationPolicyLogic';
 export * from './moderationQueue';
 export * from './notification';
 export * from './notificationActor';
+export * from './notificationApp';
 export * from './notificationPage';
 export * from './notificationTargetPost';
 export * from './notificationType';

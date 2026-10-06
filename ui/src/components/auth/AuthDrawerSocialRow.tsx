@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { loadGsiScript } from "../GoogleButton";
 import { useGetGoogleConfig, useLoginWithGoogle } from "../../lib/api/generated/auth/auth";
 import { useAuth } from "../../lib/auth-context";
+import { usePostAuthRedirect } from "../../lib/postAuth";
 
 interface AuthDrawerSocialRowProps {
   mode: "login" | "signup";
@@ -32,13 +32,13 @@ export function AuthDrawerSocialRow({ mode }: AuthDrawerSocialRowProps) {
 function GoogleSocialButton({ mode }: { mode: "login" | "signup" }) {
   const { data: config } = useGetGoogleConfig();
   const { refresh } = useAuth();
-  const navigate = useNavigate();
+  const goAfterAuth = usePostAuthRedirect();
   const containerRef = useRef<HTMLDivElement>(null);
   const googleLogin = useLoginWithGoogle({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/feed");
+        goAfterAuth();
       },
     },
   });

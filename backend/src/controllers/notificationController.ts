@@ -33,6 +33,9 @@ function serialize(notification: INotification) {
           title: (targetPost.title as string) ?? "",
         }
       : null,
+    app: notification.app ?? "core",
+    message: notification.message ?? null,
+    link: notification.link ?? null,
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),
   };

@@ -15,6 +15,11 @@ import type { Notification } from "../lib/api/generated/model";
 const POLL_INTERVAL_MS = 30_000;
 
 const TYPE_LABEL: Record<Notification["type"], string> = {
+  "jobs.application.submitted": "New application received",
+  "jobs.application.status_changed": "Your application was updated",
+  "jobs.job.approved": "Your job was approved",
+  "jobs.job.rejected": "Your job was not approved",
+  "jobs.company.member_invited": "You were added to a company",
   "user.followed": "followed you",
   "post.upvoted": "upvoted your post",
   "comment.upvoted": "upvoted your comment",
@@ -130,22 +135,21 @@ function NotificationRow({
   onMarkRead: () => void;
 }) {
   const unread = !notification.readAt;
-  const label = TYPE_LABEL[notification.type];
+  const label = notification.message ?? TYPE_LABEL[notification.type];
   const linkTo = notification.targetPost ? `/p/${notification.targetPost.slug}` : "#";
+  // Mini-app notifications point at another Centoire app: open it in a new tab.
+  const externalHref = notification.app !== "core" && notification.link ? notification.link : null;
+  const rowClass = `flex items-start gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0 hover:bg-cream ${
+    unread ? "bg-crimson-tint/40" : ""
+  }`;
 
   function handleClick() {
     if (unread) onMarkRead();
     onOpen();
   }
 
-  return (
-    <Link
-      to={linkTo}
-      onClick={handleClick}
-      className={`flex items-start gap-3 border-b border-line px-4 py-3 text-sm last:border-b-0 hover:bg-cream ${
-        unread ? "bg-crimson-tint/40" : ""
-      }`}
-    >
+  const content = (
+    <>
       {notification.actor ? (
         <AvatarBubble
           name={notification.actor.displayName}
@@ -173,6 +177,16 @@ function NotificationRow({
         </p>
       </div>
       {unread && <span className="mt-1.5 size-2 shrink-0 rounded-full bg-crimson" aria-hidden />}
+    </>
+  );
+
+  return externalHref ? (
+    <a href={externalHref} target="_blank" rel="noopener" onClick={handleClick} className={rowClass}>
+      {content}
+    </a>
+  ) : (
+    <Link to={linkTo} onClick={handleClick} className={rowClass}>
+      {content}
     </Link>
   );
 }

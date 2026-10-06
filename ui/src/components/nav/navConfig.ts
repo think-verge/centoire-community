@@ -19,6 +19,16 @@ import {
   UserPlusIcon,
   UsersIcon,
 } from "./icons";
+import { miniAppHref, miniApps } from "../../lib/miniApps";
+
+const EXCLUSIVE_ICONS: Record<string, IconComponent> = {
+  "ai-tools": AiToolsIcon,
+  jobs: BriefcaseIcon,
+  certification: CertIcon,
+  startups: RocketIcon,
+  research: ResearchIcon,
+  buyers: FactoryIcon,
+};
 
 export type IconComponent = ComponentType<{ className?: string }>;
 
@@ -26,6 +36,8 @@ export interface NavItem {
   key: string;
   label: string;
   to: string;
+  /** Absolute URL of another Centoire app; renders as a new-tab link instead of a router link. */
+  href?: string;
   icon?: IconComponent;
   disabled?: boolean;
   permission?: Permission;
@@ -47,6 +59,18 @@ export const CATEGORY_NAV_ITEMS: NavItem[] = [
   { key: "cat:lifestyle", label: "Lifestyle", to: "/category/lifestyle", icon: LifestyleIcon, isChild: true },
 ];
 
+/** "Centoire Exclusive" entries come from the mini-app registry: live apps open in a new tab. */
+const EXCLUSIVE_ITEMS: NavItem[] = miniApps.map((app) => {
+  const href = miniAppHref(app, "sidebar");
+  return {
+    key: `excl:${app.id}`,
+    label: app.label,
+    to: app.comingSoonPath,
+    ...(href ? { href } : {}),
+    icon: EXCLUSIVE_ICONS[app.id],
+  };
+});
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     key: "explore",
@@ -63,12 +87,7 @@ export const NAV_GROUPS: NavGroup[] = [
     key: "exclusive",
     label: "Centoire Exclusive",
     items: [
-      { key: "excl:ai-tools", label: "AI & Industry Tools", to: "/exclusive/ai-tools", icon: AiToolsIcon },
-      { key: "excl:jobs", label: "Jobs", to: "/exclusive/jobs", icon: BriefcaseIcon },
-      { key: "excl:cert", label: "Certification", to: "/exclusive/certification", icon: CertIcon },
-      { key: "excl:startups", label: "Startup / Investors", to: "/exclusive/startups", icon: RocketIcon },
-      { key: "excl:research", label: "Research", to: "/exclusive/research", icon: ResearchIcon },
-      { key: "excl:buyers", label: "Buyer / Manufactures", to: "/exclusive/buyers", icon: FactoryIcon },
+      ...EXCLUSIVE_ITEMS,
     ],
   },
   {

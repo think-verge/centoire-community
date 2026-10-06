@@ -16,7 +16,9 @@ jobs:
     outputs:
       projects: ${{ steps.filter-projects.outputs.projects }}
     env:
-      all_projects: "backend ui ai-agent"
+      # "node" covers every npm workspace (backend, ui, packages/*, apps/*/*): they share one
+      # lockfile and shared packages affect every consumer, so they are checked together.
+      all_projects: "node ai-agent"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,11 +39,12 @@ jobs:
           ALL_PROJECTS=($all_projects)
           CHANGED_FILES="${{ steps.get-changes.outputs.changed_files }}"
           FILTERED=()
-          for PROJECT in "${ALL_PROJECTS[@]}"; do
-            if echo "$CHANGED_FILES" | grep -qw "$PROJECT"; then
-              FILTERED+=("$PROJECT")
-            fi
-          done
+          if echo "$CHANGED_FILES" | grep -qwE "backend|ui|packages|apps|package.json|package-lock.json"; then
+            FILTERED+=("node")
+          fi
+          if echo "$CHANGED_FILES" | grep -qw "ai-agent"; then
+            FILTERED+=("ai-agent")
+          fi
           # No project-specific changes detected (push to main, or a PR that only
           # touched root-level files) -> run the full matrix.
           if [ ${#FILTERED[@]} -eq 0 ]; then
@@ -66,12 +69,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js
-        if: matrix.project == 'backend' || matrix.project == 'ui'
+        if: matrix.project == 'node'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Set up Python
         if: matrix.project == 'ai-agent'
@@ -82,8 +85,8 @@ jobs:
           cache-dependency-path: ai-agent/requirements.txt
 
       - name: Install dependencies (Node)
-        if: matrix.project == 'backend' || matrix.project == 'ui'
-        run: cd ${{ matrix.project }} && npm ci
+        if: matrix.project == 'node'
+        run: npm ci
 
       - name: Install dependencies (Python)
         if: matrix.project == 'ai-agent'
@@ -93,12 +96,12 @@ jobs:
           pip install -r requirements.txt
 
       - name: Typecheck
-        if: matrix.project == 'backend' || matrix.project == 'ui'
-        run: cd ${{ matrix.project }} && npm run typecheck
+        if: matrix.project == 'node'
+        run: npm run typecheck
 
       - name: Lint
-        if: matrix.project == 'backend' || matrix.project == 'ui'
-        run: cd ${{ matrix.project }} && npm run lint
+        if: matrix.project == 'node'
+        run: npm run lint
 
       - name: Python syntax / import check
         if: matrix.project == 'ai-agent'
@@ -108,14 +111,14 @@ jobs:
           python -c "import app.main"
 
       - name: Build
-        if: matrix.project == 'backend' || matrix.project == 'ui'
-        run: cd ${{ matrix.project }} && npm run build
+        if: matrix.project == 'node'
+        run: npm run build
 
       - name: Test
-        if: matrix.project == 'backend'
-        run: cd backend && npm test
-        # ui has no test script/framework yet; ai-agent has no test suite yet.
-        # Add matching steps here once those projects gain test coverage.
+        if: matrix.project == 'node'
+        run: npm test
+        # Runs `test` in every workspace that defines it (backend today).
+        # ai-agent has no test suite yet.
 
   tests-passed:
     name: Tests passed

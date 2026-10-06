@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 AGENT_VENV := ai-agent/.venv
 
-.PHONY: ui backend agent agent-install install openapi seed help
+.PHONY: ui backend jobs-api jobs-web agent agent-install install openapi seed help
 
 ## Start the React dev server (port 5173)
 ui:
@@ -10,6 +10,16 @@ ui:
 ## Start the Node.js/Express backend in watch mode (port 8000)
 backend:
 	cd backend && npm run dev
+
+## Start the Jobs API in watch mode (port 8010). No-op until apps/jobs/api exists.
+jobs-api:
+	@if [ -f apps/jobs/api/src/server.ts ]; then npm run dev -w @centoire/jobs-api; \
+	else echo "jobs-api: apps/jobs/api/src/server.ts not created yet, nothing to run"; fi
+
+## Start the Jobs web app (port 5174). No-op until apps/jobs/web exists.
+jobs-web:
+	@if [ -f apps/jobs/web/index.html ]; then npm run dev -w @centoire/jobs-web; \
+	else echo "jobs-web: apps/jobs/web not created yet (planned for P4/P7), nothing to run"; fi
 
 ## Create venv and install Python deps if needed
 agent-install:
@@ -22,8 +32,7 @@ agent: agent-install
 
 ## Install all dependencies (Node + Python)
 install: agent-install
-	cd backend && npm install
-	cd ui && npm install
+	npm install
 
 ## Regenerate OpenAPI spec + frontend client (run after backend schema changes)
 openapi:
@@ -38,6 +47,8 @@ help:
 	@echo ""
 	@echo "  make ui       — React dev server     (localhost:5173)"
 	@echo "  make backend  — Express API server   (localhost:8000)"
+	@echo "  make jobs-api — Jobs API               (localhost:8010)"
+	@echo "  make jobs-web — Jobs web app           (localhost:5174)"
 	@echo "  make agent    — FastAPI AI agent     (localhost:8001)"
 	@echo "  make install  — Install all deps"
 	@echo "  make openapi  — Regenerate API client"

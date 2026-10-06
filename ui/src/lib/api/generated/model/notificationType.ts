@@ -19,4 +19,9 @@ export const NotificationType = {
   commentmentioned: 'comment.mentioned',
   postapproved: 'post.approved',
   postrejected: 'post.rejected',
+  jobsapplicationsubmitted: 'jobs.application.submitted',
+  jobsapplicationstatus_changed: 'jobs.application.status_changed',
+  jobsjobapproved: 'jobs.job.approved',
+  jobsjobrejected: 'jobs.job.rejected',
+  jobscompanymember_invited: 'jobs.company.member_invited',
 } as const;

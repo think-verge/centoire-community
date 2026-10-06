@@ -1,37 +1,5 @@
-import type { NextFunction, Request, Response } from "express";
-import mongoose from "mongoose";
-import { ZodError } from "zod";
-import { ApiError } from "../utils/api-error.js";
+import { createErrorHandler, notFoundHandler } from "@centoire/server-kit";
 import { isProduction } from "../config/env.js";
 
-export function notFoundHandler(_req: Request, res: Response): void {
-  res.status(404).json({ detail: "Not found" });
-}
-
-export function errorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
-  if (err instanceof ApiError) {
-    res.status(err.statusCode).json({ detail: err.message });
-    return;
-  }
-  if (err instanceof ZodError) {
-    const first = err.issues[0];
-    const path = first?.path.join(".");
-    res.status(422).json({
-      detail: path ? `${path}: ${first?.message}` : (first?.message ?? "Invalid input"),
-    });
-    return;
-  }
-  if (err instanceof mongoose.Error.CastError || err instanceof mongoose.Error.ValidationError) {
-    res.status(422).json({ detail: "Invalid input" });
-    return;
-  }
-  if (!isProduction) {
-    console.error("[error]", err);
-  }
-  res.status(500).json({ detail: "Internal server error" });
-}
+export { notFoundHandler };
+export const errorHandler = createErrorHandler({ isProduction });

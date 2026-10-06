@@ -1732,7 +1732,12 @@
               "comment.replied",
               "comment.mentioned",
               "post.approved",
-              "post.rejected"
+              "post.rejected",
+              "jobs.application.submitted",
+              "jobs.application.status_changed",
+              "jobs.job.approved",
+              "jobs.job.rejected",
+              "jobs.company.member_invited"
             ]
           },
           "actor": {
@@ -1781,6 +1786,21 @@
               "title"
             ]
           },
+          "app": {
+            "type": "string",
+            "enum": [
+              "core",
+              "jobs"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          },
+          "link": {
+            "type": "string",
+            "nullable": true
+          },
           "readAt": {
             "type": "string",
             "nullable": true
@@ -1794,6 +1814,9 @@
           "type",
           "actor",
           "targetPost",
+          "app",
+          "message",
+          "link",
           "readAt",
           "createdAt"
         ]

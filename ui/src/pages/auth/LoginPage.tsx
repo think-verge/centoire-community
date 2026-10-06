@@ -1,25 +1,26 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { AuthLayout } from "../../components/AuthLayout";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { GoogleButton } from "../../components/GoogleButton";
 import { useLogin } from "../../lib/api/generated/auth/auth";
 import { useAuth } from "../../lib/auth-context";
+import { usePostAuthRedirect } from "../../lib/postAuth";
 
 export function LoginPage() {
-  const navigate = useNavigate();
+  const goAfterAuth = usePostAuthRedirect();
   const { user, refresh } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
 
   useEffect(() => {
-    if (user) navigate("/feed", { replace: true });
-  }, [user, navigate]);
+    if (user) goAfterAuth();
+  }, [user, goAfterAuth]);
   const login = useLogin({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/feed");
+        goAfterAuth();
       },
     },
   });

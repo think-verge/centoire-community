@@ -1,10 +1,22 @@
+import { useEffect } from "react";
+import type { MiniAppId } from "@centoire/contracts";
+import { miniApps } from "../../lib/miniApps";
+
 export function ExclusivePage({
   title,
   description,
+  appId,
 }: {
   title: string;
   description: string;
+  /** When this mini app is live, old /exclusive/* links forward to it. */
+  appId?: MiniAppId;
 }) {
+  const liveUrl = appId ? miniApps.find((app) => app.id === appId)?.url : null;
+  useEffect(() => {
+    if (liveUrl) window.location.replace(liveUrl);
+  }, [liveUrl]);
+
   return (
     <main className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
       <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[var(--color-coral)]">
