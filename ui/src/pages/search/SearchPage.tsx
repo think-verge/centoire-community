@@ -264,9 +264,11 @@ export function SearchPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                  <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
                     {renderPosts.map((post, index) => (
-                      <DemoPostCard key={`${post.id}-${index}`} post={post} />
+                      <div key={`${post.id}-${index}`} className="flex flex-col h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col">
+                        <DemoPostCard post={post} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -309,9 +311,11 @@ export function SearchPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+                  <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
                     {finalCircles.map((circle, index) => (
-                      <DemoCircleCard key={`${circle.id}-${index}`} circle={circle} />
+                      <div key={`${circle.id}-${index}`}>
+                        <DemoCircleCard circle={circle} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -380,9 +384,11 @@ export function SearchPage() {
                     ))}
                   </div>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
                     {finalPeople.map((person, index) => (
-                      <DemoCreatorCard key={`${person.id}-${index}`} person={person} />
+                      <div key={`${person.id}-${index}`} className="flex flex-col h-full">
+                        <DemoCreatorCard person={person} />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -476,9 +482,9 @@ function DemoPostCard({ post }: { post: any }) {
 function DemoCircleCard({ circle }: { circle: any }) {
   return (
     <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-lg flex flex-col h-full overflow-hidden min-h-[220px]">
-      <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&h=100&fit=crop" className="h-[80px] w-full object-cover" alt="" />
+      <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&h=100&fit=crop" className="h-[44px] w-full object-cover" alt="" />
       <div className="px-5 flex justify-between relative -mt-5">
-        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" className="size-12 rounded-[12px] border-2 border-white object-cover shadow-sm bg-white" alt="" />
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" className="size-14 rounded-full border-2 border-white object-cover shadow-sm bg-white" alt="" />
         <div className="flex items-center gap-2 mt-6 text-[#737373] text-[11px] font-ui font-medium">
           <div className="flex -space-x-1.5">
              <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=50&h=50&fit=crop" className="size-4 rounded-full border border-white" />
