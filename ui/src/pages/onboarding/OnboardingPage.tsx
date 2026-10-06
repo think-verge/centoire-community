@@ -1,40 +1,46 @@
-import { useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import {
   useCompleteOnboarding,
   useSetInterests,
   useUpdateMe,
 } from "../../lib/api/generated/users/users";
+import { useListTags } from "../../lib/api/generated/tags/tags";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
-import type { Tag } from "../../lib/api/generated/model";
+
 import { useAuth } from "../../lib/auth-context";
 import logoDark from "../../assets/landing/logo-dark.svg";
 
-const CATEGORY_LABELS: Record<Tag["category"], string> = {
-  style: "STYLE",
-  craft: "CRAFT",
-  business: "BUSINESS",
-  culture: "CULTURE",
-};
+
 
 export function OnboardingPage() {
-  const [step, setStep] = useState(0);
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepParam = parseInt(searchParams.get("step") || "1", 10);
+  const currentStep = isNaN(stepParam) || stepParam < 1 || stepParam > 3 ? 1 : stepParam;
+
+  // 0-indexed step for array indexing
+  const step = currentStep - 1;
+
+  function setStep(newStepIndex: number) {
+    setSearchParams({ step: (newStepIndex + 1).toString() });
+  }
 
   return (
-    <main className="min-h-screen w-full bg-[#ECEBE7] flex flex-col py-8 px-4 sm:px-8">
-      <div className={`w-full max-w-[840px] ${step === 3 ? "h-[720px]" : "h-[640px]"} max-h-[calc(100vh-4rem)] my-auto mx-auto bg-white px-8 sm:px-14 pt-10 pb-10 sm:pb-12 border border-[#E5E5E5] shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-col transition-[height] duration-300 ease-in-out`}>
+    <main className="min-h-screen w-full bg-[#ECEBE7] flex flex-col pt-[80px] pb-12 px-4 sm:px-8">
+      <div className={`w-full max-w-[800px] h-auto max-h-[calc(100vh-128px)] mb-auto mx-auto bg-white p-12 border border-[#E5E5E5] shadow-[0_2px_16px_rgba(0,0,0,0.04)] flex flex-col gap-9 transition-all duration-300 ease-in-out`}>
         {/* Top Logo */}
-        <div className="flex justify-center mb-8 sm:mb-10 shrink-0">
+        <div className="flex justify-center shrink-0">
           <img src={logoDark} alt="Centoire" className="h-8 sm:h-9 w-auto" />
         </div>
 
-        <header className="mb-5 sm:mb-6 flex items-center justify-between shrink-0">
-          <div className="rounded-full bg-[#FCEEE8] px-2.5 py-1 font-ui text-[12px] font-black uppercase tracking-tight text-[#E5552D]">
-            STEP {step + 1} OF 4
+        <header className="flex items-center justify-between shrink-0">
+          <div className="rounded-full bg-[#FCEEE8] px-3.5 py-1 font-ui text-[12px] font-bold uppercase tracking-tight text-[#E5552D]/80">
+            STEP {step + 1} OF 3
           </div>
           <div className="flex items-center gap-1.5">
-            {[0, 1, 2, 3].map((i) => (
+            {[0, 1, 2].map((i) => (
               <div
                 key={i}
                 className={`h-1 rounded-full transition-colors ${i === step ? "w-[26px] bg-[#D85834]" : "w-[14px] bg-[#F6D9D0]"
@@ -44,151 +50,24 @@ export function OnboardingPage() {
           </div>
         </header>
 
-        {step === 0 && <RoleStep onDone={() => setStep(1)} />}
-        {step === 1 && <InterestsStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
-        {step === 2 && <FollowStep onDone={() => setStep(3)} onBack={() => setStep(1)} />}
-        {step === 3 && <ProfileStep onBack={() => setStep(2)} />}
+        {step === 0 && <InterestsStep onDone={() => setStep(1)} onBack={() => navigate("/")} />}
+        {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
+        {step === 2 && <ProfileStep onBack={() => setStep(1)} />}
       </div>
     </main>
   );
 }
 
-function RoleStep({ onDone }: { onDone: () => void }) {
-  const [selectedRole, setSelectedRole] = useState<string | null>("creator");
-
-  const roles = [
-    {
-      id: "explorer",
-      title: "Explorer",
-      description: "I browse and discover trends",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <circle cx="12" cy="12" r="9" />
-          <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "creator",
-      title: "Creator",
-      description: "I curate and publish content",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-    {
-      id: "professional",
-      title: "Professional",
-      description: "I work in fashion or luxury",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
-          <rect x="3" y="8" width="18" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M16 8V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="8" y1="8" x2="8" y2="21" strokeLinecap="round" strokeLinejoin="round" />
-          <line x1="16" y1="8" x2="16" y2="21" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      ),
-    },
-  ];
-
-  return (
-    <section className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-        <h1 className="font-editorial text-[32px] sm:text-[34px] font-normal text-charcoal leading-tight">
-          How are you planning to use Centoire?
-        </h1>
-        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14.5px] leading-[1.6] pr-0">
-          We customize your broadsheet feed, archival access, and collection dispatches according to your specific professional or personal focus.
-        </p>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-3">
-          {roles.map((role) => {
-            const active = selectedRole === role.id;
-            return (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => setSelectedRole(role.id)}
-                className={`group flex flex-col items-center justify-center px-2 py-6 sm:px-3 sm:py-6 transition-all duration-200 outline-none cursor-pointer text-left rounded-none
-                ${active
-                    ? "border border-[#D85834] bg-white shadow-[0_20px_24px_-12px_rgba(0,0,0,0.25)]"
-                    : "border border-[#E5E5E5] bg-white shadow-[0_12px_16px_-8px_rgba(0,0,0,0.1)] hover:border-[#D4D4D4] hover:shadow-[0_16px_20px_-10px_rgba(0,0,0,0.15)]"
-                  }`}
-              >
-                <div
-                  className={`flex items-center justify-center size-[60px] sm:size-[64px] rounded-[16px] mb-5 transition-colors ${active ? "bg-[#FCE5DA] text-[#D85834]" : "bg-[#EBEBEB] text-[#111111]"
-                    }`}
-                >
-                  {role.icon}
-                </div>
-                <h3 className="font-editorial text-[22px] sm:text-[24px] font-bold text-charcoal mb-1.5 text-center">
-                  {role.title}
-                </h3>
-                <p className="font-ui font-normal text-[13px] sm:text-[14px] text-[#737373] text-center leading-normal">
-                  {role.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="pt-6 border-t border-[#F2EDE4] flex justify-end shrink-0">
-        <button
-          type="button"
-          disabled={!selectedRole}
-          onClick={onDone}
-          className={`font-ui text-[13px] font-bold uppercase tracking-wider px-8 py-3.5 transition-colors flex items-center gap-2.5 ${selectedRole
-            ? "bg-[#111111] text-white hover:bg-black cursor-pointer"
-            : "bg-[#D4D4D8] text-white cursor-not-allowed"
-            }`}
-        >
-          CONTINUE
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="M12 5l7 7-7 7" />
-          </svg>
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function InterestsStep({ onDone, onBack }: { onDone: () => void, onBack: () => void }) {
+function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(),
   );
   const setInterests = useSetInterests({
     mutation: {
       onSuccess: onDone,
-      onError: () => onDone(), // Proceed anyway since we are using hardcoded tags
     },
   });
-
-  const grouped = useMemo(() => {
-    return [
-      ['culture', [
-        { id: '11111111-1111-1111-1111-111111111111', name: "Women's Apparel" },
-        { id: '22222222-2222-2222-2222-222222222222', name: 'Streetwear' },
-        { id: '33333333-3333-3333-3333-333333333333', name: 'Accessories' },
-        { id: '44444444-4444-4444-4444-444444444444', name: 'Footwear' },
-        { id: '55555555-5555-5555-5555-555555555555', name: 'Outerwear' },
-        { id: '66666666-6666-6666-6666-666666666666', name: 'Luxury Fashion' },
-        { id: '77777777-7777-7777-7777-777777777777', name: "Men's Apparel" },
-        { id: '88888888-8888-8888-8888-888888888888', name: 'Sustainable Fashion' },
-      ]],
-      ['style', [
-        { id: '99999999-9999-9999-9999-999999999999', name: 'Activewear' },
-        { id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', name: 'Footwear' },
-        { id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', name: 'Accessories' },
-        { id: 'cccccccc-cccc-cccc-cccc-cccccccccccc', name: 'Outerwear' },
-        { id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', name: 'Denim' },
-      ]]
-    ] as const;
-  }, []);
+  const { data: tags } = useListTags();
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -201,45 +80,45 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void, onBack: () => v
 
   return (
     <section className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-        <h1 className="font-editorial text-[32px] sm:text-[34px] font-normal text-charcoal leading-tight">
+      <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-9">
+        <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-charcoal leading-tight">
           Tailor your Broadsheet
         </h1>
-        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14.5px] leading-[1.6] pr-0">
-          Select multiple design niches below. We configure your daily Centoire feed based on these slow-fashion indices.
+        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14px] leading-[1.6] pr-0 whitespace-nowrap">
+          Select multiple niches below. We configure your daily Centoire feed based on these slow-fashion indices.
         </p>
 
-        <div className="mt-10 flex flex-col gap-8">
-          {grouped.map(([category, categoryTags]) => (
-            <div key={category}>
-              <p className="font-ui mb-3 text-[13px] font-bold uppercase tracking-wider text-[#737373]">
-                {CATEGORY_LABELS[category] || category}
-              </p>
-              <div className="flex flex-wrap gap-x-2 gap-y-3">
-                {categoryTags.map((tag) => {
-                  const active = selected.has(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggle(tag.id)}
-                      className={`font-ui rounded-full border px-[18px] py-[2px] text-[12.5px] outline-none focus:ring-0 transition-colors ${active
-                        ? "border-[#E5552D] bg-[#E5552D] text-white"
-                        : "border-[#E5E5E5] bg-white text-[#111111] hover:border-[#D4D4D4]"
-                        }`}
-                    >
-                      {tag.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <div className="mt-10 flex flex-wrap gap-x-2 gap-y-3">
+          {(tags ?? []).map((tag) => {
+            const active = selected.has(tag.id);
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => toggle(tag.id)}
+                className={`font-ui rounded-full border px-3.5 py-1.5 text-[13px] outline-none focus:ring-0 transition-colors ${active
+                  ? "border-[#E5552D] bg-[#E5552D] text-white"
+                  : "border-[#E5E5E5] bg-white text-[#111111] hover:border-[#D4D4D4]"
+                  }`}
+              >
+                {tag.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      {setInterests.error && (
+        <p className="font-ui text-[12px] font-medium text-[#E15A3A] pt-2">
+          {setInterests.error.message}
+        </p>
+      )}
       <div className="pt-6 border-t border-[#F2EDE4] flex items-center justify-between shrink-0">
-        <button type="button" onClick={onBack} className="font-ui text-[14px] font-bold text-charcoal hover:opacity-70">
+        <button
+          type="button"
+          onClick={onBack}
+          className="font-ui text-[14px] font-medium text-[#111111] hover:opacity-70 transition-opacity"
+        >
           Back
         </button>
         <div className="flex items-center gap-5">
@@ -275,7 +154,7 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
       { id: '3', displayName: 'Hiroshi Jin Aoki', handle: 'jin_aoki', bio: 'Exploring the intersections of Brutalist concrete interior spaces and permanent caps...', avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop' },
     ],
     circles: [
-      { id: 'c1', name: 'Slow Textiles & Linen', description: 'For researchers and curators documenting raw, organic, and earth-pigmented weaving\u00A0techniques.', memberCount: 12400, slug: 'slow-textiles', avatarUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=150&h=150&fit=crop' },
+      { id: 'c1', name: 'Slow Textiles & Linen', description: 'For researchers and curators documenting raw, organic, and earth-pigmented\nweaving techniques.', memberCount: 12400, slug: 'slow-textiles', avatarUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=150&h=150&fit=crop' },
       { id: 'c2', name: 'Brutalist Apparel', description: 'Structural, heavy, monochrome garments that communicate directly with raw concrete architecture.', memberCount: 8400, slug: 'brutalist-apparel', avatarUrl: 'https://images.unsplash.com/photo-1502014822147-1aedfb0676e0?w=150&h=150&fit=crop' },
     ]
   };
@@ -306,8 +185,8 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
   return (
     <section className="flex flex-col flex-1 min-h-0">
       <div className="relative flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-12">
-          <h1 className="font-editorial text-[32px] sm:text-[34px] font-normal text-[#333333] leading-tight">
+        <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-16">
+          <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-[#333333] leading-tight">
             Connect with Curation Circles
           </h1>
           <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14.5px] leading-[1.6] pr-0">
@@ -326,20 +205,40 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
             </div>
             <div className="grid grid-cols-3 gap-4">
               {data.creators.map((creator) => {
+                if ('isSkeleton' in creator && creator.isSkeleton) {
+                  return (
+                    <div key={creator.id} className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px]">
+                      <div className="flex items-center gap-3">
+                        <div className="size-12 rounded-full bg-white animate-pulse shrink-0" />
+                        <div className="flex flex-col gap-0 flex-1">
+                          <div className="h-4 w-24 bg-white animate-pulse" />
+                          <div className="h-3 w-16 bg-white animate-pulse mt-1" />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-0 my-5 flex-1">
+                        <div className="h-4 w-full bg-white animate-pulse" />
+                        <div className="h-4 w-11/12 bg-white animate-pulse mt-1" />
+                        <div className="h-4 w-4/5 bg-white animate-pulse mt-1" />
+                      </div>
+                      <div className="mt-auto w-full py-2 h-9 bg-white animate-pulse" />
+                    </div>
+                  );
+                }
+
                 const following = followedIds.has(creator.id);
                 return (
                   <div
                     key={creator.id}
-                    className="flex flex-col bg-[#EAEAEA] p-5"
+                    className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px]"
                   >
                     <div className="flex items-center gap-3">
-                      <AvatarBubble name={creator.displayName} url={creator.avatarUrl} size="size-12 text-lg" />
-                      <div>
-                        <p className="font-ui font-bold text-[#111111] text-[15px]">{creator.displayName}</p>
-                        <p className="text-[13px] text-[#737373]">@{creator.handle}</p>
+                      <AvatarBubble name={creator.displayName!} url={creator.avatarUrl || null} size="size-12 text-lg shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-ui font-bold text-[#111111] text-[15px] truncate">{creator.displayName}</p>
+                        <p className="text-[13px] text-[#737373] truncate">@{creator.handle}</p>
                       </div>
                     </div>
-                    <p className="font-ui tracking-tight text-[13.5px] text-[#5A5A5A] mt-2 mb-3 leading-[1.3] line-clamp-3">
+                    <p className="font-ui tracking-tight text-[13.5px] text-[#5A5A5A] my-5 leading-[1.3] line-clamp-3">
                       {creator.bio}
                     </p>
                     <button
@@ -370,38 +269,55 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
             </div>
             <div className="flex flex-col gap-4">
               {data.circles.map((circle) => {
+                if ('isSkeleton' in circle && circle.isSkeleton) {
+                  return (
+                    <div key={circle.id} className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5">
+                      <div className="size-10 shrink-0 rounded-full bg-white animate-pulse" />
+                      <div className="flex-1 min-w-0 flex flex-col gap-0">
+                        <div className="h-4 w-32 bg-white animate-pulse" />
+                        <div className="h-3.5 w-full bg-white animate-pulse mt-1" />
+                        <div className="h-3.5 w-1/2 bg-white animate-pulse mt-1" />
+                      </div>
+                      <div className="flex flex-col items-center shrink-0 w-[80px]">
+                        <div className="w-full h-6 bg-white rounded-full animate-pulse" />
+                        <div className="h-2 w-16 bg-white animate-pulse mt-1.5" />
+                      </div>
+                    </div>
+                  );
+                }
+
                 const joined = joinedIds.has(circle.id);
                 return (
                   <div
                     key={circle.id}
                     className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5"
                   >
-                    <div className="size-14 shrink-0 rounded-full bg-[#111111] overflow-hidden flex items-center justify-center">
+                    <div className="size-10 shrink-0 rounded-full bg-[#111111] overflow-hidden flex items-center justify-center">
                       {circle.avatarUrl ? (
                         <img src={circle.avatarUrl} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="font-display-serif text-white text-2xl font-bold">{circle.name[0]}</span>
+                        <span className="font-display-serif text-white text-xl font-bold">{circle.name![0]}</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-ui font-bold text-[#111111] text-[15px] truncate">
                         {circle.name}
                       </p>
-                      <p className="font-ui text-[13px] tracking-tight text-[#5A5A5A] leading-[1.3] mt-0 line-clamp-2">{circle.description}</p>
+                      <p className="font-ui text-[13px] tracking-tight text-[#5A5A5A] leading-[1.3] mt-0.5 line-clamp-2 whitespace-pre-line">{circle.description}</p>
                     </div>
                     <div className="flex flex-col items-center shrink-0 w-[80px]">
                       <button
                         type="button"
                         onClick={() => toggleJoin(circle.id)}
-                        className={`w-full py-1.5 rounded-full font-ui text-[13px] font-bold transition-colors border ${joined
+                        className={`w-full py-1 rounded-full font-ui text-[13px] font-bold transition-colors border ${joined
                           ? "bg-[#E5552D] text-white hover:opacity-90 border-transparent"
                           : "bg-white text-[#111111] hover:bg-gray-50 border-[#999999]"
                           }`}
                       >
                         {joined ? "Joined" : "Join"}
                       </button>
-                      <p className="font-ui text-[11px] text-[#8A8A8A] mt-2 whitespace-nowrap text-center">
-                        {circle.memberCount.toLocaleString()} members
+                      <p className="font-ui text-[9px] text-[#8A8A8A] mt-1.5 whitespace-nowrap text-center">
+                        {circle.memberCount!.toLocaleString()} members
                       </p>
                     </div>
                   </div>
@@ -448,6 +364,8 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string | null>("editor");
+  const [isSettingUp, setIsSettingUp] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const updateMe = useUpdateMe();
   const complete = useCompleteOnboarding({
@@ -458,6 +376,44 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
       },
     },
   });
+
+  const roles = [
+    {
+      id: "explorer",
+      title: "Explorer",
+      description: "I browse and discover trends",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <circle cx="12" cy="12" r="9" />
+          <path d="m15.5 8.5-2 5-5 2 2-5z" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: "creator",
+      title: "Creator",
+      description: "I curate and publish content",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <path d="M11 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      id: "professional",
+      title: "Professional",
+      description: "I work in fashion or luxury",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-7" aria-hidden>
+          <rect x="3" y="8" width="18" height="13" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 8V6a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="8" y1="8" x2="8" y2="21" strokeLinecap="round" strokeLinejoin="round" />
+          <line x1="16" y1="8" x2="16" y2="21" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+  ];
 
   async function handleAvatar(file: File) {
     setAvatarUploading(true);
@@ -470,93 +426,155 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   }
 
   async function finish() {
-    await updateMe.mutateAsync({
-      data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
-    });
-    complete.mutate();
+    setIsSettingUp(true);
+    try {
+      await updateMe.mutateAsync({
+        data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+      });
+      await complete.mutateAsync();
+    } catch (e) {
+      // Revert setup state if submission fails
+      setIsSettingUp(false);
+    }
   }
 
-  const error = updateMe.error ?? complete.error;
-  const isMockError = handle === 'pranjulsingh92' || handle === 'centoire_team';
-  const isError = isMockError || !!error;
+  const handleError = updateMe.error;
   const isValidHandle = /^[a-z0-9_]{3,24}$/.test(handle);
-  const canSubmit = isValidHandle && !isError && !updateMe.isPending && !complete.isPending;
+  const canSubmit = isValidHandle && !updateMe.isPending && !complete.isPending && selectedRole;
+
+  if (isSettingUp) {
+    return (
+      <div className="fixed inset-0 bg-[#F4F4F4] z-50 flex items-center justify-center">
+        <style>{`
+          @keyframes spin-v {
+            0% { transform: rotateX(0deg); }
+            15%, 55% { transform: rotateX(360deg); }
+            70%, 100% { transform: rotateX(0deg); }
+          }
+          @keyframes spin-h1 {
+            0%, 15% { transform: rotateY(0deg); }
+            30%, 70% { transform: rotateY(360deg); }
+            85%, 100% { transform: rotateY(0deg); }
+          }
+          @keyframes spin-h2 {
+            0%, 30% { transform: rotateY(0deg); }
+            45%, 85% { transform: rotateY(360deg); }
+            100% { transform: rotateY(0deg); }
+          }
+          .animate-cube-y { animation: spin-v 5s infinite ease-in-out; }
+          .animate-cube-x1 { animation: spin-h1 5s infinite ease-in-out; }
+          .animate-cube-x2 { animation: spin-h2 5s infinite ease-in-out; }
+        `}</style>
+        <div className="flex flex-col items-center justify-center">
+          {/* Animated "Cube/Layout" Loader */}
+          <div className="grid grid-cols-[1fr_2fr] gap-4 w-[260px] h-[150px] mb-8" style={{ perspective: '800px' }}>
+            <div className="bg-[#DFDFDF] w-full h-full animate-cube-y" />
+            <div className="flex flex-col gap-4 h-full" style={{ perspective: '800px' }}>
+              <div className="bg-[#DFDFDF] w-full h-full animate-cube-x1" />
+              <div className="bg-[#DFDFDF] w-full h-full animate-cube-x2" />
+            </div>
+          </div>
+
+          <h2 className="font-editorial text-[24px] text-charcoal mb-0.5">
+            Setting up your broadsheet...
+          </h2>
+          <p className="font-ui text-[12px] text-[#555555]">
+            Preparing your experience
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-4">
-        <h1 className="font-editorial text-[32px] sm:text-[34px] font-normal text-charcoal leading-tight">
+        <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-charcoal leading-tight">
           Establish Your Identity
         </h1>
-        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14.5px] leading-[1.6] pr-0">
+        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14px] leading-[1.6] pr-0">
           Define your curated handle and setup a minimal style blueprint. This represents how you will appear inside broadsheet comment sections and lookbooks. You can complete your profile in the settings later.
         </p>
 
-        <div className="mt-12 grid sm:grid-cols-[200px_1fr] gap-0">
+        <div className="mt-8 flex flex-col gap-6">
 
-          {/* Left Col: Upload */}
-          <div className="flex flex-col items-center sm:border-r border-hairline pr-6">
-            <p className="font-ui text-[13px] font-extrabold uppercase tracking-wider text-[#737373] mb-6 self-start whitespace-nowrap">
-              UPLOAD YOUR PICTURE
-            </p>
-            <div className="flex flex-col items-center justify-center pt-2">
-              <div className="relative cursor-pointer" onClick={() => fileRef.current?.click()}>
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="w-[100px] h-[100px] rounded-full object-cover" />
-                ) : (
-                  <div className="w-[100px] h-[100px] rounded-full bg-[#A2D4B6] flex items-center justify-center text-charcoal text-4xl font-ui font-medium">
-                    P
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                disabled={avatarUploading}
-                onClick={() => fileRef.current?.click()}
-                className="mt-6 flex items-center gap-2 font-ui text-[13px] font-semibold text-charcoal hover:opacity-70"
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" x2="12" y1="3" y2="15" />
-                </svg>
-                {avatarUploading ? "Uploading..." : "Upload a photo"}
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void handleAvatar(file);
-                }}
-              />
+          {/* Profile Portrait */}
+          <div className="flex gap-5 items-start">
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-[84px] h-[84px] rounded-full object-cover" />
+              ) : (
+                <div className="w-[84px] h-[84px] rounded-full bg-[#A2D4B6] flex items-center justify-center text-charcoal text-3xl font-ui font-bold">
+                  PS
+                </div>
+              )}
             </div>
+            <div className="flex flex-col gap-1.5">
+              <p className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373]">
+                PROFILE PORTRAIT
+              </p>
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  disabled={avatarUploading}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-2 bg-[#111111] text-white px-4 py-2 font-ui text-[12px] font-bold rounded-none hover:opacity-90 transition-opacity"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" x2="12" y1="3" y2="15" />
+                  </svg>
+                  {avatarUploading ? "Uploading..." : "Upload Photo"}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setAvatarUrl(null)}
+                  className="border border-[#EAEAEA] px-4 py-2 font-ui text-[12px] text-[#737373] hover:text-[#111111] transition-colors rounded-none"
+                >
+                  Remove
+                </button>
+              </div>
+              <p className="font-ui text-[11px] text-[#8A8A8A] font-medium">
+                JPG or PNG. Max 5MB. Standard portrait ratio preferred.
+              </p>
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleAvatar(file);
+              }}
+            />
           </div>
 
-          {/* Right Col: Form */}
-          <div className="flex flex-col pl-6">
-
-            <div className="mb-6">
-              <label className="font-ui text-[13px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+          {/* Grid for Name and Handle */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
                 YOUR NAME
               </label>
               <input
                 type="text"
                 readOnly
-                value={user?.displayName || ""}
-                className="w-full border border-hairline px-4 py-3 text-[15px] text-charcoal outline-none bg-white focus:border-stone"
+                value={user?.displayName || "Pranjul Singh"}
+                className="w-full border border-[#EAEAEA] rounded-none px-4 py-2.5 text-[14px] text-[#111111] outline-none bg-white focus:border-[#D4D4D4]"
               />
             </div>
-
-            <div className="mb-6">
+            <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="font-ui text-[13px] font-bold uppercase tracking-wider text-[#737373]">
+                <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373]">
                   CURATOR HANDLE
                 </label>
-                {isError && (
-                  <span className="font-ui text-[13px] font-normal text-[#E15A3A]">Handle already existed</span>
+                {handleError ? (
+                  <span className="font-ui text-[12px] font-medium text-[#E15A3A]">{handleError.message}</span>
+                ) : (
+                  handle.length >= 3 && (
+                    <span className="font-ui text-[12px] font-medium text-[#10B981]">Handle is available</span>
+                  )
                 )}
               </div>
               <input
@@ -564,33 +582,66 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                 placeholder="Enter your username"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                className={`w-full border px-4 py-3 text-[15px] outline-none bg-white transition-colors ${isError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-hairline text-charcoal focus:border-stone"
+                className={`w-full border rounded-none px-4 py-2.5 text-[14px] outline-none bg-white transition-colors ${handleError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4]"
                   }`}
               />
             </div>
-
-            <div>
-              <label className="font-ui text-[13px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
-                ONE-LINE STYLE BIO (OPTIONAL)
-              </label>
-              <textarea
-                rows={1}
-                maxLength={160}
-                placeholder="e.g. Minimalist with a love for raw textures"
-                value={bio}
-                onChange={(e) => {
-                  setBio(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = `${e.target.scrollHeight}px`;
-                }}
-                className="w-full border border-hairline px-4 py-3 text-[15px] text-stone outline-none bg-white focus:border-stone resize-none overflow-hidden"
-              />
-            </div>
-
           </div>
+
+          {/* Role */}
+          <div>
+            <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+              PRIMARY STYLE ROLE
+            </label>
+            <div className="relative">
+              <select
+                value={selectedRole || "editor"}
+                onChange={(e) => setSelectedRole(e.target.value)}
+                className="w-full appearance-none border border-[#EAEAEA] rounded-none px-4 py-2.5 pr-10 text-[14px] text-[#111111] outline-none bg-white focus:border-[#D4D4D4] cursor-pointer"
+              >
+                <option value="" disabled>Select your role</option>
+                <option value="editor">Editor</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.title} — {role.description}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#737373]">
+                <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+              ONE-LINE STYLE BIO (OPTIONAL)
+            </label>
+            <textarea
+              rows={1}
+              maxLength={160}
+              placeholder="Documenting raw drapes, linen trenches, and the structural integrity Documenting raw drapes."
+              value={bio}
+              onChange={(e) => {
+                setBio(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              className="w-full border border-[#EAEAEA] rounded-none px-4 py-2.5 text-[14px] text-[#111111] outline-none bg-white focus:border-[#D4D4D4] resize-none overflow-hidden"
+            />
+          </div>
+
         </div>
       </div>
 
+      {complete.error && (
+        <p className="font-ui text-[12px] font-medium text-[#E15A3A] pb-2">
+          {complete.error.message}
+        </p>
+      )}
       <div className="pt-6 border-t border-hairline flex items-center justify-between shrink-0">
         <button type="button" onClick={onBack} className="font-ui text-sm font-semibold text-charcoal hover:opacity-70">
           Back
@@ -599,12 +650,16 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
           type="button"
           disabled={!canSubmit}
           onClick={finish}
-          className={`px-6 py-3.5 font-ui text-[13px] font-bold uppercase tracking-widest transition-colors flex items-center gap-2 ${canSubmit
+          className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${canSubmit
             ? "bg-[#111111] text-white hover:bg-black"
             : "bg-[#D5D5D5] text-white cursor-not-allowed"
             }`}
         >
-          GET STARTED <span>→</span>
+          GET STARTED
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="M12 5l7 7-7 7" />
+          </svg>
         </button>
       </div>
     </section>

@@ -124,7 +124,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
 
       // Priority 1: use RSS body (content:encoded or content) if substantial (>500 chars)
       // Many paywalled sites still publish full text in their RSS feed.
-      const rssBodyRaw = ((item as Record<string, unknown>)["content:encoded"] as string | undefined) ?? item.content ?? "";
+      const rssBodyRaw = ((item as unknown as Record<string, unknown>)["content:encoded"] as string | undefined) ?? item.content ?? "";
       const rssBodyStripped = stripHtml(String(rssBodyRaw));
       const hasRssBody = rssBodyStripped.length > 500;
 

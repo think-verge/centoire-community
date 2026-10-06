@@ -21,6 +21,7 @@ fi
 
 echo "==> Installing backend dependencies"
 cd "$BACKEND_DIR"
+rm -rf node_modules
 npm ci
 
 echo "==> Building backend"
@@ -32,6 +33,7 @@ rm -f "$UI_DIR/src/components/nav/SidebarSection.tsx"
 
 echo "==> Installing UI dependencies"
 cd "$UI_DIR"
+rm -rf node_modules
 npm ci
 
 echo "==> Building UI"

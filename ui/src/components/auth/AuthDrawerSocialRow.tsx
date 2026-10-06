@@ -61,7 +61,6 @@ function GoogleSocialButton({ mode }: { mode: "login" | "signup" }) {
         width: 360,
         text: mode === "signup" ? "signup_with" : "signin_with",
       });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     });
     return () => {
       cancelled = true;
