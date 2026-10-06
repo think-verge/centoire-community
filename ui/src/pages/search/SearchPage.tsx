@@ -172,7 +172,7 @@ export function SearchPage() {
                   </div>
                 )}
                 
-                <div className={`grid gap-4 ${type === "ALL" ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"}`}>
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
                   {data.posts.map((post) => (
                     <PostCard
                       key={post.id}
