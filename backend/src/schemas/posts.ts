@@ -72,6 +72,14 @@ export const PostDetailSchema = registry.register(
   }),
 );
 
+export const PostFullContentSchema = registry.register(
+  "PostFullContent",
+  z.object({
+    contentHtml: z.string().nullable(),
+    source: z.string(),
+  }),
+);
+
 export const CreatePostInputSchema = registry.register(
   "CreatePostInput",
   z.object({
@@ -135,6 +143,17 @@ export function registerPostPaths(): void {
     request: { params: z.object({ slug: z.string() }) },
     responses: {
       200: jsonResponse("Post detail", PostDetailSchema),
+      404: errorResponse("Post not found"),
+    },
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/posts/{slug}/full-content",
+    tags: ["posts"],
+    operationId: "getPostFullContent",
+    request: { params: z.object({ slug: z.string() }) },
+    responses: {
+      200: jsonResponse("Extracted full article content, fetching on demand if needed", PostFullContentSchema),
       404: errorResponse("Post not found"),
     },
   });

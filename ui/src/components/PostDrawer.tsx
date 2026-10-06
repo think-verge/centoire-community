@@ -1,7 +1,8 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useGetPost } from "../lib/api/generated/posts/posts";
 import { PostPanel } from "./PostPanel";
 import { PostSidebar } from "./PostSidebar";
+import { ReadFullStoryModal } from "./ReadFullStoryModal";
 
 interface PostDrawerProps {
   slug: string;
@@ -16,6 +17,7 @@ export function PostDrawer({
   headerActions,
 }: PostDrawerProps) {
   const { data: post } = useGetPost(slug);
+  const [readFullStoryOpen, setReadFullStoryOpen] = useState(false);
 
   // Keyboard dismiss
   useEffect(() => {
@@ -35,16 +37,16 @@ export function PostDrawer({
   }, []);
 
   const externalUrl = post?.externalUrl;
+  const needsFullStory = !!externalUrl && !post?.contentHtml;
 
-  const defaultHeaderActions = externalUrl ? (
-    <a
-      href={externalUrl}
-      target="_blank"
-      rel="noreferrer"
+  const defaultHeaderActions = needsFullStory ? (
+    <button
+      type="button"
+      onClick={() => setReadFullStoryOpen(true)}
       className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
     >
       Full article ↗
-    </a>
+    </button>
   ) : null;
 
   return (
@@ -97,6 +99,15 @@ export function PostDrawer({
           )}
         </div>
       </div>
+
+      {readFullStoryOpen && post && externalUrl && (
+        <ReadFullStoryModal
+          slug={slug}
+          title={post.title}
+          externalUrl={externalUrl}
+          onClose={() => setReadFullStoryOpen(false)}
+        />
+      )}
     </div>
   );
 }

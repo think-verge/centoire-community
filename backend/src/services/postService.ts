@@ -13,6 +13,7 @@ import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
+import { extractArticleHtml, stripHtml } from "./ingestionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 
 interface PostInput {
@@ -222,6 +223,32 @@ export async function getBySlug(
     throw new ApiError(404, "Post not found");
   }
   return post;
+}
+
+export async function getFullContent(
+  slug: string,
+  viewerId?: string,
+  viewerRole?: UserRole,
+): Promise<{ contentHtml: string | null; source: string }> {
+  const post = await getBySlug(slug, viewerId, viewerRole);
+  const hostname = post.externalUrl ? new URL(post.externalUrl).hostname.replace(/^www\./, "") : "";
+
+  if (post.contentHtml) {
+    return { contentHtml: post.contentHtml, source: hostname };
+  }
+  if (!post.externalUrl) {
+    return { contentHtml: null, source: hostname };
+  }
+
+  const contentHtml = await extractArticleHtml(post.externalUrl);
+  if (contentHtml) {
+    const contentText = stripHtml(contentHtml);
+    await Post.updateOne(
+      { _id: post._id },
+      { $set: { contentHtml, contentText, readTimeMinutes: readTimeMinutes(contentText) } },
+    );
+  }
+  return { contentHtml, source: hostname };
 }
 
 export async function incrementViews(postId: Types.ObjectId): Promise<void> {

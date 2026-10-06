@@ -17,6 +17,7 @@ import { CirclesPage } from "./pages/circles/CirclesPage";
 import { CreateCirclePage } from "./pages/circles/CreateCirclePage";
 import { ComposePage } from "./pages/compose/ComposePage";
 import { DraftsPage } from "./pages/compose/DraftsPage";
+import { PostDetailPage } from "./pages/post/PostDetailPage";
 import { DiscoverPage } from "./pages/feed/DiscoverPage";
 import { FeedPage } from "./pages/feed/FeedPage";
 import { FollowingPage } from "./pages/feed/FollowingPage";
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/u/:handle" element={<ProfilePage />} />
               <Route path="/t/:slug" element={<TagPage />} />
               <Route path="/c/:slug" element={<CircleDetailPage />} />
+              <Route path="/p/:slug" element={<PostDetailPage />} />
               <Route
                 path="/exclusive/ai-tools"
                 element={

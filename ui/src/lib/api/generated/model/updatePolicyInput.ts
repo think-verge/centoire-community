@@ -5,8 +5,20 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdatePolicyInputConditionsItem } from './updatePolicyInputConditionsItem';
+import type { UpdatePolicyInputLogic } from './updatePolicyInputLogic';
+import type { UpdatePolicyInputAction } from './updatePolicyInputAction';
 
 export interface UpdatePolicyInput {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  name?: string;
+  conditions?: UpdatePolicyInputConditionsItem[];
+  logic?: UpdatePolicyInputLogic;
+  action?: UpdatePolicyInputAction;
+  priority?: number;
   active?: boolean;
   /** @maxLength 500 */
   reason?: string;

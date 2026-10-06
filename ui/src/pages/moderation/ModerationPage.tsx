@@ -3,6 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { PostDrawer } from "../../components/PostDrawer";
+import { Switch } from "../../components/Switch";
+import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "../../components/Table";
 import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
 import { ServerFilterBar } from "../../components/filter/ServerFilterBar";
 import { useServerFilter } from "../../components/filter/useServerFilter";
@@ -665,6 +667,7 @@ function PoliciesTab() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useListPolicies();
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<ModerationPolicy | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -779,26 +782,57 @@ function PoliciesTab() {
           </div>
         )}
 
-        {policies.map((policy) => (
-          <PolicyRow
-            key={policy.id}
-            policy={policy}
-            selected={selected.has(policy.id)}
-            onToggleSelect={() => toggleOne(policy.id)}
-            onDelete={() => deletePolicyMutation.mutate({ id: policy.id })}
-            onToggleActive={() =>
-              updatePolicyMutation.mutate({ id: policy.id, data: { active: !policy.active } })
-            }
-            deleteLoading={deletePolicyMutation.isPending}
-          />
-        ))}
-        {policies.length === 0 && (
+        {policies.length === 0 ? (
           <p className="text-sm text-ink-faint">No policies defined.</p>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableHeaderCell className="w-8">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                  onChange={toggleAll}
+                  className="h-4 w-4 accent-crimson cursor-pointer"
+                  aria-label="Select all"
+                />
+              </TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Policy</TableHeaderCell>
+              <TableHeaderCell>Action</TableHeaderCell>
+              <TableHeaderCell>Priority</TableHeaderCell>
+              <TableHeaderCell>Notes</TableHeaderCell>
+              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+            </TableHead>
+            <TableBody>
+              {policies.map((policy) => (
+                <PolicyRow
+                  key={policy.id}
+                  policy={policy}
+                  selected={selected.has(policy.id)}
+                  onToggleSelect={() => toggleOne(policy.id)}
+                  onDelete={() => deletePolicyMutation.mutate({ id: policy.id })}
+                  onEdit={() => setEditingPolicy(policy)}
+                  onToggleActive={() =>
+                    updatePolicyMutation.mutate({ id: policy.id, data: { active: !policy.active } })
+                  }
+                  deleteLoading={deletePolicyMutation.isPending}
+                />
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
 
       {createOpen && (
-        <PolicyFormDialog onClose={() => setCreateOpen(false)} onCreated={invalidate} />
+        <PolicyFormDialog onClose={() => setCreateOpen(false)} onSaved={invalidate} />
+      )}
+      {editingPolicy && (
+        <PolicyFormDialog
+          policy={editingPolicy}
+          onClose={() => setEditingPolicy(null)}
+          onSaved={invalidate}
+        />
       )}
     </div>
   );
@@ -811,6 +845,7 @@ function PolicyRow({
   selected,
   onToggleSelect,
   onDelete,
+  onEdit,
   onToggleActive,
   deleteLoading,
 }: {
@@ -818,6 +853,7 @@ function PolicyRow({
   selected: boolean;
   onToggleSelect: () => void;
   onDelete: () => void;
+  onEdit: () => void;
   onToggleActive: () => void;
   deleteLoading: boolean;
 }) {
@@ -828,69 +864,64 @@ function PolicyRow({
   const actionLabel = policy.action === "auto_approve" ? "Auto-approve" : "Auto-reject";
 
   return (
-    <div className={`rounded-xl border bg-paper p-4 transition-colors ${selected ? "border-crimson/40 bg-crimson/[0.02]" : "border-line"} ${!policy.active ? "opacity-60" : ""}`}>
-      <div className="flex flex-wrap items-start gap-3">
+    <TableRow className={`${selected ? "bg-crimson/[0.02]" : ""} ${!policy.active ? "opacity-60" : ""}`}>
+      <TableCell>
         <input
           type="checkbox"
           checked={selected}
           onChange={onToggleSelect}
-          className="mt-0.5 h-4 w-4 flex-shrink-0 accent-crimson cursor-pointer"
+          className="h-4 w-4 accent-crimson cursor-pointer"
           aria-label={`Select ${policy.name}`}
         />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${actionColor}`}
-            >
-              {actionLabel}
-            </span>
-            <span className="font-semibold text-sm text-ink">{policy.name}</span>
-            {policy.priority !== 0 && (
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
-                priority {policy.priority}
-              </span>
-            )}
-            {!policy.active && (
-              <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                inactive
-              </span>
-            )}
+      </TableCell>
+      <TableCell>
+        <Switch
+          checked={policy.active}
+          onChange={onToggleActive}
+          label={`${policy.active ? "Disable" : "Enable"} ${policy.name}`}
+        />
+      </TableCell>
+      <TableCell className="min-w-0">
+        <span className="font-semibold text-sm text-ink">{policy.name}</span>
+        {policy.conditions.length === 0 ? (
+          <p className="mt-1 text-xs text-ink-soft">Matches all posts (catch-all)</p>
+        ) : (
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            {policy.conditions.map((c, i) => (
+              <>
+                {i > 0 && (
+                  <span key={`logic-${i}`} className="text-[10px] font-bold uppercase text-ink-faint">
+                    {policy.logic}
+                  </span>
+                )}
+                <ConditionChip key={i} condition={c} />
+              </>
+            ))}
           </div>
-
-          {policy.conditions.length === 0 ? (
-            <p className="mt-1.5 text-xs text-ink-soft">Matches all posts (catch-all)</p>
-          ) : (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {policy.conditions.map((c, i) => (
-                <>
-                  {i > 0 && (
-                    <span key={`logic-${i}`} className="text-[10px] font-bold uppercase text-ink-faint">
-                      {policy.logic}
-                    </span>
-                  )}
-                  <ConditionChip key={i} condition={c} />
-                </>
-              ))}
-            </div>
-          )}
-
-          {policy.reason && (
-            <p className="mt-1 text-xs text-ink-faint">{policy.reason}</p>
-          )}
-          {policy.expiresAt && (
-            <p className="mt-0.5 text-xs text-ink-faint">
-              Expires {new Date(policy.expiresAt).toLocaleDateString()}
-            </p>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
+        )}
+      </TableCell>
+      <TableCell>
+        <span
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap ${actionColor}`}
+        >
+          {actionLabel}
+        </span>
+      </TableCell>
+      <TableCell className="text-sm text-ink-soft">{policy.priority}</TableCell>
+      <TableCell className="text-xs text-ink-faint">
+        {policy.reason && <p>{policy.reason}</p>}
+        {policy.expiresAt && (
+          <p className="mt-0.5">Expires {new Date(policy.expiresAt).toLocaleDateString()}</p>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
           <button
             type="button"
-            onClick={onToggleActive}
-            className="text-xs text-ink-soft hover:text-ink"
+            onClick={onEdit}
+            className="text-xs font-semibold text-ink-soft hover:text-ink"
           >
-            {policy.active ? "Disable" : "Enable"}
+            Edit
           </button>
           <Button
             variant="ghost"
@@ -901,8 +932,8 @@ function PolicyRow({
             Delete
           </Button>
         </div>
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -937,28 +968,41 @@ function defaultCondition(): DraftCondition {
 }
 
 function PolicyFormDialog({
+  policy,
   onClose,
-  onCreated,
+  onSaved,
 }: {
+  policy?: ModerationPolicy;
   onClose: () => void;
-  onCreated: () => void;
+  onSaved: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [logic, setLogic] = useState<"and" | "or">("and");
-  const [action, setAction] = useState<"auto_approve" | "auto_reject">("auto_approve");
-  const [priority, setPriority] = useState("0");
-  const [reason, setReason] = useState("");
-  const [expiresAt, setExpiresAt] = useState("");
-  const [conditions, setConditions] = useState<DraftCondition[]>([]);
+  const isEdit = !!policy;
+  const [name, setName] = useState(policy?.name ?? "");
+  const [logic, setLogic] = useState<"and" | "or">(policy?.logic ?? "and");
+  const [action, setAction] = useState<"auto_approve" | "auto_reject">(
+    policy?.action ?? "auto_approve",
+  );
+  const [priority, setPriority] = useState(String(policy?.priority ?? 0));
+  const [reason, setReason] = useState(policy?.reason ?? "");
+  const [expiresAt, setExpiresAt] = useState(
+    policy?.expiresAt ? policy.expiresAt.slice(0, 10) : "",
+  );
+  const [conditions, setConditions] = useState<DraftCondition[]>(
+    policy?.conditions.map((c) => ({
+      key: c.key as ConditionKey,
+      operator: c.operator as ConditionOperator,
+      values: c.values.map(String),
+      chipInput: "",
+    })) ?? [],
+  );
 
-  const createPolicy = useCreatePolicy({
-    mutation: {
-      onSuccess: () => {
-        onCreated();
-        onClose();
-      },
-    },
-  });
+  const onSuccess = () => {
+    onSaved();
+    onClose();
+  };
+  const createPolicy = useCreatePolicy({ mutation: { onSuccess } });
+  const updatePolicyMutation = useUpdatePolicy({ mutation: { onSuccess } });
+  const saveMutation = isEdit ? updatePolicyMutation : createPolicy;
 
   function addCondition() {
     setConditions((prev) => [...prev, defaultCondition()]);
@@ -1026,17 +1070,21 @@ function PolicyFormDialog({
       return { key: c.key, operator: c.operator, values };
     });
 
-    createPolicy.mutate({
-      data: {
-        name,
-        logic: CreatePolicyInputLogic[logic],
-        action: CreatePolicyInputAction[action],
-        priority: parseInt(priority, 10) || 0,
-        conditions: builtConditions,
-        reason: reason || undefined,
-        expiresAt: expiresAt || undefined,
-      },
-    });
+    const data = {
+      name,
+      logic: CreatePolicyInputLogic[logic],
+      action: CreatePolicyInputAction[action],
+      priority: parseInt(priority, 10) || 0,
+      conditions: builtConditions,
+      reason: reason || undefined,
+      expiresAt: expiresAt || undefined,
+    };
+
+    if (isEdit && policy) {
+      updatePolicyMutation.mutate({ id: policy.id, data });
+    } else {
+      createPolicy.mutate({ data });
+    }
   }
 
   return (
@@ -1044,15 +1092,17 @@ function PolicyFormDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
       role="dialog"
       aria-modal="true"
-      aria-label="New policy"
+      aria-label={isEdit ? "Edit policy" : "New policy"}
       onClick={onClose}
     >
       <div
         className="w-full max-w-xl rounded-xl border border-line bg-paper p-6 shadow-card-hover overflow-y-auto max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="kicker mb-1">New policy</p>
-        <h2 className="font-display-serif text-2xl font-semibold">Create bypass rule</h2>
+        <p className="kicker mb-1">{isEdit ? "Edit policy" : "New policy"}</p>
+        <h2 className="font-display-serif text-2xl font-semibold">
+          {isEdit ? "Edit bypass rule" : "Create bypass rule"}
+        </h2>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {/* Name + Priority row */}
@@ -1158,15 +1208,15 @@ function PolicyFormDialog({
             onChange={(e) => setExpiresAt(e.target.value)}
           />
 
-          {createPolicy.error && (
-            <p className="text-sm text-crimson">{createPolicy.error.message}</p>
+          {saveMutation.error && (
+            <p className="text-sm text-crimson">{saveMutation.error.message}</p>
           )}
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" loading={createPolicy.isPending}>
-              Create policy
+            <Button type="submit" loading={saveMutation.isPending}>
+              {isEdit ? "Save changes" : "Create policy"}
             </Button>
           </div>
         </form>

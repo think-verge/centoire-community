@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import mongoose from "mongoose";
 import { ZodError } from "zod";
 import { ApiError } from "../utils/api-error.js";
 import { isProduction } from "../config/env.js";
@@ -23,6 +24,10 @@ export function errorHandler(
     res.status(422).json({
       detail: path ? `${path}: ${first?.message}` : (first?.message ?? "Invalid input"),
     });
+    return;
+  }
+  if (err instanceof mongoose.Error.CastError || err instanceof mongoose.Error.ValidationError) {
+    res.status(422).json({ detail: "Invalid input" });
     return;
   }
   if (!isProduction) {

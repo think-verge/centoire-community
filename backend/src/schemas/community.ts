@@ -1,6 +1,7 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 import { CurrentUserSchema, PublicUserSchema } from "./auth.js";
 import { PostCardSchema } from "./posts.js";
+import { FeedPageSchema } from "./feed.js";
 
 export const TagSchema = registry.register(
   "Tag",
@@ -64,9 +65,13 @@ export const CreateCircleInputSchema = registry.register(
     description: z.string().min(1).max(160),
     about: z.string().max(4000).optional(),
     rules: z.array(z.string().max(300)).max(10).optional(),
-    tagIds: z.array(z.string()).max(5).optional(),
+    tagIds: z.array(z.string().regex(/^[a-f\d]{24}$/i, "Invalid tag id")).max(5).optional(),
+    tagNames: z.array(z.string().trim().min(1).max(40)).max(5).optional(),
     avatarUrl: z.string().url().optional(),
     coverImageUrl: z.string().url().optional(),
+  }).refine((c) => (c.tagIds?.length ?? 0) + (c.tagNames?.length ?? 0) >= 1, {
+    message: "Pick at least one topic",
+    path: ["tagIds"],
   }),
 );
 
@@ -85,9 +90,14 @@ export const TagListQuerySchema = z.object({
 });
 
 export const CircleListQuerySchema = z.object({
-  q: z.string().optional(),
+  q: z.string().trim().min(1).optional(),
   tag: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
+
+export const CircleSlugParamsSchema = z.object({ slug: z.string().min(1).max(80) });
+
+export const CirclePostsQuerySchema = z.object({ cursor: z.string().optional() });
 
 export function registerCommunityPaths(): void {
   registry.registerPath({
@@ -189,7 +199,12 @@ export function registerCommunityPaths(): void {
     tags: ["circles"],
     operationId: "createCircle",
     request: { body: jsonBody(CreateCircleInputSchema) },
-    responses: { 201: jsonResponse("Circle created", CircleSchema) },
+    responses: {
+      201: jsonResponse("Circle created", CircleSchema),
+      401: errorResponse("Not signed in"),
+      409: errorResponse("Could not allocate a unique handle"),
+      422: errorResponse("Invalid input"),
+    },
   });
   registry.registerPath({
     method: "get",
@@ -208,7 +223,11 @@ export function registerCommunityPaths(): void {
     tags: ["circles"],
     operationId: "joinCircle",
     request: { params: z.object({ slug: z.string() }) },
-    responses: { 204: { description: "Joined" }, 404: errorResponse("Circle not found") },
+    responses: {
+      204: { description: "Joined" },
+      401: errorResponse("Not signed in"),
+      404: errorResponse("Circle not found"),
+    },
   });
   registry.registerPath({
     method: "delete",
@@ -216,7 +235,12 @@ export function registerCommunityPaths(): void {
     tags: ["circles"],
     operationId: "leaveCircle",
     request: { params: z.object({ slug: z.string() }) },
-    responses: { 204: { description: "Left" }, 422: errorResponse("Owners cannot leave") },
+    responses: {
+      204: { description: "Left" },
+      401: errorResponse("Not signed in"),
+      404: errorResponse("Circle not found"),
+      422: errorResponse("Owners cannot leave"),
+    },
   });
 }
 
@@ -240,9 +264,10 @@ export function registerCircleContentPaths(): void {
     path: "/circles/{slug}/posts",
     tags: ["circles"],
     operationId: "listCirclePosts",
-    request: { params: z.object({ slug: z.string() }) },
+    request: { params: CircleSlugParamsSchema, query: CirclePostsQuerySchema },
     responses: {
-      200: jsonResponse("Posts in this circle", z.array(PostCardSchema)),
+      200: jsonResponse("A page of posts in this circle", FeedPageSchema),
+      404: errorResponse("Circle not found"),
     },
   });
   registry.registerPath({
@@ -252,6 +277,7 @@ export function registerCircleContentPaths(): void {
     operationId: "listCircleMembers",
     request: { params: z.object({ slug: z.string() }) },
     responses: {
+      404: errorResponse("Circle not found"),
       200: jsonResponse(
         "Circle members",
         z.array(

@@ -29,6 +29,7 @@ import type {
   ErrorResponse,
   PostCard,
   PostDetail,
+  PostFullContent,
   UpdatePostInput
 } from '.././model';
 
@@ -257,6 +258,92 @@ export function useGetPost<TData = Awaited<ReturnType<typeof getPost>>, TError =
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetPostQueryOptions(slug,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getPostFullContent = (
+    slug: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<PostFullContent>(
+      {url: `/posts/${slug}/full-content`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetPostFullContentQueryKey = (slug?: string,) => {
+    return [
+    `/posts/${slug}/full-content`
+    ] as const;
+    }
+
+    
+export const getGetPostFullContentQueryOptions = <TData = Awaited<ReturnType<typeof getPostFullContent>>, TError = ErrorType<ErrorResponse>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPostFullContentQueryKey(slug);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPostFullContent>>> = ({ signal }) => getPostFullContent(slug, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(slug), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPostFullContentQueryResult = NonNullable<Awaited<ReturnType<typeof getPostFullContent>>>
+export type GetPostFullContentQueryError = ErrorType<ErrorResponse>
+
+
+export function useGetPostFullContent<TData = Awaited<ReturnType<typeof getPostFullContent>>, TError = ErrorType<ErrorResponse>>(
+ slug: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPostFullContent>>,
+          TError,
+          Awaited<ReturnType<typeof getPostFullContent>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPostFullContent<TData = Awaited<ReturnType<typeof getPostFullContent>>, TError = ErrorType<ErrorResponse>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPostFullContent>>,
+          TError,
+          Awaited<ReturnType<typeof getPostFullContent>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPostFullContent<TData = Awaited<ReturnType<typeof getPostFullContent>>, TError = ErrorType<ErrorResponse>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetPostFullContent<TData = Awaited<ReturnType<typeof getPostFullContent>>, TError = ErrorType<ErrorResponse>>(
+ slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPostFullContent>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPostFullContentQueryOptions(slug,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
