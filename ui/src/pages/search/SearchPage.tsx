@@ -16,6 +16,7 @@ export function SearchPage() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
 
   const { data, isLoading } = useSearch(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { q, type: type === "ALL" ? "all" : type.toLowerCase() as any },
     { query: { enabled: q.trim().length > 0 } },
   );
@@ -395,7 +396,7 @@ export function SearchPage() {
 // INLINE DEMO CARDS TO MATCH FIGMA SCREENSHOTS EXACTLY
 // -----------------------------------------------------------------------------
 
-function DemoPostCard({ post }: { post: any }) {
+function DemoPostCard({ post }: { post: Record<string, unknown> }) {
   return (
     <article className="group break-inside-avoid overflow-hidden rounded-[16px] border border-[#EAEAEA] bg-[#FAFAFA] shadow-sm flex flex-col flex-1 h-full">
       <div className="relative h-[180px] w-full shrink-0">
@@ -440,7 +441,7 @@ function DemoPostCard({ post }: { post: any }) {
   );
 }
 
-function DemoCircleCard({ circle }: { circle: any }) {
+function DemoCircleCard({ circle }: { circle: Record<string, unknown> }) {
   return (
     <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-sm flex flex-col h-full overflow-hidden">
       <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&h=100&fit=crop" className="h-[60px] w-full object-cover" alt="" />
@@ -470,7 +471,7 @@ function DemoCircleCard({ circle }: { circle: any }) {
   );
 }
 
-function DemoCreatorCard({ person }: { person: any }) {
+function DemoCreatorCard({ person }: { person: Record<string, unknown> }) {
   return (
     <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-sm px-5 py-3 flex flex-col h-full relative">
       <div className="flex items-start">

@@ -432,7 +432,7 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
         data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
       });
       await complete.mutateAsync();
-    } catch (e) {
+    } catch {
       // Revert setup state if submission fails
       setIsSettingUp(false);
     }
