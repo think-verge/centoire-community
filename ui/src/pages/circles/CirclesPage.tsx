@@ -13,7 +13,7 @@ export function CirclesPage() {
   const [query, setQuery] = useState("");
   const { data: circles, isLoading } = useListCircles(query ? { q: query } : undefined);
   const [filter, setFilter] = useState("ALL");
-  const filters = ["ALL", "RECOMMENDED", "FASHION", "ART & DESIGN", "TECHNOLOGY"];
+  const filters = ["ALL", "RECOMMENDED", "FASHION", "ART", "LIFESTYLE"];
 
   // Mock categorizations for demo by duplicating the array to have enough items
   const safeCircles = circles || [];
@@ -21,12 +21,13 @@ export function CirclesPage() {
   
   const recommended = extendedCircles.slice(0, 8);
   const fashion = extendedCircles.slice(2, 10);
-  const artAndDesign = extendedCircles.slice(4, 12);
-  const technology = extendedCircles.slice(6, 14);
+  const art = extendedCircles.slice(4, 12);
+  const lifestyle = extendedCircles.slice(6, 14);
 
   return (
-    <div className="px-4 py-8 sm:px-8 max-w-[1400px] mx-auto w-full">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="px-4 py-8 sm:px-8 w-full bg-[#F6F7F9] min-h-screen">
+      <div className="max-w-[1400px] mx-auto w-full">
+        <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-editorial text-[32px] sm:text-[36px] font-bold text-[#111111] leading-tight">Circles</h1>
           <p className="mt-1 text-[#5A5A5A] font-ui text-[14px]">
@@ -42,14 +43,14 @@ export function CirclesPage() {
       </div>
 
       <div className="mt-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-6">
           {filters.map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`rounded-full border px-5 py-2 font-ui text-[13px] font-semibold uppercase tracking-wider transition-colors ${filter === f
-                  ? "bg-[#E5552D] text-white border-[#E5552D]"
-                  : "bg-white text-[#8A8A8A] border-[#EAEAEA] hover:border-[#999999]"
+              className={`font-ui text-[13px] font-bold uppercase tracking-wider transition-colors ${filter === f
+                  ? "bg-[#E5552D] text-white rounded-full px-5 py-2"
+                  : "text-[#555555] hover:text-[#111111] bg-transparent"
                 }`}
             >
               {f}
@@ -79,17 +80,18 @@ export function CirclesPage() {
 
           <JobsPromoBanner />
 
-          <CircleCarousel title="ART & DESIGN" circles={artAndDesign} />
-          <CircleCarousel title="TECHNOLOGY" circles={technology} />
+          <CircleCarousel title="ART" circles={art} />
+          <CircleCarousel title="LIFESTYLE" circles={lifestyle} />
         </div>
       )}
 
       {circles?.length === 0 && (
-        <div className="mt-10 rounded-xl border border-dashed border-[#EAEAEA] p-12 text-center">
+        <div className="mt-10 rounded-xl border border-dashed border-[#EAEAEA] p-12 text-center bg-white">
           <p className="font-editorial text-2xl font-medium text-[#111111]">No circles found</p>
           <p className="mt-2 text-[14px] text-[#5A5A5A] font-ui">Start the one you're looking for.</p>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -108,16 +110,21 @@ function CircleCarousel({ title, circles }: { title: string; circles: Circle[] }
 
   return (
     <div className="w-full relative">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-ui text-[16px] font-black uppercase tracking-wider text-[#111111]">
-          {title}
-        </h3>
+      <div className="flex items-end justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h3 className="font-ui text-[15px] font-bold uppercase tracking-wider text-[#111111]">
+            {title}
+          </h3>
+          <Link to="#" className="text-[#8A8A8A] hover:text-[#111111] font-ui text-[12px] underline underline-offset-2 transition-colors">
+            View all
+          </Link>
+        </div>
         <div className="flex items-center gap-2 text-[#555555]">
-          <button onClick={() => scroll("left")} className="hover:text-[#111111] transition-colors p-1">
-            <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+          <button onClick={() => scroll("left")} className="size-8 rounded-full bg-white shadow-sm flex items-center justify-center border border-[#EAEAEA] hover:shadow transition-shadow">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           </button>
-          <button onClick={() => scroll("right")} className="hover:text-[#111111] transition-colors p-1">
-            <svg className="size-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          <button onClick={() => scroll("right")} className="size-8 rounded-full bg-white shadow-sm flex items-center justify-center border border-[#EAEAEA] hover:shadow transition-shadow">
+            <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
       </div>
@@ -202,15 +209,15 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
   const content = mockContent[index % mockContent.length];
 
   return (
-    <div className="flex flex-col rounded-[20px] border border-[#EAEAEA] bg-white overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.06)] hover:shadow-lg transition-shadow w-[275px] h-[240px]">
-      <div className="h-[32px] w-full bg-[#F5F5F5] relative shrink-0">
+    <div className="flex flex-col rounded-[16px] border border-[#EAEAEA] bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow w-[310px] h-[245px]">
+      <div className="h-[48px] w-full bg-[#F5F5F5] relative shrink-0">
         <img src={images.cover} alt="" className="w-full h-full object-cover" />
 
-        <div className="absolute -bottom-9 left-4 size-[60px] rounded-full bg-[#111111] overflow-hidden flex items-center justify-center shadow-sm">
-          <img src={images.avatar} alt="" className="w-full h-full object-cover" />
+        <div className="absolute -bottom-8 left-4 size-[52px] rounded-[14px] bg-white p-[2px] overflow-hidden flex items-center justify-center shadow-sm">
+          <img src={images.avatar} alt="" className="w-full h-full object-cover rounded-[12px]" />
         </div>
 
-        <div className="absolute -bottom-9 right-4 flex items-center gap-2">
+        <div className="absolute -bottom-8 right-4 flex items-center gap-2">
           <div className="flex items-center gap-2 bg-transparent rounded-full border border-[#EAEAEA] pl-0.5 pr-2.5 py-0.5">
             <div className="flex -space-x-1.5">
               {dummyAvatars.map((url, i) => (
@@ -227,17 +234,17 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
         </div>
       </div>
 
-      <div className="px-4 pt-12 pb-4 flex flex-col flex-1">
+      <div className="px-4 pt-10 pb-4 flex flex-col flex-1">
         <Link to={`/c/${circle.slug}`} className="min-w-0">
-          <h2 className="font-editorial text-[19px] font-bold text-[#111111] hover:text-[#E5552D] transition-colors truncate">
-            {content.name}
+          <h2 className="font-editorial text-[18px] font-bold text-[#111111] hover:text-[#E5552D] transition-colors truncate">
+            c/{content.name}
           </h2>
         </Link>
-        <p className="mt-1.5 text-[14px] font-ui text-[#737373] leading-snug line-clamp-3 min-h-[64px]">
+        <p className="mt-1 text-[13px] font-ui text-[#737373] leading-[1.4] line-clamp-3 min-h-[56px]">
           {content.description}
         </p>
 
-        <div className="mt-auto pt-2 flex items-center justify-between gap-2">
+        <div className="mt-auto pt-4 flex items-center justify-between gap-2">
           <button
             onClick={toggle}
             className={`px-6 py-1 rounded-full font-ui text-[13px] font-semibold transition-colors border shrink-0 ${joined
