@@ -1,12 +1,16 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { AvatarBubble } from "../../components/AppShell";
 import {
   useCompleteOnboarding,
   useSetInterests,
   useUpdateMe,
+  useFollowUser,
+  useUnfollowUser,
 } from "../../lib/api/generated/users/users";
+import { useJoinCircle, useLeaveCircle } from "../../lib/api/generated/circles/circles";
 import { useListTags } from "../../lib/api/generated/tags/tags";
+import { useGetOnboardingSuggestions } from "../../lib/api/generated/onboarding/onboarding";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
 import { useAuth } from "../../lib/auth-context";
@@ -147,45 +151,84 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
 }
 
 function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const data = {
-    creators: [
-      { id: '1', displayName: 'Camille Lafleur', handle: 'camille', bio: 'Curating raw weaves, minimal silhouettes, and the return of heavy structured linens.', avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop' },
-      { id: '2', displayName: 'Sophia Sterling', handle: 'sterling', bio: 'Fashion analyst investigating unstructured summer silhouettes and architectural...', avatarUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&h=150&fit=crop' },
-      { id: '3', displayName: 'Hiroshi Jin Aoki', handle: 'jin_aoki', bio: 'Exploring the intersections of Brutalist concrete interior spaces and permanent caps...', avatarUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop' },
-    ],
-    circles: [
-      { id: 'c1', name: 'Slow Textiles & Linen', description: 'For researchers and curators documenting raw, organic, and earth-pigmented\nweaving techniques.', memberCount: 12400, slug: 'slow-textiles', avatarUrl: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=150&h=150&fit=crop' },
-      { id: 'c2', name: 'Brutalist Apparel', description: 'Structural, heavy, monochrome garments that communicate directly with raw concrete architecture.', memberCount: 8400, slug: 'brutalist-apparel', avatarUrl: 'https://images.unsplash.com/photo-1502014822147-1aedfb0676e0?w=150&h=150&fit=crop' },
-    ]
+  const { data, isLoading } = useGetOnboardingSuggestions();
+  
+  const followUser = useFollowUser();
+  const unfollowUser = useUnfollowUser();
+  const joinCircle = useJoinCircle();
+  const leaveCircle = useLeaveCircle();
+
+  const [followedIds, setFollowedIds] = useState<Set<string>>(new Set());
+  const [joinedIds, setJoinedIds] = useState<Set<string>>(new Set());
+
+  const curatorsRef = useRef<HTMLDivElement>(null);
+  const circlesRef = useRef<HTMLDivElement>(null);
+
+  const scrollCurators = (dir: 'left' | 'right') => {
+    if (curatorsRef.current) {
+      curatorsRef.current.scrollBy({ left: dir === 'left' ? -300 : 300, behavior: 'smooth' });
+    }
   };
 
-  const [followedIds, setFollowedIds] = useState(new Set(['1']));
-  const [joinedIds, setJoinedIds] = useState(new Set(['c1']));
+  const scrollCircles = (dir: 'up' | 'down') => {
+    if (circlesRef.current) {
+      circlesRef.current.scrollBy({ top: dir === 'up' ? -200 : 200, behavior: 'smooth' });
+    }
+  };
+
+  // Initialize from backend data, only counting items that are actually displayed
+  useEffect(() => {
+    if (data) {
+      const creatorIds = data.creators.map(c => c.id);
+      const circleSlugs = data.circles.map(c => c.slug);
+      
+      setFollowedIds(new Set((data.followedCreatorIds || []).filter(id => creatorIds.includes(id))));
+      setJoinedIds(new Set((data.joinedCircleIds || []).filter(slug => circleSlugs.includes(slug))));
+    }
+  }, [data]);
 
   const totalFollows = followedIds.size + joinedIds.size;
 
   function toggleFollow(id: string) {
-    setFollowedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    if (followedIds.has(id)) {
+      unfollowUser.mutate({ id });
+      setFollowedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      followUser.mutate({ id });
+      setFollowedIds(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    }
   }
 
   function toggleJoin(id: string) {
-    setJoinedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    if (joinedIds.has(id)) {
+      leaveCircle.mutate({ slug: id }); // API expects 'slug' for leaveCircle
+      setJoinedIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      joinCircle.mutate({ slug: id }); // API expects 'slug' for joinCircle
+      setJoinedIds(prev => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+    }
   }
 
   return (
     <section className="flex flex-col flex-1 min-h-0">
       <div className="relative flex-1 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-16">
+        <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-8">
           <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-[#333333] leading-tight">
             Connect with Curation Circles
           </h1>
@@ -199,37 +242,36 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
                 RECOMMENDED FASHION CURATORS
               </p>
               <div className="flex gap-4 text-[#555555] hidden sm:flex cursor-pointer">
-                <svg className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                <svg className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg onClick={() => scrollCurators('left')} className="size-6 hover:text-black transition-colors" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg onClick={() => scrollCurators('right')} className="size-6 hover:text-black transition-colors" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              {data.creators.map((creator) => {
-                if ('isSkeleton' in creator && creator.isSkeleton) {
-                  return (
-                    <div key={creator.id} className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px]">
+            <div ref={curatorsRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {isLoading || !data ? (
+                // Skeletons
+                Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px] shrink-0 w-[calc(33.333%-10.66px)] snap-start">
                       <div className="flex items-center gap-3">
-                        <div className="size-12 rounded-full bg-white animate-pulse shrink-0" />
-                        <div className="flex flex-col gap-0 flex-1">
-                          <div className="h-4 w-24 bg-white animate-pulse" />
-                          <div className="h-3 w-16 bg-white animate-pulse mt-1" />
-                        </div>
+                      <div className="size-12 rounded-full bg-white animate-pulse shrink-0" />
+                      <div className="flex flex-col gap-0 flex-1">
+                        <div className="h-4 w-24 bg-white animate-pulse" />
+                        <div className="h-3 w-16 bg-white animate-pulse mt-1" />
                       </div>
-                      <div className="flex flex-col gap-0 my-5 flex-1">
-                        <div className="h-4 w-full bg-white animate-pulse" />
-                        <div className="h-4 w-11/12 bg-white animate-pulse mt-1" />
-                        <div className="h-4 w-4/5 bg-white animate-pulse mt-1" />
-                      </div>
-                      <div className="mt-auto w-full py-2 h-9 bg-white animate-pulse" />
                     </div>
-                  );
-                }
-
+                    <div className="flex flex-col gap-0 my-5 flex-1">
+                      <div className="h-4 w-full bg-white animate-pulse" />
+                      <div className="h-4 w-11/12 bg-white animate-pulse mt-1" />
+                      <div className="h-4 w-4/5 bg-white animate-pulse mt-1" />
+                    </div>
+                    <div className="mt-auto w-full py-2 h-9 bg-white animate-pulse" />
+                  </div>
+                ))
+              ) : data.creators.map((creator) => {
                 const following = followedIds.has(creator.id);
                 return (
                   <div
                     key={creator.id}
-                    className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px]"
+                    className="flex flex-col bg-[#EAEAEA] p-5 min-h-[220px] shrink-0 w-[calc(33.333%-10.66px)] snap-start"
                   >
                     <div className="flex items-center gap-3">
                       <AvatarBubble name={creator.displayName!} url={creator.avatarUrl || null} size="size-12 text-lg shrink-0" />
@@ -263,34 +305,33 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
                 RECOMMENDED CIRCLES
               </p>
               <div className="flex gap-4 text-[#555555] cursor-pointer">
-                <svg className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                <svg className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg onClick={() => scrollCircles('up')} className="size-6 hover:text-black transition-colors" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                <svg onClick={() => scrollCircles('down')} className="size-6 hover:text-black transition-colors" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" /></svg>
               </div>
             </div>
-            <div className="flex flex-col gap-4">
-              {data.circles.map((circle) => {
-                if ('isSkeleton' in circle && circle.isSkeleton) {
-                  return (
-                    <div key={circle.id} className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5">
-                      <div className="size-10 shrink-0 rounded-full bg-white animate-pulse" />
-                      <div className="flex-1 min-w-0 flex flex-col gap-0">
-                        <div className="h-4 w-32 bg-white animate-pulse" />
-                        <div className="h-3.5 w-full bg-white animate-pulse mt-1" />
-                        <div className="h-3.5 w-1/2 bg-white animate-pulse mt-1" />
-                      </div>
-                      <div className="flex flex-col items-center shrink-0 w-[80px]">
-                        <div className="w-full h-6 bg-white rounded-full animate-pulse" />
-                        <div className="h-2 w-16 bg-white animate-pulse mt-1.5" />
-                      </div>
+            <div ref={circlesRef} className="flex flex-col gap-4 overflow-y-auto max-h-[172px] snap-y snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {isLoading || !data ? (
+                // Skeletons
+                Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5 shrink-0 snap-start">
+                    <div className="size-10 shrink-0 rounded-full bg-white animate-pulse" />
+                    <div className="flex-1 min-w-0 flex flex-col gap-0">
+                      <div className="h-4 w-32 bg-white animate-pulse" />
+                      <div className="h-3.5 w-full bg-white animate-pulse mt-1" />
+                      <div className="h-3.5 w-1/2 bg-white animate-pulse mt-1" />
                     </div>
-                  );
-                }
-
-                const joined = joinedIds.has(circle.id);
+                    <div className="flex flex-col items-center shrink-0 w-[80px]">
+                      <div className="w-full h-6 bg-white rounded-full animate-pulse" />
+                      <div className="h-2 w-16 bg-white animate-pulse mt-1.5" />
+                    </div>
+                  </div>
+                ))
+              ) : data.circles.map((circle) => {
+                const joined = joinedIds.has(circle.slug);
                 return (
                   <div
                     key={circle.id}
-                    className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5"
+                    className="flex items-center justify-between gap-4 bg-[#E5E5E5] px-5 py-3.5 shrink-0 snap-start"
                   >
                     <div className="size-10 shrink-0 rounded-full bg-[#111111] overflow-hidden flex items-center justify-center">
                       {circle.avatarUrl ? (
@@ -308,7 +349,7 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
                     <div className="flex flex-col items-center shrink-0 w-[80px]">
                       <button
                         type="button"
-                        onClick={() => toggleJoin(circle.id)}
+                        onClick={() => toggleJoin(circle.slug!)}
                         className={`w-full py-1 rounded-full font-ui text-[13px] font-bold transition-colors border ${joined
                           ? "bg-[#E5552D] text-white hover:opacity-90 border-transparent"
                           : "bg-white text-[#111111] hover:bg-gray-50 border-[#999999]"
@@ -334,13 +375,13 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
         </button>
         <div className="flex items-center gap-5">
           <p className="text-[14px] font-ui text-[#9B9B9B]">
-            {totalFollows < 3 ? `Pick ${3 - totalFollows} more to continue` : ""}
+            {totalFollows < 1 ? `Pick at least 1 more to continue` : ""}
           </p>
           <button
             type="button"
-            disabled={totalFollows < 3}
+            disabled={totalFollows < 1}
             onClick={onDone}
-            className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${totalFollows >= 3
+            className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${totalFollows >= 1
               ? "bg-[#111111] text-white hover:bg-black"
               : "bg-[#C9C9C9] text-white cursor-not-allowed"
               }`}
@@ -428,9 +469,12 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   async function finish() {
     setIsSettingUp(true);
     try {
-      await updateMe.mutateAsync({
-        data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
-      });
+      await Promise.all([
+        updateMe.mutateAsync({
+          data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+        }),
+        new Promise((resolve) => setTimeout(resolve, 4000)), // 4-second minimum delay
+      ]);
       await complete.mutateAsync();
     } catch {
       // Revert setup state if submission fails
