@@ -19,9 +19,28 @@ export function SearchPage() {
   const circlesRef = useRef<HTMLDivElement>(null);
   const creatorsRef = useRef<HTMLDivElement>(null);
 
+  const [canScroll, setCanScroll] = useState({
+    posts: { left: false, right: true },
+    circles: { left: false, right: true },
+    creators: { left: false, right: true }
+  });
+
   const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
     if (ref.current) {
       ref.current.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
+
+  const handleScroll = (ref: React.RefObject<HTMLDivElement | null>, key: 'posts' | 'circles' | 'creators') => {
+    if (ref.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = ref.current;
+      setCanScroll(prev => ({
+        ...prev,
+        [key]: {
+          left: scrollLeft > 0,
+          right: Math.ceil(scrollLeft) < scrollWidth - clientWidth - 2
+        }
+      }));
     }
   };
 
@@ -147,27 +166,29 @@ export function SearchPage() {
           <div className="flex flex-col gap-12">
             
             {/* Header Area */}
-            <div>
+            <div className={type !== "ALL" ? "-mb-10 relative z-10" : ""}>
               <p className="font-ui text-[13px] font-bold uppercase tracking-wider text-[#555555] mb-2.5">
                 AI SEARCH RESULTS FOR
               </p>
-              <h1 className="font-editorial text-[36px] font-normal leading-tight text-[#111111] tracking-tight mb-6">
+              <h1 className="font-editorial text-[36px] font-normal leading-tight text-[#111111] tracking-tight mb-4">
                 {q}
               </h1>
+
+              {/* Source Badge under heading for ALL / POSTS / PEOPLE */}
+              <div className="flex items-center gap-2 border border-[#C0C0C0] rounded-full pl-1 pr-3 py-1 w-max mb-6">
+                <div className="flex -space-x-1.5">
+                  <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-30 object-cover" alt=""/>
+                  <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-20 object-cover" alt=""/>
+                  <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-10 object-cover" alt=""/>
+                </div>
+                <span className="font-ui text-[12px] font-medium text-[#737373]">
+                  Source: c/fashion, c/trends + 4 more
+                </span>
+              </div>
 
               {/* AI Generated Content Block */}
               {type === "ALL" && (
                 <div className="flex flex-col gap-4 -mb-8 relative z-10">
-                  <div className="flex items-center gap-2 border border-[#C0C0C0] rounded-full pl-1 pr-3 py-1 w-max">
-                    <div className="flex -space-x-1.5">
-                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-30 object-cover" />
-                      <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-20 object-cover" />
-                      <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=50&h=50&fit=crop" className="size-6 rounded-full border-2 border-white relative z-10 object-cover" />
-                    </div>
-                    <span className="font-ui text-[12px] font-medium text-[#737373]">
-                      Source: c/fashion, c/trends + 4 more
-                    </span>
-                  </div>
 
                   <p className="font-ui text-[16px] text-[#333333] leading-[1.6]">
                     In 2026, the paradigm is shifting. By using advanced algorithmic looms, designers are combining traditional coarse flax weaves with incredibly high-density structural wefts.<br/>
@@ -180,7 +201,7 @@ export function SearchPage() {
                         <p className="font-ui text-[12px] text-[#737373] mb-1.5">
                           Sourced from <span className="text-[#3A76C4] cursor-pointer underline">Structural Wefts Circle</span>
                         </p>
-                        <p className="font-ui italic text-[14px] text-[#333333]">
+                        <p className="font-ui text-[14px] text-[#333333]">
                           "The heavy, architectural drape is intentional — it breathes without losing shape."
                         </p>
                         <p className="font-ui text-[12px] text-[#737373] mt-2">
@@ -208,7 +229,7 @@ export function SearchPage() {
 
             {/* Related Posts */}
             {(type === "ALL" || type === "POSTS") && data.posts.length > 0 && (
-              <section className="relative z-0">
+              <section className="-mb-6 relative z-0">
                 {type === "ALL" && (
                   <>
                     <div className="w-full h-px bg-[#D0D0D0] mt-0 mb-4"></div>
@@ -223,10 +244,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=posts`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button onClick={() => scroll(postsRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(postsRef, 'left')} disabled={!canScroll.posts.left} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.posts.left ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button onClick={() => scroll(postsRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(postsRef, 'right')} disabled={!canScroll.posts.right} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.posts.right ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -235,7 +256,7 @@ export function SearchPage() {
                 )}
                 
                 {type === "ALL" ? (
-                  <div ref={postsRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={postsRef} onScroll={() => handleScroll(postsRef, 'posts')} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth py-6 -my-6" style={{ scrollbarWidth: 'none' }}>
                     {renderPosts.map((post, index) => (
                       <div key={`${post.id}-${index}`} className="w-[270px] snap-start shrink-0 flex flex-col h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col">
                         <DemoPostCard post={post} />
@@ -254,7 +275,7 @@ export function SearchPage() {
 
             {/* Circles */}
             {(type === "ALL" || type === "CIRCLES") && renderCircles.length > 0 && (
-              <section>
+              <section className="-mb-8 relative z-0">
                 {type === "ALL" && (
                   <>
                     <div className="w-full h-px bg-[#D0D0D0] mt-0 mb-4"></div>
@@ -269,10 +290,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=circles`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button onClick={() => scroll(circlesRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(circlesRef, 'left')} disabled={!canScroll.circles.left} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.circles.left ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button onClick={() => scroll(circlesRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(circlesRef, 'right')} disabled={!canScroll.circles.right} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.circles.right ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -280,7 +301,7 @@ export function SearchPage() {
                   </>
                 )}
                 {type === "ALL" ? (
-                  <div ref={circlesRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={circlesRef} onScroll={() => handleScroll(circlesRef, 'circles')} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth py-6 -my-6" style={{ scrollbarWidth: 'none' }}>
                     {finalCircles.map((circle, index) => (
                       <div key={`${circle.id}-${index}`} className="w-[270px] snap-start shrink-0">
                         <DemoCircleCard circle={circle} />
@@ -299,7 +320,7 @@ export function SearchPage() {
 
             {/* Featured Jobs */}
             {type === "ALL" && (
-              <section className="w-full mt-2 -mb-2">
+              <section className="w-full mt-2 -mb-6 relative z-0">
                 <div className="bg-[#111111] py-12 px-8 sm:px-12 text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden min-h-[220px]">
                   <img src="/dark_silk_banner_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-80" alt="" />
                   <div className="absolute inset-0 opacity-50 mix-blend-overlay">
@@ -325,10 +346,9 @@ export function SearchPage() {
 
             {/* Creators (People) */}
             {(type === "ALL" || type === "PEOPLE") && data.people.length > 0 && (
-              <section>
+              <section className="-mb-5 relative z-0">
                 {type === "ALL" && (
                   <>
-                    <div className="w-full h-px bg-[#D0D0D0] mt-8 mb-4"></div>
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[#E5552D]">
                         CREATORS
@@ -340,10 +360,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=people`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button onClick={() => scroll(creatorsRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(creatorsRef, 'left')} disabled={!canScroll.creators.left} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.creators.left ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button onClick={() => scroll(creatorsRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
+                        <button onClick={() => scroll(creatorsRef, 'right')} disabled={!canScroll.creators.right} className={`size-8 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.creators.right ? 'border-[#EAEAEA] text-[#111111] hover:bg-gray-50' : 'border-transparent text-[#D0D0D0]'}`}>
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -352,9 +372,9 @@ export function SearchPage() {
                 )}
                 
                 {type === "ALL" ? (
-                  <div ref={creatorsRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={creatorsRef} onScroll={() => handleScroll(creatorsRef, 'creators')} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth py-6 -my-6" style={{ scrollbarWidth: 'none' }}>
                     {finalPeople.map((person, index) => (
-                      <div key={`${person.id}-${index}`} className="w-[310px] snap-start shrink-0 flex flex-col h-full">
+                      <div key={`${person.id}-${index}`} className="w-[270px] snap-start shrink-0 flex flex-col h-full">
                         <DemoCreatorCard person={person} />
                       </div>
                     ))}
@@ -409,7 +429,7 @@ export function SearchPage() {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DemoPostCard({ post }: { post: any }) {
   return (
-    <article className="group break-inside-avoid overflow-hidden rounded-[16px] border border-[#EAEAEA] bg-[#FAFAFA] shadow-sm flex flex-col flex-1 h-full">
+    <article className="group break-inside-avoid overflow-hidden rounded-[16px] border border-[#EAEAEA] bg-[#FAFAFA] shadow-lg flex flex-col flex-1 h-full">
       <div className="relative h-[180px] w-full shrink-0">
         <img
           src={post.coverImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=300&fit=crop"}
@@ -455,10 +475,10 @@ function DemoPostCard({ post }: { post: any }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DemoCircleCard({ circle }: { circle: any }) {
   return (
-    <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-sm flex flex-col h-full overflow-hidden">
-      <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&h=100&fit=crop" className="h-[60px] w-full object-cover" alt="" />
-      <div className="px-4 flex justify-between relative -mt-5">
-        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" className="size-10 rounded-[12px] border-2 border-white object-cover shadow-sm bg-white" alt="" />
+    <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-lg flex flex-col h-full overflow-hidden min-h-[220px]">
+      <img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&h=100&fit=crop" className="h-[80px] w-full object-cover" alt="" />
+      <div className="px-5 flex justify-between relative -mt-5">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop" className="size-12 rounded-[12px] border-2 border-white object-cover shadow-sm bg-white" alt="" />
         <div className="flex items-center gap-2 mt-6 text-[#737373] text-[11px] font-ui font-medium">
           <div className="flex -space-x-1.5">
              <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=50&h=50&fit=crop" className="size-4 rounded-full border border-white" />
@@ -469,7 +489,7 @@ function DemoCircleCard({ circle }: { circle: any }) {
           <svg className="size-3.5 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
         </div>
       </div>
-      <div className="px-4 mt-2 flex-1 flex flex-col">
+      <div className="px-5 mt-4 flex-1 flex flex-col">
         <h3 className="font-editorial text-[18px] font-normal leading-tight text-[#111111]">{circle.name}</h3>
         <p className="font-ui text-[12px] text-[#737373] mt-2 line-clamp-2 leading-relaxed">{circle.description}</p>
         <div className="mt-auto pt-4 pb-4 flex justify-between items-center">
@@ -486,7 +506,7 @@ function DemoCircleCard({ circle }: { circle: any }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DemoCreatorCard({ person }: { person: any }) {
   return (
-    <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-sm px-5 py-3 flex flex-col h-full relative">
+    <div className="bg-white rounded-[16px] border border-[#EAEAEA] shadow-lg px-5 py-4 flex flex-col h-full relative">
       <div className="flex items-start">
          <img src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="size-10 rounded-full object-cover" alt="" />
       </div>
