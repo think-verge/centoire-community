@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -147,8 +147,17 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(Boolean(circle.viewerRole));
   const [members, setMembers] = useState(circle.memberCount);
+  const [copied, setCopied] = useState(false);
   const join = useJoinCircle();
   const leave = useLeaveCircle();
+
+  // Re-sync when the list refetches with fresh server state.
+  useEffect(() => {
+    setJoined(Boolean(circle.viewerRole));
+    setMembers(circle.memberCount);
+  }, [circle.viewerRole, circle.memberCount]);
+
+  const rollback = () => void queryClient.invalidateQueries({ queryKey: getListCirclesQueryKey() });
 
   function toggle() {
     if (joined) {
@@ -156,12 +165,22 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
       setMembers((n) => Math.max(0, n - 1));
       leave.mutate(
         { slug: circle.slug },
-        { onError: () => void queryClient.invalidateQueries({ queryKey: getListCirclesQueryKey() }) },
+        { onError: rollback },
       );
     } else {
       setJoined(true);
       setMembers((n) => n + 1);
-      join.mutate({ slug: circle.slug });
+      join.mutate({ slug: circle.slug }, { onError: rollback });
+    }
+  }
+
+  async function share() {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/c/${circle.slug}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable
     }
   }
 
@@ -199,14 +218,6 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
 
   const images = getStaticImages(circle.name);
 
-  const mockContent = [
-    { name: "Mindful Living", description: "Share mindfulness tips, meditation routines, and self-care practices for everyday balance.", members: "18.4k", visitors: "2.1k weekly visitors" },
-    { name: "Creative Writing", description: "Share stories, poems, and writing prompts with fellow readers and aspiring authors.", members: "12.2k", visitors: "1.5k weekly visitors" },
-    { name: "Photography", description: "Share and discuss photography techniques, gear recommendations, and favorite shots.", members: "34.5k", visitors: "4.2k weekly visitors" },
-    { name: "Music Lovers", description: "Discover and discuss music across genres, playlists, and emerging artists.", members: "8.9k", visitors: "1.1k weekly visitors" },
-    { name: "Book Club", description: "Discuss latest reads, book reviews, and author interviews.", members: "45.1k", visitors: "5.8k weekly visitors" },
-  ];
-  const content = mockContent[index % mockContent.length];
 
   return (
     <div className="flex flex-col rounded-[16px] border border-[#EAEAEA] bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow w-[310px] h-[245px]">
@@ -225,10 +236,15 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
               ))}
             </div>
             <span className="font-ui text-[11px] font-medium text-[#555555]">
-              {members}
+              {formatCount(members)}
             </span>
           </div>
-          <button className="text-[#8A8A8A] hover:text-[#111111] transition-colors">
+          <button
+            onClick={share}
+            aria-label={copied ? "Link copied" : "Copy circle link"}
+            title={copied ? "Link copied" : "Copy circle link"}
+            className="text-[#8A8A8A] hover:text-[#111111] transition-colors"
+          >
             <svg className="size-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
           </button>
         </div>
@@ -237,17 +253,19 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
       <div className="px-4 pt-10 pb-4 flex flex-col flex-1">
         <Link to={`/c/${circle.slug}`} className="min-w-0">
           <h2 className="font-editorial text-[18px] font-bold text-[#111111] hover:text-[#E5552D] transition-colors truncate">
-            c/{content.name}
+            c/{circle.name}
           </h2>
         </Link>
         <p className="mt-1 text-[13px] font-ui text-[#737373] leading-[1.4] line-clamp-3 min-h-[56px]">
-          {content.description}
+          {circle.description}
         </p>
 
         <div className="mt-auto pt-4 flex items-center justify-between gap-2">
           <button
             onClick={toggle}
-            className={`px-6 py-1 rounded-full font-ui text-[13px] font-semibold transition-colors border shrink-0 ${joined
+            disabled={circle.viewerRole === "owner"}
+            title={circle.viewerRole === "owner" ? "Owners can't leave their circle" : undefined}
+            className={`px-6 py-1 rounded-full font-ui text-[13px] font-semibold transition-colors border shrink-0 disabled:opacity-60 ${joined
               ? "bg-[#E5552D] text-white border-transparent hover:opacity-90"
               : "bg-white text-[#111111] border-[#111111] hover:bg-[#F5F5F5]"
               }`}
@@ -255,7 +273,7 @@ function CircleCard({ circle, index = 0 }: { circle: Circle; index?: number }) {
             {joined ? "Joined" : "Join"}
           </button>
           <span className="font-ui text-[14px] text-[#737373] truncate">
-            {content.visitors}
+            {circle.postCount} {circle.postCount === 1 ? "post" : "posts"}
           </span>
         </div>
       </div>
@@ -315,4 +333,6 @@ function JobsPromoBanner() {
   );
 }
 
-
+function formatCount(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1).replace(/\.0$/, "")}k` : String(n);
+}
