@@ -11,6 +11,7 @@ export type RightSidebarContext =
   | { type: "feed" }
   | { type: "following" }
   | { type: "discover" }
+  | { type: "search" }
   | { type: "category"; category: string };
 
 // Category → tag category mapping for Trending Topics

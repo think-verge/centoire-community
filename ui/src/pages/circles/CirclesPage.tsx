@@ -143,7 +143,7 @@ function CircleCarousel({ title, circles }: { title: string; circles: Circle[] }
   );
 }
 
-function CircleCard({ circle }: { circle: Circle }) {
+export function CircleCard({ circle }: { circle: Circle }) {
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(Boolean(circle.viewerRole));
   const [members, setMembers] = useState(circle.memberCount);
