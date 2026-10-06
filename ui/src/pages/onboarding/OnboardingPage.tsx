@@ -469,12 +469,9 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
   async function finish() {
     setIsSettingUp(true);
     try {
-      await Promise.all([
-        updateMe.mutateAsync({
-          data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
-        }),
-        new Promise((resolve) => setTimeout(resolve, 4000)), // 4-second minimum delay
-      ]);
+      await updateMe.mutateAsync({
+        data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+      });
       await complete.mutateAsync();
     } catch (e) {
       // Revert setup state if submission fails
