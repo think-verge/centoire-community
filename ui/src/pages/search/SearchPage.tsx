@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, Fragment, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { SparkleIcon } from "../../components/nav/icons";
 import { PostDrawer } from "../../components/PostDrawer";
@@ -14,6 +14,16 @@ export function SearchPage() {
   const paramType = params.get("type")?.toUpperCase() as SearchType | undefined;
   const type = paramType && TYPES.includes(paramType) ? paramType : "ALL";
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+
+  const postsRef = useRef<HTMLDivElement>(null);
+  const circlesRef = useRef<HTMLDivElement>(null);
+  const creatorsRef = useRef<HTMLDivElement>(null);
+
+  const scroll = (ref: React.RefObject<HTMLDivElement | null>, direction: 'left' | 'right') => {
+    if (ref.current) {
+      ref.current.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
 
   const { data, isLoading } = useSearch(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,7 +80,7 @@ export function SearchPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] w-full">
-      <div className="w-full px-5 py-8 flex flex-col gap-6">
+      <div className="w-full px-5 pt-8 pb-4 flex flex-col gap-6">
         {/* Top filter row */}
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 flex-wrap">
@@ -213,10 +223,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=posts`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(postsRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(postsRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -225,7 +235,7 @@ export function SearchPage() {
                 )}
                 
                 {type === "ALL" ? (
-                  <div className="flex gap-4 overflow-x-auto snap-x hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={postsRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
                     {renderPosts.map((post, index) => (
                       <div key={`${post.id}-${index}`} className="w-[270px] snap-start shrink-0 flex flex-col h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col">
                         <DemoPostCard post={post} />
@@ -247,7 +257,7 @@ export function SearchPage() {
               <section>
                 {type === "ALL" && (
                   <>
-                    <div className="w-full h-px bg-[#D0D0D0] mt-8 mb-4"></div>
+                    <div className="w-full h-px bg-[#D0D0D0] mt-0 mb-4"></div>
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[#E5552D]">
                         CIRCLES
@@ -259,10 +269,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=circles`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(circlesRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(circlesRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -270,7 +280,7 @@ export function SearchPage() {
                   </>
                 )}
                 {type === "ALL" ? (
-                  <div className="flex gap-4 overflow-x-auto snap-x hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={circlesRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
                     {finalCircles.map((circle, index) => (
                       <div key={`${circle.id}-${index}`} className="w-[270px] snap-start shrink-0">
                         <DemoCircleCard circle={circle} />
@@ -330,10 +340,10 @@ export function SearchPage() {
                         <Link to={`/search?q=${q}&type=people`} className="font-ui text-[12px] text-[#555555] hover:text-[#111111] underline ml-3 capitalize font-normal">View all</Link>
                       </h2>
                       <div className="flex gap-2">
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(creatorsRef, 'left')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                         </button>
-                        <button className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50">
+                        <button onClick={() => scroll(creatorsRef, 'right')} className="size-8 rounded-full bg-white border border-[#EAEAEA] flex items-center justify-center text-[#111111] hover:bg-gray-50 transition-colors">
                           <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                         </button>
                       </div>
@@ -342,7 +352,7 @@ export function SearchPage() {
                 )}
                 
                 {type === "ALL" ? (
-                  <div className="flex gap-4 overflow-x-auto snap-x hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                  <div ref={creatorsRef} className="flex gap-4 overflow-x-auto snap-x hide-scrollbar scroll-smooth" style={{ scrollbarWidth: 'none' }}>
                     {finalPeople.map((person, index) => (
                       <div key={`${person.id}-${index}`} className="w-[310px] snap-start shrink-0 flex flex-col h-full">
                         <DemoCreatorCard person={person} />
@@ -361,7 +371,7 @@ export function SearchPage() {
 
             {/* Related Topics */}
             {type === "ALL" && (
-              <section className="-mt-2 relative z-10">
+              <section className="-mt-2 pb-0 relative z-10">
                 <div className="w-full h-px bg-[#D0D0D0] mb-4 mt-0"></div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[#E5552D]">
