@@ -6,18 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -28,9 +33,10 @@ import type {
   Circle,
   CreateCircleInput,
   ErrorResponse,
+  FeedPage,
   ListCircleMembers200Item,
-  ListCirclesParams,
-  PostCard
+  ListCirclePostsParams,
+  ListCirclesParams
 } from '.././model';
 
 import { customInstance } from '../../http';
@@ -142,7 +148,7 @@ export const createCircle = (
   
 
 
-export const getCreateCircleMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateCircleMutationOptions = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCircle>>, TError,{data: CreateCircleInput}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof createCircle>>, TError,{data: CreateCircleInput}, TContext> => {
 
@@ -169,9 +175,9 @@ const {mutation: mutationOptions} = options ?
 
     export type CreateCircleMutationResult = NonNullable<Awaited<ReturnType<typeof createCircle>>>
     export type CreateCircleMutationBody = CreateCircleInput
-    export type CreateCircleMutationError = ErrorType<unknown>
+    export type CreateCircleMutationError = ErrorType<ErrorResponse>
 
-    export const useCreateCircle = <TError = ErrorType<unknown>,
+    export const useCreateCircle = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCircle>>, TError,{data: CreateCircleInput}, TContext>, }
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createCircle>>,
@@ -383,12 +389,14 @@ const {mutation: mutationOptions} = options ?
     }
     export const listCirclePosts = (
     slug: string,
+    params?: ListCirclePostsParams,
  signal?: AbortSignal
 ) => {
       
       
-      return customInstance<PostCard[]>(
-      {url: `/circles/${slug}/posts`, method: 'GET', signal
+      return customInstance<FeedPage>(
+      {url: `/circles/${slug}/posts`, method: 'GET',
+        params, signal
     },
       );
     }
@@ -396,23 +404,101 @@ const {mutation: mutationOptions} = options ?
 
 
 
-export const getListCirclePostsQueryKey = (slug?: string,) => {
+export const getListCirclePostsInfiniteQueryKey = (slug?: string,
+    params?: ListCirclePostsParams,) => {
     return [
-    `/circles/${slug}/posts`
+    'infinite', `/circles/${slug}/posts`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getListCirclePostsQueryKey = (slug?: string,
+    params?: ListCirclePostsParams,) => {
+    return [
+    `/circles/${slug}/posts`, ...(params ? [params]: [])
     ] as const;
     }
 
     
-export const getListCirclePostsQueryOptions = <TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<unknown>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
+export const getListCirclePostsInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof listCirclePosts>>, ListCirclePostsParams['cursor']>, TError = ErrorType<ErrorResponse>>(slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListCirclePostsQueryKey(slug);
+  const queryKey =  queryOptions?.queryKey ?? getListCirclePostsInfiniteQueryKey(slug,params);
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCirclePosts>>> = ({ signal }) => listCirclePosts(slug, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCirclePosts>>, QueryKey, ListCirclePostsParams['cursor']> = ({ signal, pageParam }) => listCirclePosts(slug,{...params, 'cursor': pageParam || params?.['cursor']}, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(slug), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListCirclePostsInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof listCirclePosts>>>
+export type ListCirclePostsInfiniteQueryError = ErrorType<ErrorResponse>
+
+
+export function useListCirclePostsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listCirclePosts>>, ListCirclePostsParams['cursor']>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params: undefined |  ListCirclePostsParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCirclePosts>>,
+          TError,
+          Awaited<ReturnType<typeof listCirclePosts>>, QueryKey
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListCirclePostsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listCirclePosts>>, ListCirclePostsParams['cursor']>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCirclePosts>>,
+          TError,
+          Awaited<ReturnType<typeof listCirclePosts>>, QueryKey
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListCirclePostsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listCirclePosts>>, ListCirclePostsParams['cursor']>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListCirclePostsInfinite<TData = InfiniteData<Awaited<ReturnType<typeof listCirclePosts>>, ListCirclePostsParams['cursor']>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData, QueryKey, ListCirclePostsParams['cursor']>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListCirclePostsInfiniteQueryOptions(slug,params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getListCirclePostsQueryOptions = <TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<ErrorResponse>>(slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCirclePostsQueryKey(slug,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCirclePosts>>> = ({ signal }) => listCirclePosts(slug,params, signal);
 
       
 
@@ -422,11 +508,12 @@ const {query: queryOptions} = options ?? {};
 }
 
 export type ListCirclePostsQueryResult = NonNullable<Awaited<ReturnType<typeof listCirclePosts>>>
-export type ListCirclePostsQueryError = ErrorType<unknown>
+export type ListCirclePostsQueryError = ErrorType<ErrorResponse>
 
 
-export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<unknown>>(
- slug: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>> & Pick<
+export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params: undefined |  ListCirclePostsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCirclePosts>>,
           TError,
@@ -435,8 +522,9 @@ export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCircleP
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<unknown>>(
- slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>> & Pick<
+export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCirclePosts>>,
           TError,
@@ -445,17 +533,19 @@ export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCircleP
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<unknown>>(
- slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
+export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<unknown>>(
- slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
+export function useListCirclePosts<TData = Awaited<ReturnType<typeof listCirclePosts>>, TError = ErrorType<ErrorResponse>>(
+ slug: string,
+    params?: ListCirclePostsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCirclePosts>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListCirclePostsQueryOptions(slug,options)
+  const queryOptions = getListCirclePostsQueryOptions(slug,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -489,7 +579,7 @@ export const getListCircleMembersQueryKey = (slug?: string,) => {
     }
 
     
-export const getListCircleMembersQueryOptions = <TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<unknown>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>>, }
+export const getListCircleMembersQueryOptions = <TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<ErrorResponse>>(slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -508,10 +598,10 @@ const {query: queryOptions} = options ?? {};
 }
 
 export type ListCircleMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listCircleMembers>>>
-export type ListCircleMembersQueryError = ErrorType<unknown>
+export type ListCircleMembersQueryError = ErrorType<ErrorResponse>
 
 
-export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<unknown>>(
+export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<ErrorResponse>>(
  slug: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCircleMembers>>,
@@ -521,7 +611,7 @@ export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircl
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<unknown>>(
+export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<ErrorResponse>>(
  slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listCircleMembers>>,
@@ -531,12 +621,12 @@ export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircl
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<unknown>>(
+export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<ErrorResponse>>(
  slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<unknown>>(
+export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircleMembers>>, TError = ErrorType<ErrorResponse>>(
  slug: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listCircleMembers>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

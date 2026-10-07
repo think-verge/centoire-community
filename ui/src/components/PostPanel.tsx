@@ -2,11 +2,12 @@ import { generateHTML } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { AvatarBubble } from "./AppShell";
 import { CommentThread } from "./CommentThread";
 import { PostActions } from "./PostActions";
+import { ReadFullStoryModal } from "./ReadFullStoryModal";
 import { useGetPost } from "../lib/api/generated/posts/posts";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 
@@ -21,6 +22,7 @@ interface PostPanelProps {
 export function PostPanel({ slug, compact = false }: PostPanelProps) {
   const { data: post, isLoading, error } = useGetPost(slug);
   const commentsRef = useRef<HTMLDivElement>(null);
+  const [readFullStoryOpen, setReadFullStoryOpen] = useState(false);
 
   const html = useMemo(() => {
     if (!post?.content) return null;
@@ -135,16 +137,24 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
       ) : post.externalUrl ? (
         <div className="mt-6 rounded-xl border border-line bg-paper p-6">
           <p className="text-lg leading-relaxed text-ink-soft">{post.excerpt}</p>
-          <a
-            href={post.externalUrl}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => setReadFullStoryOpen(true)}
             className="mt-4 inline-block rounded-lg bg-crimson px-4 py-2 text-sm font-semibold text-ink-inverse hover:bg-crimson-deep"
           >
-            Read the full story ↗
-          </a>
+            Read the full story
+          </button>
         </div>
       ) : null}
+
+      {readFullStoryOpen && post.externalUrl && (
+        <ReadFullStoryModal
+          slug={slug}
+          title={post.title}
+          externalUrl={post.externalUrl}
+          onClose={() => setReadFullStoryOpen(false)}
+        />
+      )}
 
       <footer className="mt-8 border-t border-line pt-6" ref={commentsRef} id="post-comments">
         <div className="mb-8 max-w-md">

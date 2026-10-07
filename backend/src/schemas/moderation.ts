@@ -58,6 +58,11 @@ export const CreatePolicyInputSchema = registry.register(
 export const UpdatePolicyInputSchema = registry.register(
   "UpdatePolicyInput",
   z.object({
+    name: z.string().min(1).max(100).optional(),
+    conditions: z.array(PolicyConditionSchema).optional(),
+    logic: z.enum(["and", "or"]).optional(),
+    action: PolicyActionEnum.optional(),
+    priority: z.number().int().optional(),
     active: z.boolean().optional(),
     reason: z.string().max(500).optional(),
     expiresAt: z.string().datetime().nullable().optional(),

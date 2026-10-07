@@ -17,6 +17,7 @@ postRouter.post(
 );
 postRouter.get("/me/drafts", requireAuth, asyncHandler(postController.myDrafts));
 postRouter.get("/:slug", optionalAuth, asyncHandler(postController.getBySlug));
+postRouter.get("/:slug/full-content", optionalAuth, asyncHandler(postController.getFullContent));
 postRouter.patch(
   "/:id",
   requireAuth,

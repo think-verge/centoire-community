@@ -7,7 +7,7 @@ import { hasPermission } from "../lib/permissions";
 import { DesktopSidebar } from "./nav/DesktopSidebar";
 import { RightSidebar } from "./nav/RightSidebar";
 import { MobileNav } from "./nav/MobileNav";
-import { CameraIcon, MenuIcon, MicIcon, SearchIcon } from "./nav/icons";
+import { CameraIcon, MenuIcon, MicIcon, SparkleIcon } from "./nav/icons";
 import { NotificationBell } from "./NotificationBell";
 import logoDark from "../assets/landing/logo-dark.svg";
 
@@ -15,6 +15,7 @@ function getRightSidebarContext(pathname: string): RightSidebarContext | null {
   if (pathname === "/feed") return { type: "feed" };
   if (pathname === "/following") return { type: "following" };
   if (pathname === "/discover") return { type: "discover" };
+  if (pathname === "/search") return { type: "search" };
   const m = pathname.match(/^\/category\/([^/]+)$/);
   if (m) return { type: "category", category: m[1] };
   return null;
@@ -88,7 +89,7 @@ export function AppShell() {
               }
             }}
           >
-            <SearchIcon className="size-4 shrink-0 text-[var(--color-taupe)]" />
+            <SparkleIcon className="size-4 shrink-0 text-[var(--color-taupe)]" />
             <input
               type="search"
               value={searchQuery}

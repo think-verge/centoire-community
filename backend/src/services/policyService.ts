@@ -135,10 +135,24 @@ export async function createPolicy(
 
 export async function updatePolicy(
   id: string,
-  input: { active?: boolean; reason?: string; expiresAt?: string | null },
+  input: {
+    name?: string;
+    conditions?: ICondition[];
+    logic?: "and" | "or";
+    action?: PolicyAction;
+    priority?: number;
+    active?: boolean;
+    reason?: string;
+    expiresAt?: string | null;
+  },
 ): Promise<IModerationPolicy> {
   const policy = await ModerationPolicy.findById(id);
   if (!policy) throw new ApiError(404, "Policy not found");
+  if (input.name !== undefined) policy.name = input.name;
+  if (input.conditions !== undefined) policy.conditions = input.conditions;
+  if (input.logic !== undefined) policy.logic = input.logic;
+  if (input.action !== undefined) policy.action = input.action;
+  if (input.priority !== undefined) policy.priority = input.priority;
   if (input.active !== undefined) policy.active = input.active;
   if (input.reason !== undefined) policy.reason = input.reason;
   if (input.expiresAt !== undefined) {
