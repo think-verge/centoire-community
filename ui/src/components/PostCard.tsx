@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
-import { AvatarBubble } from "./AppShell";
 import { PostActions } from "./PostActions";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 
@@ -31,11 +30,11 @@ export function PostCard({
     (post.category && isPostCategory(post.category) ? CATEGORY_LABELS[post.category] : null);
 
   return (
-    <article className="group mb-4 break-inside-avoid overflow-hidden rounded-xl border border-[var(--color-hairline)] bg-white shadow-sm transition-shadow hover:shadow-md">
-      {post.coverImageUrl && (
-        <button type="button" onClick={openPost} className="relative block w-full cursor-pointer">
+    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
+      {post.coverImageUrl ? (
+        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer">
           {!imageLoaded && (
-            <div className="h-48 w-full animate-pulse bg-[var(--color-sand)]" aria-hidden />
+            <div className="h-full w-full animate-pulse bg-[var(--color-sand)]" aria-hidden />
           )}
           <img
             src={post.coverImageUrl}
@@ -43,117 +42,82 @@ export function PostCard({
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageLoaded(true)}
-            className={`max-h-72 w-full object-cover transition-opacity duration-300 ${
-              imageLoaded ? "opacity-100" : "absolute inset-0 h-48 opacity-0"
+            className={`h-full w-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? "opacity-100" : "absolute inset-0 opacity-0"
             }`}
           />
-          {/* Source + category overlay */}
-          {imageLoaded && (post.source || categoryLabel) && (
-            <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 bg-gradient-to-t from-black/65 to-transparent px-3 py-3">
-              {post.source && (
-                <span className="flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-0.5 font-ui text-[10px] font-semibold uppercase text-white backdrop-blur-sm">
-                  <span className="size-1.5 shrink-0 rounded-full bg-[var(--color-coral)]" />
-                  {hostname(post.source.siteUrl)}
-                </span>
+          {/* Badge */}
+          {(post.authorIsCreator || post.upvoteCount > 100) ? (
+            <div className="absolute top-3 right-3 bg-[#00C365] text-white rounded-full px-2 py-0.5 text-[12px] font-medium font-ui flex items-center gap-1 shadow-sm">
+              {post.authorIsCreator ? (
+                <>
+                  <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                  Centoire Pick
+                </>
+              ) : (
+                <>
+                  <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>
+                  Hot
+                </>
               )}
-              {categoryLabel && (
-                <span className="font-ui text-[10px] uppercase tracking-wide text-white/80">
-                  {categoryLabel}
-                </span>
-              )}
+            </div>
+          ) : null}
+          {/* Category overlay */}
+          {imageLoaded && categoryLabel && (
+            <div className="absolute bottom-3 left-3 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
+              <span className="size-1.5 rounded-full bg-[#3CCBFF]"></span>
+              {categoryLabel}
             </div>
           )}
         </button>
+      ) : (
+        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer bg-[#F9F9F9]">
+          {/* Grey space matching image height perfectly to maintain card size parity */}
+        </button>
       )}
 
-      <div className="p-4">
-        {/* Centoire Pick / Must Read badge */}
-        {post.authorIsCreator && (
-          <span className="mb-2 inline-block rounded-full bg-[var(--color-coral)] px-2 py-0.5 font-ui text-[10px] font-semibold uppercase tracking-wide text-white">
-            ✓ Centoire Pick
-          </span>
-        )}
+      <div className="p-4 flex flex-col flex-1 gap-1">
+        <p className="text-[10px] font-ui text-[#737373] flex items-center">
+          {new Date(post.publishedAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+          <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-1.5 block"></span> 
+          {post.readTimeMinutes || 4} min read
+        </p>
 
-        <button type="button" onClick={openPost} className="block cursor-pointer text-left">
-          <h2 className="font-editorial text-xl font-semibold leading-snug text-[var(--color-charcoal)] group-hover:text-[var(--color-coral)]">
+        <button type="button" onClick={openPost} className="block cursor-pointer text-left mt-2">
+          <h3 className="font-editorial text-[20px] font-medium leading-tight text-[#111111] line-clamp-3 group-hover:text-[#E4572E]">
             {post.title}
-            {external && <span className="ml-1 text-sm text-[var(--color-taupe)]">↗</span>}
-          </h2>
+          </h3>
         </button>
 
-        {!post.coverImageUrl && post.excerpt && (
-          <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[var(--color-stone)]">
-            {post.excerpt}
-          </p>
-        )}
-
-        {/* No-cover card: show category + tags as pills */}
-        {!post.coverImageUrl && (post.source || categoryLabel || post.tags.length > 0) && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {post.source && (
-              <span className="flex items-center gap-1 rounded-full border border-[var(--color-hairline)] px-2 py-0.5 font-ui text-[10px] text-[var(--color-stone)]">
-                <span className="size-1.5 rounded-full bg-[var(--color-coral)]" />
-                {hostname(post.source.siteUrl)}
-              </span>
-            )}
-            {categoryLabel && (
-              <span className="rounded-full border border-[var(--color-hairline)] px-2 py-0.5 font-ui text-[10px] text-[var(--color-stone)]">
-                {categoryLabel}
-              </span>
-            )}
-            {post.tags.slice(0, 2).map((tag) => (
-              <Link
-                key={tag.id}
-                to={`/t/${tag.slug}`}
-                className="rounded-full border border-[var(--color-hairline)] px-2 py-0.5 font-ui text-[10px] text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
-              >
-                {tag.name}
-              </Link>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-3 flex items-center gap-2 text-xs text-[var(--color-taupe)]">
-          {post.author && (
-            <Link
-              to={post.author.handle ? `/u/${post.author.handle}` : "#"}
-              className="flex items-center gap-1.5 font-medium text-[var(--color-stone)] hover:text-[var(--color-charcoal)]"
-            >
-              <AvatarBubble
-                name={post.author.displayName}
-                url={post.author.avatarUrl}
-                size="size-5"
-              />
-              {post.author.displayName}
-            </Link>
-          )}
-          {post.circle && (
-            <>
-              <span aria-hidden>·</span>
-              <Link to={`/c/${post.circle.slug}`} className="text-[var(--color-coral)] hover:underline">
-                {post.circle.name}
-              </Link>
-            </>
-          )}
-          <span className="ml-auto">{post.readTimeMinutes} min</span>
+        {/* Footer actions row */}
+        <div className="mt-auto pt-3 flex items-center justify-between border-t border-[#EAEAEA] border-opacity-60">
+          <PostActions
+            post={post}
+            onOpenModal={onOpenPost ? () => onOpenPost(post) : undefined}
+            prependNode={
+              <div className="flex items-center">
+                {post.source || post.origin === "aggregated" ? (
+                  <div className="size-6 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
+                    <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                  </div>
+                ) : post.author ? (
+                  <div className="size-6 shrink-0 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[10px] overflow-hidden">
+                    {post.author.avatarUrl ? (
+                      <img src={post.author.avatarUrl} alt="" className="size-full object-cover" />
+                    ) : (
+                      post.author.displayName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            }
+          />
         </div>
-
-        <PostActions
-          post={post}
-          onOpenModal={onOpenPost ? () => onOpenPost(post) : undefined}
-        />
       </div>
     </article>
   );
 }
 
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace("www.", "");
-  } catch {
-    return url;
-  }
-}
 
 type IconProps = { className?: string };
 export function StitchIcon({ className }: IconProps) {

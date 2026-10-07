@@ -10,7 +10,6 @@ import {
 } from "../lib/api/generated/engagement/engagement";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { useAuth } from "../lib/auth-context";
-import { StitchIcon } from "./PostCard";
 
 /**
  * Upvote / comment / bookmark row. Optimistic per-card state: counts flip
@@ -20,9 +19,11 @@ import { StitchIcon } from "./PostCard";
 export function PostActions({
   post,
   onOpenModal,
+  prependNode,
 }: {
   post: PostCardType;
   onOpenModal?: () => void;
+  prependNode?: React.ReactNode;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -32,8 +33,6 @@ export function PostActions({
   );
   const [bookmarked, setBookmarked] = useState(post.viewer.bookmarked);
   const [upvotes, setUpvotes] = useState(post.upvoteCount);
-  const [saves, setSaves] = useState(post.bookmarkCount);
-  const [stitching, setStitching] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +61,6 @@ export function PostActions({
   useEffect(() => {
     if (!bookmarkPost.isPending && !unbookmarkPost.isPending) {
       setBookmarked(post.viewer.bookmarked);
-      setSaves(post.bookmarkCount);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post.bookmarkCount, post.viewer.bookmarked]);
@@ -95,8 +93,6 @@ export function PostActions({
     } else {
       setVoted(1);
       setUpvotes((n) => n + 1);
-      setStitching(true);
-      setTimeout(() => setStitching(false), 400);
       votePost.mutate({ id: post.id, data: { value: 1 } });
     }
   }
@@ -104,14 +100,12 @@ export function PostActions({
   function saveTo(folderId: string | null) {
     setPickerOpen(false);
     setBookmarked(true);
-    setSaves((n) => n + 1);
     bookmarkPost.mutate({ id: post.id, data: { folderId } });
   }
 
   function handleBookmarkClick() {
     if (bookmarked) {
       setBookmarked(false);
-      setSaves((n) => n - 1);
       unbookmarkPost.mutate({ id: post.id });
     } else {
       // Opening the picker lazily fetches folders; direct-save happens from it.
@@ -120,54 +114,60 @@ export function PostActions({
   }
 
   return (
-    <div className="mt-3 flex items-center gap-4 border-t border-line pt-3 text-xs">
-      <button
-        type="button"
-        aria-pressed={voted === 1}
-        onClick={toggleUpvote}
-        title={voted === 1 ? "Remove upvote" : "Upvote"}
-        className={`flex items-center gap-1 transition-colors ${
-          voted === 1 ? "font-semibold text-crimson" : "text-ink-soft hover:text-crimson"
-        }`}
-      >
-        <StitchIcon className={`size-4 ${stitching ? "animate-stitch" : ""}`} />
-        {upvotes}
-      </button>
-      <button
-        type="button"
-        onClick={onOpenModal ?? (() => navigate(`/p/${post.slug}#comments`))}
-        className="flex items-center gap-1 text-ink-soft hover:text-ink"
-        title="Comments"
-      >
-        <CommentIcon className="size-4" />
-        {post.commentCount}
-      </button>
-      <div className="relative ml-auto" ref={pickerRef}>
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center gap-2.5">
+        {prependNode}
         <button
           type="button"
-          aria-pressed={bookmarked}
-          aria-haspopup="menu"
-          onClick={handleBookmarkClick}
-          title={bookmarked ? "Remove from saved" : "Save"}
-          className={`flex items-center gap-1 transition-colors ${
-            bookmarked ? "font-semibold text-gold" : "text-ink-soft hover:text-gold"
+          aria-pressed={voted === 1}
+          onClick={toggleUpvote}
+          title={voted === 1 ? "Remove upvote" : "Upvote"}
+          className={`flex items-center gap-1.5 transition-colors text-[12px] font-ui font-medium ${
+            voted === 1 ? "text-[#E4572E]" : "text-[#737373] hover:text-[#E4572E]"
           }`}
         >
-          <BookmarkSmallIcon className="size-4" filled={bookmarked} />
-          {saves}
+          <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 11l7-7m0 0l7 7m-7-7v14" /></svg>
+          {upvotes >= 1000 ? (upvotes/1000).toFixed(1) + 'k' : upvotes}
         </button>
+        <button
+          type="button"
+          onClick={onOpenModal ?? (() => navigate(`/p/${post.slug}#comments`))}
+          className="flex items-center gap-1.5 text-[12px] font-ui font-medium text-[#737373] hover:text-[#111111]"
+          title="Comments"
+        >
+          <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+          {post.commentCount}
+        </button>
+      </div>
+
+      <div className="relative ml-auto flex items-center gap-2 text-[#737373]" ref={pickerRef}>
+        <svg className="size-4 cursor-pointer hover:text-[#111111] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+        <div className="border border-[#EAEAEA] rounded-[8px] p-1 cursor-pointer hover:bg-black/5 transition-colors">
+          <button
+            type="button"
+            aria-pressed={bookmarked}
+            aria-haspopup="menu"
+            onClick={handleBookmarkClick}
+            title={bookmarked ? "Remove from saved" : "Save"}
+            className={`flex items-center justify-center transition-colors ${
+              bookmarked ? "text-[#E4572E]" : "text-[#737373] hover:text-[#111111]"
+            }`}
+          >
+            <svg className="size-4" fill={bookmarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
+          </button>
+        </div>
         {pickerOpen && (
           <div
             role="menu"
             aria-label="Save to folder"
-            className="absolute bottom-full right-0 z-30 mb-2 w-44 rounded-xl border border-line bg-paper py-1 shadow-card-hover"
+            className="absolute bottom-full right-0 z-30 mb-2 w-44 rounded-xl border border-[#EAEAEA] bg-white py-1 shadow-lg"
           >
-            <p className="kicker px-3 pb-1 pt-1.5">Save to</p>
+            <p className="font-ui text-[10px] uppercase font-bold tracking-wider text-[#737373] px-3 pb-1 pt-1.5">Save to</p>
             <button
               type="button"
               role="menuitem"
               onClick={() => saveTo(null)}
-              className="block w-full px-3 py-1.5 text-left text-xs font-medium text-ink hover:bg-cream"
+              className="block w-full px-3 py-1.5 text-left font-ui text-[12px] font-medium text-[#111111] hover:bg-black/5"
             >
               All bookmarks
             </button>
@@ -177,7 +177,7 @@ export function PostActions({
                 type="button"
                 role="menuitem"
                 onClick={() => saveTo(folder.id)}
-                className="block w-full truncate px-3 py-1.5 text-left text-xs font-medium text-ink hover:bg-cream"
+                className="block w-full truncate px-3 py-1.5 text-left font-ui text-[12px] font-medium text-[#111111] hover:bg-black/5"
               >
                 {folder.name}
               </button>
@@ -189,7 +189,7 @@ export function PostActions({
                 setPickerOpen(false);
                 navigate("/bookmarks");
               }}
-              className="block w-full border-t border-line px-3 py-1.5 text-left text-xs text-ink-faint hover:bg-cream"
+              className="block w-full border-t border-[#EAEAEA] px-3 py-1.5 text-left font-ui text-[12px] text-[#737373] hover:bg-black/5"
             >
               + New folder…
             </button>
@@ -200,25 +200,4 @@ export function PostActions({
   );
 }
 
-type IconProps = { className?: string };
-function CommentIcon({ className }: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden>
-      <path d="M21 12a8 8 0 0 1-8 8H4l2-3.5A8 8 0 1 1 21 12z" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function BookmarkSmallIcon({ className, filled }: IconProps & { filled?: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill={filled ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth="1.8"
-      className={className}
-      aria-hidden
-    >
-      <path d="M7 4h10v16l-5-3.5L7 20z" strokeLinejoin="round" />
-    </svg>
-  );
-}
+

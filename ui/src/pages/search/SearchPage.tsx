@@ -1,4 +1,4 @@
-import { useState, Fragment, useRef } from "react";
+import { useState, useRef, Fragment } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PostDrawer } from "../../components/PostDrawer";
 import { useSearch } from "../../lib/api/generated/search/search";
@@ -96,9 +96,25 @@ export function SearchPage() {
 
   const finalCircles = [...renderCircles, ...renderCircles, ...renderCircles];
 
+  // Figma: Plus Jakarta Sans, SemiBold 600, 14px, uppercase, 8px gap, 16px side padding
+  const pillBase =
+    "rounded-full border px-4 py-[7px] font-ui text-[14px] leading-[18px] font-semibold uppercase tracking-normal transition-colors";
+  const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40";
+  const pillActive = "bg-[#E4572E] border-[#E4572E] text-white";
+
+  // Horizontal rails: padding (with matching negative margin) leaves room for the
+  // card shadow (0 4 10) so it is never clipped by overflow-x-auto.
+  const railClass =
+    "flex items-stretch gap-6 overflow-x-auto snap-x scroll-pl-3 hide-scrollbar scroll-smooth px-3 -mx-3 pt-3 -mt-3 pb-5 -mb-5";
+  const gridClass = "grid gap-6 px-3 -mx-3 py-3 -my-3";
+  const gridStyle = { gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))" };
+  // Figma: 3 cards per row with 24px gaps (281.33px @ 892px)
+  const railItemClass = "w-[calc((100%-48px)/3)] min-w-[260px] snap-start shrink-0 flex flex-col";
+  const stretchCard = "h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col";
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] w-full">
-      <div className="w-full px-5 pt-8 pb-4 flex flex-col gap-6">
+      <div className="w-full px-5 pt-8 pb-8 flex flex-col gap-6">
         {/* Top filter row */}
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2 flex-wrap">
@@ -107,30 +123,27 @@ export function SearchPage() {
                 <button
                   type="button"
                   onClick={() => submit(value)}
-                  className={`rounded-full px-4 py-2 font-ui text-[14px] leading-none font-semibold uppercase tracking-wider transition-colors border ${type === value
-                      ? "bg-[#E4572E] border-[#E4572E] text-white"
-                      : "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40"
-                    }`}
+                  className={`${pillBase} ${type === value ? pillActive : pillIdle}`}
                 >
                   {value}
                 </button>
-                {index === 0 && <div className="h-8 w-px bg-[#D0D0D0] mx-1"></div>}
+                {index === 0 && <div className="h-[34px] w-px bg-[#C4C4C4]"></div>}
               </Fragment>
             ))}
-            <button className="rounded-full bg-white border border-[#111111]/20 text-black/60 hover:border-[#111111]/40 px-4 py-2 font-ui text-[14px] leading-none font-semibold uppercase tracking-wider transition-colors">
+            <button className={`${pillBase} ${pillIdle}`}>
               TAGS
             </button>
-            <button className="rounded-full bg-white border border-[#111111]/20 text-black/60 hover:border-[#111111]/40 px-4 py-2 font-ui text-[14px] leading-none font-semibold uppercase tracking-wider transition-colors flex items-center gap-1.5">
+            <button className={`${pillBase} ${pillIdle} flex items-center gap-1.5`}>
               +4 MORE
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
           </div>
           <div className="flex items-center gap-3 hidden sm:flex">
-            <button className="rounded-full border border-[#111111]/20 bg-white text-black/60 px-4 py-2 flex items-center gap-1.5 font-ui text-[14px] leading-none font-semibold uppercase tracking-wider hover:border-[#111111]/40">
+            <button className={`${pillBase} ${pillIdle} flex items-center gap-1.5`}>
               FILTERS
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
-            <button className="rounded-full border border-[#111111]/20 bg-white text-black/60 px-4 py-2 flex items-center gap-1.5 font-ui text-[14px] leading-none font-semibold uppercase tracking-wider hover:border-[#111111]/40">
+            <button className={`${pillBase} ${pillIdle} flex items-center gap-1.5`}>
               ALL TIME
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
@@ -161,10 +174,10 @@ export function SearchPage() {
           )}
 
           {q && data && hasResults && (
-            <div className="flex flex-col gap-12">
+            <div className="flex flex-col gap-6">
 
               {/* Header Area */}
-              <div className={type !== "ALL" ? "-mb-10 relative z-10" : ""}>
+              <div>
                 <p className="font-ui text-[14px] font-bold leading-none uppercase tracking-wider text-[#111111]/60 mb-3">
                   AI SEARCH RESULTS FOR
                 </p>
@@ -173,7 +186,7 @@ export function SearchPage() {
                 </h1>
 
                 {/* Source Badge under heading for ALL / POSTS / PEOPLE */}
-                <div className="flex items-center gap-2 border border-[#111111]/10 rounded-full pl-0.5 pr-2 py-0.5 w-max mb-6">
+                <div className="flex items-center gap-2 border border-[#111111]/10 rounded-full pl-0.5 pr-2 py-0.5 w-max">
                   <div className="flex -space-x-1.5">
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" className="size-[26px] rounded-full border border-white relative z-30 object-cover" alt="" />
                     <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=50&h=50&fit=crop" className="size-[26px] rounded-full border border-white relative z-20 object-cover" alt="" />
@@ -186,7 +199,7 @@ export function SearchPage() {
 
                 {/* AI Generated Content Block */}
                 {type === "ALL" && (
-                  <div className="flex flex-col -mb-8 relative z-10">
+                  <div className="flex flex-col mt-6">
                     <p className="font-ui text-[14px] font-bold leading-none uppercase tracking-wider text-[#111111]/60 mb-3">
                       SUMMARY:
                     </p>
@@ -200,102 +213,81 @@ export function SearchPage() {
 
               {/* Related Posts */}
               {(type === "ALL" || type === "POSTS") && data.posts.length > 0 && (
-                <section className="-mb-6 relative z-0">
-                  {type === "ALL" && (
-                    <>
-                      <div className="w-full h-px bg-[#D4D4D4] mt-0 mb-4"></div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#E4572E]">
-                          RELATED POSTS
-                        </p>
+                <section className="flex flex-col gap-6">
+                  {type === "ALL" && <div className="w-full h-px bg-[#D4D4D4]"></div>}
+                  <div className="flex flex-col gap-4">
+                    {type === "ALL" && (
+                      <SectionHeader
+                        label="RELATED POSTS"
+                        title="RECOMMENDED FOR YOU"
+                        viewAllTo={`/search?q=${q}&type=posts`}
+                        canLeft={canScroll.posts.left}
+                        canRight={canScroll.posts.right}
+                        onLeft={() => scroll(postsRef, 'left')}
+                        onRight={() => scroll(postsRef, 'right')}
+                      />
+                    )}
+                    {type === "ALL" ? (
+                      <div ref={postsRef} onScroll={() => handleScroll(postsRef, 'posts')} className={railClass} style={{ scrollbarWidth: 'none' }}>
+                        {renderPosts.map((post, index) => (
+                          <div key={`${post.id}-${index}`} className={`${railItemClass} ${stretchCard}`}>
+                            <DemoPostCard post={post} index={index} />
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex items-baseline gap-3">
-                          RECOMMENDED FOR YOU
-                          <Link to={`/search?q=${q}&type=posts`} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case relative -top-[3px]">View all</Link>
-                        </h2>
-                        <div className="flex gap-2">
-                          <button onClick={() => scroll(postsRef, 'left')} disabled={!canScroll.posts.left} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.posts.left ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-                          </button>
-                          <button onClick={() => scroll(postsRef, 'right')} disabled={!canScroll.posts.right} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.posts.right ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-                          </button>
-                        </div>
+                    ) : (
+                      <div className={`${gridClass} !gap-x-6 !gap-y-4`} style={gridStyle}>
+                        {renderPosts.map((post, index) => (
+                          <div key={`${post.id}-${index}`} className={`flex flex-col ${stretchCard}`}>
+                            <DemoPostCard post={post} index={index} />
+                          </div>
+                        ))}
                       </div>
-                    </>
-                  )}
-
-                  {type === "ALL" ? (
-                    <div ref={postsRef} onScroll={() => handleScroll(postsRef, 'posts')} className="flex items-stretch gap-6 overflow-x-auto snap-x hide-scrollbar scroll-smooth pb-6 -mb-6 px-1 -mx-1" style={{ scrollbarWidth: 'none' }}>
-                      {renderPosts.map((post, index) => (
-                        <div key={`${post.id}-${index}`} className="w-[281px] snap-start shrink-0 flex flex-col h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col">
-                          <DemoPostCard post={post} index={index} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
-                      {renderPosts.map((post, index) => (
-                        <div key={`${post.id}-${index}`} className="flex flex-col h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col">
-                          <DemoPostCard post={post} index={index} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </section>
               )}
 
               {/* Circles */}
               {(type === "ALL" || type === "CIRCLES") && renderCircles.length > 0 && (
-                <section className="-mb-8 relative z-0">
-                  {type === "ALL" && (
-                    <>
-                      <div className="w-full h-px bg-[#D4D4D4] mt-0 mb-4"></div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#E4572E]">
-                          CIRCLES
-                        </p>
+                <section className="flex flex-col gap-6">
+                  {type === "ALL" && <div className="w-full h-px bg-[#D4D4D4]"></div>}
+                  <div className="flex flex-col gap-4">
+                    {type === "ALL" && (
+                      <SectionHeader
+                        label="CIRCLES"
+                        title="RECOMMENDED FOR YOU"
+                        viewAllTo={`/search?q=${q}&type=circles`}
+                        canLeft={canScroll.circles.left}
+                        canRight={canScroll.circles.right}
+                        onLeft={() => scroll(circlesRef, 'left')}
+                        onRight={() => scroll(circlesRef, 'right')}
+                      />
+                    )}
+                    {type === "ALL" ? (
+                      <div ref={circlesRef} onScroll={() => handleScroll(circlesRef, 'circles')} className={railClass} style={{ scrollbarWidth: 'none' }}>
+                        {finalCircles.map((circle, index) => (
+                          <div key={`${circle.id}-${index}`} className={`${railItemClass} h-auto`}>
+                            <DemoCircleCard circle={circle} />
+                          </div>
+                        ))}
                       </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex items-baseline gap-3">
-                          RECOMMENDED FOR YOU
-                          <Link to={`/search?q=${q}&type=circles`} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case relative -top-[3px]">View all</Link>
-                        </h2>
-                        <div className="flex gap-2">
-                          <button onClick={() => scroll(circlesRef, 'left')} disabled={!canScroll.circles.left} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.circles.left ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-                          </button>
-                          <button onClick={() => scroll(circlesRef, 'right')} disabled={!canScroll.circles.right} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.circles.right ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-                          </button>
-                        </div>
+                    ) : (
+                      <div className={gridClass} style={gridStyle}>
+                        {finalCircles.map((circle, index) => (
+                          <div key={`${circle.id}-${index}`}>
+                            <DemoCircleCard circle={circle} />
+                          </div>
+                        ))}
                       </div>
-                    </>
-                  )}
-                  {type === "ALL" ? (
-                    <div ref={circlesRef} onScroll={() => handleScroll(circlesRef, 'circles')} className="flex items-stretch gap-6 overflow-x-auto snap-x hide-scrollbar scroll-smooth pb-6 -mb-6 px-1 -mx-1" style={{ scrollbarWidth: 'none' }}>
-                      {finalCircles.map((circle, index) => (
-                        <div key={`${circle.id}-${index}`} className="w-[281px] snap-start shrink-0">
-                          <DemoCircleCard circle={circle} />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
-                      {finalCircles.map((circle, index) => (
-                        <div key={`${circle.id}-${index}`}>
-                          <DemoCircleCard circle={circle} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </section>
               )}
 
               {/* Featured Jobs */}
               {type === "ALL" && (
-                <section className="w-full mt-2 -mb-6 relative z-0">
+                <section className="w-full">
                   <div className="bg-[#111111] py-12 px-8 sm:px-12 text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden min-h-[220px]">
                     <img src="/dark_silk_banner_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-80" alt="" />
                     <div className="absolute inset-0 opacity-50 mix-blend-overlay">
@@ -321,41 +313,28 @@ export function SearchPage() {
 
               {/* Creators (People) */}
               {(type === "ALL" || type === "PEOPLE") && data.people.length > 0 && (
-                <section className="-mb-5 relative z-0">
+                <section className="flex flex-col gap-4">
                   {type === "ALL" && (
-                    <>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#E4572E]">
-                          CREATORS
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex items-baseline gap-3">
-                          TOP VOICES
-                          <Link to={`/search?q=${q}&type=people`} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case relative -top-[3px]">View all</Link>
-                        </h2>
-                        <div className="flex gap-2">
-                          <button onClick={() => scroll(creatorsRef, 'left')} disabled={!canScroll.creators.left} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.creators.left ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
-                          </button>
-                          <button onClick={() => scroll(creatorsRef, 'right')} disabled={!canScroll.creators.right} className={`size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${canScroll.creators.right ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`}>
-                            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-                          </button>
-                        </div>
-                      </div>
-                    </>
+                    <SectionHeader
+                      label="CREATORS"
+                      title="TOP VOICES"
+                      viewAllTo={`/search?q=${q}&type=people`}
+                      canLeft={canScroll.creators.left}
+                      canRight={canScroll.creators.right}
+                      onLeft={() => scroll(creatorsRef, 'left')}
+                      onRight={() => scroll(creatorsRef, 'right')}
+                    />
                   )}
-
                   {type === "ALL" ? (
-                    <div ref={creatorsRef} onScroll={() => handleScroll(creatorsRef, 'creators')} className="flex items-stretch gap-6 overflow-x-auto snap-x hide-scrollbar scroll-smooth pb-6 -mb-6 px-1 -mx-1" style={{ scrollbarWidth: 'none' }}>
+                    <div ref={creatorsRef} onScroll={() => handleScroll(creatorsRef, 'creators')} className={railClass} style={{ scrollbarWidth: 'none' }}>
                       {finalPeople.map((person, index) => (
-                        <div key={`${person.id}-${index}`} className="w-[281px] snap-start shrink-0 flex flex-col h-full">
+                        <div key={`${person.id}-${index}`} className={`${railItemClass} h-auto`}>
                           <DemoCreatorCard person={person} />
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="grid gap-4 py-4 -my-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))' }}>
+                    <div className={gridClass} style={gridStyle}>
                       {finalPeople.map((person, index) => (
                         <div key={`${person.id}-${index}`} className="flex flex-col h-full">
                           <DemoCreatorCard person={person} />
@@ -368,21 +347,23 @@ export function SearchPage() {
 
               {/* Related Topics */}
               {type === "ALL" && (
-                <section className="-mt-2 pb-0 relative z-10">
-                  <div className="w-full h-px bg-[#D4D4D4] mb-4 mt-0"></div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[#E5552D]">
-                      RELATED TOPICS
-                    </p>
-                  </div>
-                  <h3 className="font-editorial text-[32px] tracking-tight text-[#111111] mb-1">Explore adjacent themes</h3>
-                  <p className="font-ui text-[14px] text-[#737373] mb-6">Broaden your discovery with topics that are closely related to your search.</p>
-                  <div className="flex flex-wrap gap-2.5">
-                    {["Shanghai Fashion Week", "Chinese Designers", "Beijing Street Style", "Runway Trends", "Knitwear", "Accessories", "Collections", "Emerging Brands"].map(topic => (
-                      <button key={topic} className="rounded-full bg-white border border-[#111111]/10 px-4 py-2.5 font-ui text-[14px] font-medium text-[#111111]/60 leading-none tracking-[0.5px] hover:border-[#111111]/30 transition-colors">
-                        {topic}
-                      </button>
-                    ))}
+                <section className="flex flex-col gap-6">
+                  <div className="w-full h-px bg-[#D4D4D4]"></div>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                      <p className="font-ui text-[12px] leading-[15px] font-bold uppercase tracking-wider text-[#E4572E]">
+                        RELATED TOPICS
+                      </p>
+                      <h3 className="font-editorial text-[32px] leading-[1.15] tracking-tight text-[#111111]">Explore adjacent themes</h3>
+                      <p className="font-ui text-[14px] text-[#737373]">Broaden your discovery with topics that are closely related to your search.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2.5">
+                      {["Shanghai Fashion Week", "Chinese Designers", "Beijing Street Style", "Runway Trends", "Knitwear", "Accessories", "Collections", "Emerging Brands"].map(topic => (
+                        <button key={topic} className="rounded-full bg-white border border-[#111111]/10 px-4 py-2.5 font-ui text-[14px] font-medium text-[#111111]/60 leading-none tracking-[0.5px] hover:border-[#111111]/30 transition-colors">
+                          {topic}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </section>
               )}
@@ -399,52 +380,113 @@ export function SearchPage() {
   );
 }
 
+// Section heading: eyebrow label + title row separated by a 4px gap (Figma "Frame / gap 4px")
+function SectionHeader({
+  label,
+  title,
+  viewAllTo,
+  canLeft,
+  canRight,
+  onLeft,
+  onRight,
+}: {
+  label: string;
+  title: string;
+  viewAllTo: string;
+  canLeft: boolean;
+  canRight: boolean;
+  onLeft: () => void;
+  onRight: () => void;
+}) {
+  const arrowClass = (enabled: boolean) =>
+    `size-[36px] shrink-0 rounded-full bg-white border flex items-center justify-center transition-colors ${enabled ? 'border-[#111111]/10 text-[#111111] hover:bg-black/5' : 'border-[#111111]/5 text-[#111111]/60'}`;
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <p className="font-ui text-[12px] leading-[15px] font-bold uppercase tracking-wider text-[#E4572E]">
+        {label}
+      </p>
+      <div className="flex items-center justify-between">
+        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex items-baseline gap-3">
+          {title}
+          <Link to={viewAllTo} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case relative -top-[3px]">View all</Link>
+        </h2>
+        <div className="flex gap-2">
+          <button onClick={onLeft} disabled={!canLeft} className={arrowClass(canLeft)}>
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" /></svg>
+          </button>
+          <button onClick={onRight} disabled={!canRight} className={arrowClass(canRight)}>
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // -----------------------------------------------------------------------------
 // INLINE DEMO CARDS TO MATCH FIGMA SCREENSHOTS EXACTLY
 // -----------------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DemoPostCard({ post, index }: { post: any, index?: number }) {
+  const variant = (index ?? 0) % 3;
   return (
-    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
+    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[342px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(17, 17, 17, 0.1)' }}>
       <div className="relative h-[158px] w-full shrink-0">
         <img
           src={post.coverImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=300&fit=crop"}
           alt=""
           className="h-full w-full object-cover"
         />
-        <div className="absolute top-3 right-3 bg-[#00C365] text-white rounded-full px-2 py-0.5 text-[12px] font-medium font-ui flex items-center gap-1 shadow-sm">
-          <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /></svg>
-          Hot
-        </div>
-        {index === 1 && (
+        {variant !== 1 && (
+          <div className="absolute top-3 right-3 bg-[#00C365] text-white rounded-full px-2 py-0.5 text-[12px] font-medium font-ui flex items-center gap-1 shadow-sm">
+            {variant === 2 ? (
+              <>
+                <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                Centoire Pick
+              </>
+            ) : (
+              <>
+                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" /></svg>
+                Hot
+              </>
+            )}
+          </div>
+        )}
+        {variant === 1 && (
           <div className="absolute bottom-3 left-3 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
             <span className="size-1.5 rounded-full bg-[#3CCBFF]"></span>
             Street Style
           </div>
         )}
-        {index === 2 && (
+        {variant === 2 && (
           <div className="absolute bottom-3 left-3 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
             <span className="size-1.5 rounded-full bg-[#FF6B00]"></span>
             Knitwear
           </div>
         )}
       </div>
-      <div className="p-3 flex flex-col flex-1 gap-3">
+      <div className="p-4 flex flex-col flex-1 gap-1">
         <p className="text-[10px] font-ui text-[#737373] flex items-center">
           12 Sep 24 
           <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-1.5 block"></span> 
           4 min read
         </p>
         <h3 
-          className="font-editorial text-[20px] font-medium leading-tight text-[#111111] line-clamp-3 h-[75px]"
+          className="mt-2 font-editorial text-[20px] font-medium leading-tight text-[#111111] line-clamp-3 h-[75px]"
           dangerouslySetInnerHTML={{ __html: (post.title || "The New Minimalist Runway: 5 Trends to Know Now").replace(/&amp;amp;/g, '&').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') }}
         />
         <div className="mt-auto pt-3 flex items-center justify-between border-t border-[#EAEAEA] border-opacity-60">
           <div className="flex items-center gap-3">
-            <div className="size-6 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[10px]">
-              E
-            </div>
+            {variant === 0 ? (
+              <div className="size-6 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[10px]">
+                E
+              </div>
+            ) : (
+              <div className="size-6 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
+                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+              </div>
+            )}
             <div className="flex items-center gap-1 text-[#737373] text-[12px] font-ui font-medium">
               <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
               1.2k
