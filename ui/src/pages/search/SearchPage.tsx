@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { PostDrawer } from "../../components/PostDrawer";
 import { useSearch } from "../../lib/api/generated/search/search";
 
-const TYPES = ["ALL", "PEOPLE", "POSTS", "CIRCLES"] as const;
+const TYPES = ["ALL", "CREATORS", "POSTS", "CIRCLES"] as const;
 type SearchType = (typeof TYPES)[number];
 
 export function SearchPage() {
@@ -45,7 +45,7 @@ export function SearchPage() {
 
   const { data, isLoading } = useSearch(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { q, type: type === "ALL" ? "all" : type.toLowerCase() as any },
+    { q, type: type === "ALL" ? "all" : (type === "CREATORS" ? "people" : type.toLowerCase()) as any },
     { query: { enabled: q.trim().length > 0 } },
   );
 
@@ -98,9 +98,9 @@ export function SearchPage() {
 
   // Figma: Plus Jakarta Sans, SemiBold 600, 14px, uppercase, 8px gap, 16px side padding
   const pillBase =
-    "rounded-full border px-4 py-[7px] font-ui text-[14px] leading-[18px] font-semibold uppercase tracking-normal transition-colors";
-  const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40";
-  const pillActive = "bg-[#E4572E] border-[#E4572E] text-white";
+    "rounded-full border px-4 py-[7px] font-ui text-[13px] leading-[17px] uppercase tracking-wider transition-colors";
+  const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40 font-semibold";
+  const pillActive = "bg-[#E4572E] border-[#E4572E] text-white font-bold";
 
   // Horizontal rails: padding (with matching negative margin) leaves room for the
   // card shadow (0 4 10) so it is never clipped by overflow-x-auto.
@@ -185,7 +185,7 @@ export function SearchPage() {
                   {q}
                 </h1>
 
-                {/* Source Badge under heading for ALL / POSTS / PEOPLE */}
+                {/* Source Badge under heading for ALL / POSTS / CREATORS */}
                 <div className="flex items-center gap-2 border border-[#111111]/10 rounded-full pl-0.5 pr-2 py-0.5 w-max">
                   <div className="flex -space-x-1.5">
                     <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&h=50&fit=crop" className="size-[26px] rounded-full border border-white relative z-30 object-cover" alt="" />
@@ -312,13 +312,13 @@ export function SearchPage() {
               )}
 
               {/* Creators (People) */}
-              {(type === "ALL" || type === "PEOPLE") && data.people.length > 0 && (
+              {(type === "ALL" || type === "CREATORS") && data.people.length > 0 && (
                 <section className="flex flex-col gap-4">
                   {type === "ALL" && (
                     <SectionHeader
                       label="CREATORS"
                       title="TOP VOICES"
-                      viewAllTo={`/search?q=${q}&type=people`}
+                      viewAllTo={`/search?q=${q}&type=creators`}
                       canLeft={canScroll.creators.left}
                       canRight={canScroll.creators.right}
                       onLeft={() => scroll(creatorsRef, 'left')}
