@@ -18,7 +18,6 @@ type TabKey = "all" | "editorial" | "must_reads" | "latest" | "following" | "tre
 const MAIN_TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
   { key: "editorial", label: "Centoire Picks" },
-  { key: "must_reads", label: "Must Reads" },
   { key: "latest", label: "Latest News" },
 ];
 
@@ -71,84 +70,171 @@ export function FeedPage() {
     : discoverInfinite;
 
   const posts = data?.pages.flatMap((page) => page.items) ?? [];
-  const editorialPosts = editorialPicks.data?.items ?? [];
+  const rawEditorialPosts = editorialPicks.data?.items ?? [];
   const latestPosts = latestNews.data?.items ?? [];
+
+  // Sort editorial posts so that posts with images appear first, then pad to 6 if needed
+  const sortedRaw = [...rawEditorialPosts].sort((a, b) => {
+    const aImg = Boolean(a.coverImageUrl);
+    const bImg = Boolean(b.coverImageUrl);
+    return aImg === bImg ? 0 : aImg ? -1 : 1;
+  });
+  const editorialPosts = sortedRaw.length > 0 
+    ? [...sortedRaw, ...sortedRaw].slice(0, 6)
+    : [];
+    
+  // Sort latest posts similarly just in case the images were down there
+  const sortedLatest = [...latestPosts].sort((a, b) => {
+    const aImg = Boolean(a.coverImageUrl);
+    const bImg = Boolean(b.coverImageUrl);
+    return aImg === bImg ? 0 : aImg ? -1 : 1;
+  });
 
   const allMoreKeys = MORE_TABS.map((t) => t.key);
   const activeMoreTab = allMoreKeys.includes(activeTab) ? activeTab : null;
 
   return (
-    <div className="min-h-screen">
-      {/* Welcome header */}
-      <div className="px-4 pt-6 pb-4 sm:px-6">
-        <p className="font-ui text-[11px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-          For you
-        </p>
-        <h1 className="font-editorial mt-0.5 text-3xl italic text-[var(--color-charcoal)]">
-          {greeting()}, {user?.displayName.split(" ")[0]}
-        </h1>
-        <p className="mt-1 font-ui text-sm text-[var(--color-stone)]">
-          Here's what's trending in fashion today
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col w-full bg-[#EFEFEF]">
+      <div className="w-full max-w-[1060px] mx-auto">
+        {/* Welcome header */}
+        <div className="pt-6 pb-2 flex flex-col gap-1 px-4 sm:px-6">
+          <h1 className="font-editorial text-[32px] font-normal leading-tight text-[#111111]">
+            Welcome Back <span className="font-medium">{user?.displayName.split(" ")[0]},</span>
+          </h1>
+          <p className="font-ui text-[14px] text-[#111111] font-medium mt-1">
+            Here's what's trending in fashion today
+          </p>
+        </div>
 
-      {/* Tab bar — inline below the greeting */}
-      <div className="border-b border-[var(--color-hairline)] bg-[var(--color-sand)] px-4 sm:px-6">
-        <div className="flex items-center gap-2 overflow-x-auto py-3 scrollbar-none">
-          {MAIN_TABS.map((tab) => (
-            <TabButton
-              key={tab.key}
-              label={tab.label}
-              active={activeTab === tab.key}
-              onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
-            />
-          ))}
-          <div className="relative">
-            <TabButton
-              label={activeMoreTab ? (MORE_TABS.find((t) => t.key === activeMoreTab)?.label ?? "+4 More") : "+4 More"}
-              active={Boolean(activeMoreTab)}
-              onClick={() => setMoreOpen((o) => !o)}
-            />
-            {moreOpen && (
-              <div className="absolute left-0 top-full z-40 mt-1 w-36 rounded-xl border border-[var(--color-hairline)] bg-white py-1 shadow-lg">
-                {MORE_TABS.map((tab) => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
-                    className={`block w-full px-4 py-2 text-left font-ui text-sm ${
-                      activeTab === tab.key
-                        ? "font-semibold text-[var(--color-coral)]"
-                        : "text-[var(--color-stone)] hover:bg-[var(--color-sand)]"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+        {/* Tab bar — inline below the greeting */}
+        <div className="px-4 sm:px-6 mt-4 mb-4">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* ALL Tab */}
+              <button
+                onClick={() => { setActiveTab("all"); setMoreOpen(false); }}
+                className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                  activeTab === "all"
+                    ? "border-[#E4572E] bg-[#E4572E] text-white"
+                    : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                }`}
+              >
+                ALL
+              </button>
+              
+              {/* Divider */}
+              <div className="h-[24px] w-[1px] bg-[#D1D1D1] mx-1 shrink-0"></div>
+
+              {/* Other Main Tabs */}
+              {MAIN_TABS.filter((t) => t.key !== "all").map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
+                  className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                    activeTab === tab.key
+                      ? "border-[#E4572E] bg-[#E4572E] text-white"
+                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+
+              {/* +4 More Dropdown */}
+              <div className="relative shrink-0">
+                <button
+                  onClick={() => setMoreOpen((o) => !o)}
+                  className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border flex items-center gap-1.5 ${
+                    activeMoreTab
+                      ? "border-[#E4572E] bg-[#E4572E] text-white"
+                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                  }`}
+                >
+                  {activeMoreTab ? (MORE_TABS.find((t) => t.key === activeMoreTab)?.label ?? "+4 More") : "+4 More"}
+                  <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                </button>
+                {moreOpen && (
+                  <div className="absolute left-0 top-full z-40 mt-1 w-36 rounded-xl border border-[var(--color-hairline)] bg-white py-1 shadow-lg">
+                    {MORE_TABS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
+                        className={`block w-full px-4 py-2 text-left font-ui text-[12px] font-medium ${
+                          activeTab === tab.key
+                            ? "text-[#E4572E] bg-[#F0F0F0]"
+                            : "text-[#737373] hover:bg-[#F0F0F0]"
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+            
+            <div className="hidden sm:flex items-center">
+              <button className="shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 flex items-center gap-1.5">
+                FILTERS
+                <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+            </div>
           </div>
+        </div>
+
+        <div className="px-4 py-4 sm:px-6">
+          {isAll ? (
+            <>
+              {/* Latest News section (Moved to top as requested) */}
+              {(latestPosts.length > 0 || latestNews.isLoading) && (
+                <section className="mb-4">
+                  {latestNews.isLoading ? (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <SkeletonCard key={i} tall />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                      {sortedLatest.slice(0, 6).map((post, i) => (
+                        <PostCard
+                          key={`${post.id}-${i}`}
+                          post={post}
+                          onOpenPost={(p) => setSelectedSlug(p.slug)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
 
-      <div className="px-4 py-6 sm:px-6">
-        {isAll ? (
-          <>
-            {/* Editorial Picks section */}
+      {isAll && (
+        <>
+          {/* Featured Jobs Banner - Full width */}
+          <div className="w-full">
+            <FeaturedBanner />
+          </div>
+
+          <div className="w-full max-w-[1060px] mx-auto px-4 py-4 sm:px-6">
+            {/* Editorial Picks section (Moved to bottom as requested) */}
             {(editorialPosts.length > 0 || editorialPicks.isLoading) && (
               <section className="mb-8">
-                <SectionHeader label="Editorial Picks" to="/discover?sort=trending" />
                 {editorialPicks.isLoading ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {Array.from({ length: 6 }).map((_, i) => (
                       <SkeletonCard key={i} />
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {editorialPosts.slice(0, 6).map((post) => (
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {editorialPosts.map((post, i) => (
                       <PostCard
-                        key={post.id}
+                        key={`${post.id}-${i}`}
                         post={post}
                         onOpenPost={(p) => setSelectedSlug(p.slug)}
                       />
@@ -157,48 +243,13 @@ export function FeedPage() {
                 )}
               </section>
             )}
+          </div>
+        </>
+      )}
 
-            {/* Featured Jobs Banner */}
-            <FeaturedBanner />
-
-            {/* Latest News section */}
-            {(latestPosts.length > 0 || latestNews.isLoading) && (
-              <section className="mb-8">
-                <SectionHeader label="Latest News" to="/discover?sort=new" />
-                {latestNews.isLoading ? (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                      <SkeletonCard key={i} tall />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    {latestPosts.slice(0, 4).map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onOpenPost={(p) => setSelectedSlug(p.slug)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            )}
-
-            {/* For You infinite feed */}
-            <SectionHeader label="Your Feed" to="/settings" linkLabel="Tune feed" />
-            <MasonryFeed
-              posts={posts}
-              isLoading={isLoading}
-              hasNextPage={Boolean(hasNextPage)}
-              isFetchingNextPage={isFetchingNextPage}
-              fetchNextPage={fetchNextPage}
-              onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
-              emptyState={<EmptyFeed />}
-            />
-          </>
-        ) : (
-          /* Non-All tabs: plain infinite scroll */
+      {!isAll && (
+        <div className="w-full max-w-[1060px] mx-auto px-4 py-4 sm:px-6">
+          {/* Non-All tabs: plain infinite scroll */}
           <MasonryFeed
             posts={posts}
             isLoading={isLoading}
@@ -208,8 +259,8 @@ export function FeedPage() {
             onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
             emptyState={<EmptyFeed />}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {selectedSlug && (
         <PostDrawer
@@ -221,51 +272,7 @@ export function FeedPage() {
   );
 }
 
-function TabButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-sm font-medium transition-colors ${
-        active
-          ? "bg-[var(--color-coral)] text-white"
-          : "border border-[var(--color-hairline)] bg-white text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
 
-function SectionHeader({
-  label,
-  to,
-  linkLabel = "VIEW ALL",
-}: {
-  label: string;
-  to: string;
-  linkLabel?: string;
-}) {
-  return (
-    <div className="mb-4 flex items-center justify-between">
-      <h2 className="font-editorial text-2xl italic text-[var(--color-charcoal)]">{label}</h2>
-      <Link
-        to={to}
-        className="font-ui text-xs font-semibold text-[var(--color-coral)] hover:underline"
-      >
-        {linkLabel}
-      </Link>
-    </div>
-  );
-}
 
 function SkeletonCard({ tall }: { tall?: boolean }) {
   return (
@@ -321,9 +328,4 @@ function tabToDiscoverParams(tab: TabKey): GetFeedDiscoverParams {
   }
 }
 
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
+
