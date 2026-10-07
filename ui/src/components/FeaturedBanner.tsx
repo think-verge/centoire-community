@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export function FeaturedBanner() {
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 rounded-none bg-[#111111] px-6 sm:px-[120px] py-12 sm:py-[64px] relative overflow-hidden">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 rounded-none bg-[#111111] px-6 sm:px-[48px] py-12 sm:py-[40px] relative overflow-hidden">
       {/* Background image overlay */}
       <img src="/dark_silk_banner_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-80 z-0 pointer-events-none" alt="" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-transparent pointer-events-none z-0" />

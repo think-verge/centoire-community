@@ -113,7 +113,7 @@ export function FeedPage() {
               {/* ALL Tab */}
               <button
                 onClick={() => { setActiveTab("all"); setMoreOpen(false); }}
-                className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
                   activeTab === "all"
                     ? "border-[#E4572E] bg-[#E4572E] text-white"
                     : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
@@ -130,7 +130,7 @@ export function FeedPage() {
                 <button
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
-                  className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                  className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
                     activeTab === tab.key
                       ? "border-[#E4572E] bg-[#E4572E] text-white"
                       : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
@@ -144,7 +144,7 @@ export function FeedPage() {
               <div className="relative shrink-0">
                 <button
                   onClick={() => setMoreOpen((o) => !o)}
-                  className={`shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border flex items-center gap-1.5 ${
+                  className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border flex items-center gap-1.5 ${
                     activeMoreTab
                       ? "border-[#E4572E] bg-[#E4572E] text-white"
                       : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
@@ -175,7 +175,7 @@ export function FeedPage() {
             </div>
             
             <div className="hidden sm:flex items-center">
-              <button className="shrink-0 rounded-full px-4 py-1.5 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 flex items-center gap-1.5">
+              <button className="shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 flex items-center gap-1.5">
                 FILTERS
                 <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
               </button>
@@ -183,12 +183,12 @@ export function FeedPage() {
           </div>
         </div>
 
-        <div className="px-4 py-4 sm:px-6">
+        <div className="px-4 pt-4 sm:px-6">
           {isAll ? (
             <>
               {/* Latest News section (Moved to top as requested) */}
               {(latestPosts.length > 0 || latestNews.isLoading) && (
-                <section className="mb-4">
+                <section className="mb-6">
                   {latestNews.isLoading ? (
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                       {Array.from({ length: 6 }).map((_, i) => (
@@ -220,7 +220,7 @@ export function FeedPage() {
             <FeaturedBanner />
           </div>
 
-          <div className="w-full max-w-[1060px] mx-auto px-4 py-4 sm:px-6">
+          <div className="w-full max-w-[1060px] mx-auto px-4 pt-6 pb-4 sm:px-6">
             {/* Editorial Picks section (Moved to bottom as requested) */}
             {(editorialPosts.length > 0 || editorialPicks.isLoading) && (
               <section className="mb-8">
