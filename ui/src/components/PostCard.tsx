@@ -30,9 +30,9 @@ export function PostCard({
     (post.category && isPostCategory(post.category) ? CATEGORY_LABELS[post.category] : null);
 
   return (
-    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
+    <article className="group relative break-inside-avoid rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300 hover:z-30" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
       {post.coverImageUrl ? (
-        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer">
+        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer overflow-hidden rounded-t-[16px]">
           {!imageLoaded && (
             <div className="h-full w-full animate-pulse bg-[var(--color-sand)]" aria-hidden />
           )}
@@ -71,15 +71,15 @@ export function PostCard({
           )}
         </button>
       ) : (
-        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer bg-[#F9F9F9]">
+        <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer bg-[#F9F9F9] overflow-hidden rounded-t-[16px]">
           {/* Grey space matching image height perfectly to maintain card size parity */}
         </button>
       )}
 
       <div className="p-4 flex flex-col flex-1 gap-1">
-        <p className="text-[10px] font-ui text-[#737373] flex items-center">
+        <p className="text-[12px] font-ui text-[#737373] flex items-center">
           {new Date(post.publishedAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
-          <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-1.5 block"></span> 
+          <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-2 block"></span> 
           {post.readTimeMinutes || 4} min read
         </p>
 
@@ -97,16 +97,77 @@ export function PostCard({
             prependNode={
               <div className="flex items-center">
                 {post.source || post.origin === "aggregated" ? (
-                  <div className="size-6 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
-                    <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                  <div className="relative group/provenance cursor-pointer">
+                    <div className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
+                      <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                    </div>
+                    {/* Provenance Tooltip */}
+                    <div className="absolute top-full left-[-18px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-30 hidden group-hover/provenance:flex flex-col cursor-default after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
+                      {/* Tooltip Tail */}
+                      <div className="absolute -top-[12px] left-[22px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      <div className="relative z-10 bg-white rounded-[16px] p-[12px] flex flex-col">
+                        <div className="flex items-center gap-1.5 text-[#E5552D]">
+                          <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                          <span className="font-ui text-[10px] font-bold uppercase tracking-wider">OPEN PROVENANCE</span>
+                        </div>
+                        <p className="font-editorial text-[13px] font-medium leading-tight mt-2 text-[#111111]">
+                          This post was openly sourced from Knitwear.
+                        </p>
+                        <p className="font-ui text-[11px] text-[#737373] leading-relaxed mt-2">
+                          Scraped on Sep 08, 2024. Indexed by Centoire to help the fashion community discover and explore conversations from across the web.
+                        </p>
+                        <div className="font-ui font-semibold mt-3 flex justify-between items-center text-[10px]">
+                          <span className="text-[#111111] flex items-center gap-1 hover:text-[#E5552D] transition-colors cursor-pointer">
+                            View source feed
+                            <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                          </span>
+                          <span className="text-[#E5552D] cursor-pointer hover:underline">Learn more</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : post.author ? (
-                  <div className="size-6 shrink-0 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[10px] overflow-hidden">
-                    {post.author.avatarUrl ? (
-                      <img src={post.author.avatarUrl} alt="" className="size-full object-cover" />
-                    ) : (
-                      post.author.displayName.charAt(0).toUpperCase()
-                    )}
+                  <div className="relative group/author cursor-pointer">
+                    <div className="size-8 shrink-0 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[12px] overflow-hidden">
+                      {post.author.avatarUrl ? (
+                        <img src={post.author.avatarUrl} alt="" className="size-full object-cover" />
+                      ) : (
+                        post.author.displayName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    {/* Author Tooltip */}
+                    <div className="absolute top-full left-[-18px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-30 hidden group-hover/author:flex flex-col cursor-default after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
+                      {/* Tooltip Tail */}
+                      <div className="absolute -top-[12px] left-[22px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      <div className="relative z-10 bg-white rounded-[16px] p-[12px] flex flex-col">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 shrink-0 rounded-full bg-[#8B6B60] text-white flex items-center justify-center font-ui font-bold text-[14px] overflow-hidden">
+                            {post.author?.avatarUrl ? <img src={post.author.avatarUrl} alt="" className="size-full object-cover" /> : post.author?.displayName.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-editorial text-[14px] font-medium leading-none text-[#111111]">{post.author?.displayName}</span>
+                            <span className="font-ui text-[10px] text-[#E5552D] leading-none mt-1">Senior Fashion Editor - Paris</span>
+                          </div>
+                        </div>
+                        <div className="border-t border-[#EAEAEA] mt-3 pt-3 flex items-center justify-between px-2">
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">1.2k</span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">FOLLOWERS</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">856</span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">UPVOTES</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">34</span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">POSTS</span>
+                          </div>
+                        </div>
+                        <button type="button" className="bg-[#E5552D] text-white rounded-[8px] py-2 mt-3 w-full font-ui text-[12px] font-bold transition-colors hover:bg-[#D4441C]">
+                          Follow
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>

@@ -101,7 +101,7 @@ export function FeedPage() {
           <h1 className="font-editorial text-[32px] font-normal leading-tight text-[#111111]">
             Welcome Back <span className="font-medium">{user?.displayName.split(" ")[0]},</span>
           </h1>
-          <p className="font-ui text-[14px] text-[#111111] font-medium mt-1">
+          <p className="font-ui text-[14px] text-[#111111] font-medium">
             Here's what's trending in fashion today
           </p>
         </div>
@@ -113,10 +113,10 @@ export function FeedPage() {
               {/* ALL Tab */}
               <button
                 onClick={() => { setActiveTab("all"); setMoreOpen(false); }}
-                className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                className={`shrink-0 rounded-full px-4 py-[7px] font-ui text-[13px] leading-[17px] uppercase tracking-wider transition-colors border ${
                   activeTab === "all"
-                    ? "border-[#E4572E] bg-[#E4572E] text-white"
-                    : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                    ? "border-[#E4572E] bg-[#E4572E] text-white font-bold"
+                    : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 font-semibold"
                 }`}
               >
                 ALL
@@ -130,10 +130,10 @@ export function FeedPage() {
                 <button
                   key={tab.key}
                   onClick={() => { setActiveTab(tab.key); setMoreOpen(false); }}
-                  className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border ${
+                  className={`shrink-0 rounded-full px-4 py-[7px] font-ui text-[13px] leading-[17px] uppercase tracking-wider transition-colors border ${
                     activeTab === tab.key
-                      ? "border-[#E4572E] bg-[#E4572E] text-white"
-                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                      ? "border-[#E4572E] bg-[#E4572E] text-white font-bold"
+                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 font-semibold"
                   }`}
                 >
                   {tab.label}
@@ -144,10 +144,10 @@ export function FeedPage() {
               <div className="relative shrink-0">
                 <button
                   onClick={() => setMoreOpen((o) => !o)}
-                  className={`shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border flex items-center gap-1.5 ${
+                  className={`shrink-0 rounded-full px-4 py-[7px] font-ui text-[13px] leading-[17px] uppercase tracking-wider transition-colors border flex items-center gap-1.5 ${
                     activeMoreTab
-                      ? "border-[#E4572E] bg-[#E4572E] text-white"
-                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40"
+                      ? "border-[#E4572E] bg-[#E4572E] text-white font-bold"
+                      : "border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 font-semibold"
                   }`}
                 >
                   {activeMoreTab ? (MORE_TABS.find((t) => t.key === activeMoreTab)?.label ?? "+4 More") : "+4 More"}
@@ -175,7 +175,7 @@ export function FeedPage() {
             </div>
             
             <div className="hidden sm:flex items-center">
-              <button className="shrink-0 rounded-full px-4 py-2 font-ui text-[12px] font-bold uppercase tracking-wider transition-colors border border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 flex items-center gap-1.5">
+              <button className="shrink-0 rounded-full px-4 py-[7px] font-ui text-[13px] leading-[17px] font-semibold uppercase tracking-wider transition-colors border border-[#111111]/20 bg-white text-black/60 hover:border-[#111111]/40 flex items-center gap-1.5">
                 FILTERS
                 <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
               </button>

@@ -34,7 +34,9 @@ export function PostActions({
   const [bookmarked, setBookmarked] = useState(post.viewer.bookmarked);
   const [upvotes, setUpvotes] = useState(post.upvoteCount);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
 
   const invalidateFeeds = () => {
     void queryClient.invalidateQueries({
@@ -69,15 +71,27 @@ export function PostActions({
   });
 
   useEffect(() => {
-    if (!pickerOpen) return;
     function onOutsideClick(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+      if (pickerOpen && pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setPickerOpen(false);
       }
+      if (optionsOpen && optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
+        setOptionsOpen(false);
+      }
     }
-    document.addEventListener("mousedown", onOutsideClick);
-    return () => document.removeEventListener("mousedown", onOutsideClick);
-  }, [pickerOpen]);
+    function onScroll() {
+      if (pickerOpen) setPickerOpen(false);
+      if (optionsOpen) setOptionsOpen(false);
+    }
+    if (pickerOpen || optionsOpen) {
+      document.addEventListener("mousedown", onOutsideClick);
+      document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    }
+    return () => {
+      document.removeEventListener("mousedown", onOutsideClick);
+      document.removeEventListener("scroll", onScroll, { capture: true });
+    };
+  }, [pickerOpen, optionsOpen]);
 
   const canEngage = Boolean(user?.emailVerified);
 
@@ -108,7 +122,9 @@ export function PostActions({
       setBookmarked(false);
       unbookmarkPost.mutate({ id: post.id });
     } else {
-      // Opening the picker lazily fetches folders; direct-save happens from it.
+      // Optimistically bookmark and open picker for folders
+      setBookmarked(true);
+      bookmarkPost.mutate({ id: post.id, data: { folderId: null } });
       setPickerOpen(true);
     }
   }
@@ -140,9 +156,39 @@ export function PostActions({
         </button>
       </div>
 
-      <div className="relative ml-auto flex items-center gap-2 text-[#737373]" ref={pickerRef}>
-        <svg className="size-4 cursor-pointer hover:text-[#111111] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
-        <div className="border border-[#EAEAEA] rounded-[8px] p-1 cursor-pointer hover:bg-black/5 transition-colors">
+      <div className="relative ml-auto flex items-center gap-2 text-[#737373]">
+        <div className="relative" ref={optionsRef}>
+          <svg onClick={() => setOptionsOpen(!optionsOpen)} className="size-4 cursor-pointer hover:text-[#111111] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+          {optionsOpen && (
+            <div className="absolute top-full right-[-26px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-50 after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
+              {/* Tooltip Tail */}
+              <div className="absolute -top-[12px] right-[21px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+              <div className="flex flex-col w-full bg-white rounded-[16px] overflow-hidden relative z-10 px-3 py-[3px] [&>button]:h-[38px] [&>button]:py-0 [&>button]:px-0">
+                <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
+                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                See more from this person
+              </button>
+              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
+                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                Not interested
+              </button>
+              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
+                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                Downvote
+              </button>
+              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
+                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                Report
+              </button>
+              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors" onClick={() => setOptionsOpen(false)}>
+                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                Share
+              </button>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="border border-[#EAEAEA] rounded-[8px] p-1 cursor-pointer hover:bg-black/5 transition-colors" ref={pickerRef}>
           <button
             type="button"
             aria-pressed={bookmarked}
