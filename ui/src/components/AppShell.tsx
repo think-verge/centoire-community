@@ -186,7 +186,7 @@ export function AppShell() {
       <div className="flex w-full">
         <DesktopSidebar />
 
-        <main className="min-h-[calc(100vh-3.5rem)] min-w-0 flex-1 pb-20 md:pb-6">
+        <main className="min-h-[calc(100vh-3.5rem)] min-w-0 flex-1 pb-20 md:pb-0">
           <Outlet />
         </main>
 

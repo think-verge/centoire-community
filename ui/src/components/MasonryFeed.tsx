@@ -42,7 +42,9 @@ export function MasonryFeed({
     return (
       <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
         {Array.from({ length: 9 }).map((_, i) => (
-          <SkeletonCard key={i} tall={i % 3 === 0} />
+          <div key={i} className="mb-6 break-inside-avoid">
+            <SkeletonCard tall={i % 3 === 0} />
+          </div>
         ))}
       </div>
     );
@@ -56,11 +58,15 @@ export function MasonryFeed({
     <>
       <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
         {posts.map((post) => (
-          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} />
+          <div key={post.id} className="mb-6 break-inside-avoid">
+            <PostCard post={post} onOpenPost={onOpenPost} />
+          </div>
         ))}
         {isFetchingNextPage &&
           Array.from({ length: 4 }).map((_, i) => (
-            <SkeletonCard key={`next-page-skeleton-${i}`} tall={i % 2 === 0} />
+            <div key={`next-page-skeleton-${i}`} className="mb-6 break-inside-avoid">
+              <SkeletonCard tall={i % 2 === 0} />
+            </div>
           ))}
       </div>
       <div ref={sentinelRef} aria-hidden />
