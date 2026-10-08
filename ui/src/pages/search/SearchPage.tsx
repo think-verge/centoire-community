@@ -98,7 +98,7 @@ export function SearchPage() {
 
   // Figma: Plus Jakarta Sans, SemiBold 600, 14px, uppercase, 8px gap, 16px side padding
   const pillBase =
-    "rounded-full border px-4 py-[7px] font-ui text-[14px] leading-[18px] font-semibold uppercase tracking-normal transition-colors";
+    "rounded-full border px-3 py-[5px] sm:px-4 sm:py-[7px] font-ui text-[12px] sm:text-[14px] leading-[16px] sm:leading-[18px] font-semibold uppercase tracking-normal transition-colors shrink-0 whitespace-nowrap";
   const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40";
   const pillActive = "bg-[#E4572E] border-[#E4572E] text-white";
 
@@ -108,15 +108,25 @@ export function SearchPage() {
     "flex items-stretch gap-6 overflow-x-auto snap-x scroll-pl-3 hide-scrollbar scroll-smooth px-3 -mx-3 pt-3 -mt-3 pb-5 -mb-5";
   const gridClass = "grid gap-6 px-3 -mx-3 py-3 -my-3";
   const gridStyle = { gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))" };
-  // Figma: 3 cards per row with 24px gaps (281.33px @ 892px)
-  const railItemClass = "w-[calc((100%-48px)/3)] min-w-[260px] snap-start shrink-0 flex flex-col";
+  
+  // Responsive widths to fit exactly 1 to 10 cards based on the container width:
+  const railItemClass = "snap-start shrink-0 flex flex-col w-full " +
+    "@[560px]:w-[calc((100%-24px)/2)] " +
+    "@[850px]:w-[calc((100%-48px)/3)] " +
+    "@[1140px]:w-[calc((100%-72px)/4)] " +
+    "@[1430px]:w-[calc((100%-96px)/5)] " +
+    "@[1720px]:w-[calc((100%-120px)/6)] " +
+    "@[2010px]:w-[calc((100%-144px)/7)] " +
+    "@[2300px]:w-[calc((100%-168px)/8)] " +
+    "@[2590px]:w-[calc((100%-192px)/9)] " +
+    "@[2880px]:w-[calc((100%-216px)/10)]";
   const stretchCard = "h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col";
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0F0F0] w-full">
-      <div className="w-full px-5 pt-8 pb-8 flex flex-col gap-6">
+      <div className="w-full px-5 pt-8 pb-8 flex flex-col gap-6 @container">
         {/* Top filter row */}
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-start md:items-center justify-between w-full flex-wrap gap-4">
           <div className="flex items-center gap-2 flex-wrap">
             {TYPES.map((value, index) => (
               <Fragment key={value}>
@@ -138,7 +148,7 @@ export function SearchPage() {
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
             </button>
           </div>
-          <div className="flex items-center gap-3 hidden sm:flex">
+          <div className="flex items-center gap-3">
             <button className={`${pillBase} ${pillIdle} flex items-center gap-1.5`}>
               FILTERS
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -288,7 +298,7 @@ export function SearchPage() {
               {/* Featured Jobs */}
               {type === "ALL" && (
                 <section className="w-full">
-                  <div className="bg-[#111111] py-12 px-8 sm:px-12 text-white flex flex-col md:flex-row items-center justify-between relative overflow-hidden min-h-[220px]">
+                  <div className="bg-[#111111] py-12 px-8 sm:px-12 text-white flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden min-h-[220px]">
                     <img src="/dark_silk_banner_bg.jpg" className="absolute inset-0 w-full h-full object-cover opacity-80" alt="" />
                     <div className="absolute inset-0 opacity-50 mix-blend-overlay">
                       <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -296,12 +306,12 @@ export function SearchPage() {
                         <rect width="100%" height="100%" filter="url(#noise)" />
                       </svg>
                     </div>
-                    <div className="relative z-10 flex flex-col gap-2 max-w-[60%]">
-                      <p className="font-ui text-[11px] font-bold uppercase tracking-widest text-[#E5552D] mb-1">FIND YOUR NEXT ROLE IN FASHION</p>
-                      <h3 className="font-editorial text-[36px] sm:text-[40px] font-normal tracking-tight leading-tight">Featured Jobs</h3>
-                      <p className="font-ui text-[14px] text-[#A3A3A3] leading-relaxed mt-1">Browse curated openings at top brands, studios, and agencies - updated daily.</p>
+                    <div className="relative z-10 flex flex-col gap-3 w-full md:max-w-[60%]">
+                      <p className="font-ui text-[11px] font-bold uppercase tracking-widest text-[#E5552D]">FIND YOUR NEXT ROLE IN FASHION</p>
+                      <h3 className="font-editorial text-[42px] sm:text-[40px] font-normal tracking-tight leading-[1.05]">Featured Jobs</h3>
+                      <p className="font-ui text-[14px] text-[#A3A3A3] leading-relaxed">Browse curated openings at top brands, studios, and agencies - updated daily.</p>
                     </div>
-                    <div className="relative z-10 mt-6 md:mt-0 shrink-0">
+                    <div className="relative z-10 mt-8 md:mt-0 shrink-0 self-start md:self-auto">
                       <button className="bg-[#E5552D] text-white rounded-full px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider flex items-center gap-2 hover:bg-[#D4441C] transition-colors">
                         VIEW JOBS
                         <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
@@ -354,7 +364,7 @@ export function SearchPage() {
                       <p className="font-ui text-[12px] leading-[15px] font-bold uppercase tracking-wider text-[#E4572E]">
                         RELATED TOPICS
                       </p>
-                      <h3 className="font-editorial text-[32px] leading-[1.15] tracking-tight text-[#111111]">Explore adjacent themes</h3>
+                      <h3 className="font-ui text-[20px] font-bold leading-[1.9] uppercase tracking-normal text-[#111111]">Explore adjacent themes</h3>
                       <p className="font-ui text-[14px] text-[#737373]">Broaden your discovery with topics that are closely related to your search.</p>
                     </div>
                     <div className="flex flex-wrap gap-2.5">
@@ -405,10 +415,10 @@ function SectionHeader({
       <p className="font-ui text-[12px] leading-[15px] font-bold uppercase tracking-wider text-[#E4572E]">
         {label}
       </p>
-      <div className="flex items-center justify-between">
-        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex items-baseline gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4">
+        <h2 className="font-ui text-[20px] font-bold leading-none uppercase tracking-normal text-[#111111] flex flex-wrap items-baseline gap-3">
           {title}
-          <Link to={viewAllTo} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case relative -top-[3px]">View all</Link>
+          <Link to={viewAllTo} className="font-ui text-[14px] font-medium text-[#111111]/60 hover:text-[#111111] underline underline-offset-[2px] decoration-[#111111]/30 hover:decoration-[#111111] normal-case whitespace-nowrap relative -top-[3px]">View all</Link>
         </h2>
         <div className="flex gap-2">
           <button onClick={onLeft} disabled={!canLeft} className={arrowClass(canLeft)}>
@@ -431,7 +441,7 @@ function SectionHeader({
 function DemoPostCard({ post, index }: { post: any, index?: number }) {
   const variant = (index ?? 0) % 3;
   return (
-    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[342px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(17, 17, 17, 0.1)' }}>
+    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(17, 17, 17, 0.1)' }}>
       <div className="relative h-[158px] w-full shrink-0">
         <img
           src={post.coverImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=300&fit=crop"}
@@ -467,32 +477,32 @@ function DemoPostCard({ post, index }: { post: any, index?: number }) {
         )}
       </div>
       <div className="p-4 flex flex-col flex-1 gap-1">
-        <p className="text-[10px] font-ui text-[#737373] flex items-center">
+        <p className="text-[12px] font-ui text-[#737373] flex items-center">
           12 Sep 24 
-          <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-1.5 block"></span> 
+          <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-2 block"></span> 
           4 min read
         </p>
         <h3 
-          className="mt-2 font-editorial text-[20px] font-medium leading-tight text-[#111111] line-clamp-3 h-[75px]"
+          className="mt-1 font-editorial text-[20px] font-medium leading-tight text-[#111111] line-clamp-3 h-[75px]"
           dangerouslySetInnerHTML={{ __html: (post.title || "The New Minimalist Runway: 5 Trends to Know Now").replace(/&amp;amp;/g, '&').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"') }}
         />
         <div className="mt-auto pt-3 flex items-center justify-between border-t border-[#EAEAEA] border-opacity-60">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {variant === 0 ? (
-              <div className="size-6 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[10px]">
+              <div className="size-8 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[12px]">
                 E
               </div>
             ) : (
-              <div className="size-6 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
-                <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+              <div className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
+                <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
               </div>
             )}
-            <div className="flex items-center gap-1 text-[#737373] text-[12px] font-ui font-medium">
-              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+            <div className="flex items-center gap-1.5 text-[#737373] text-[12px] font-ui font-medium">
+              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 11l7-7m0 0l7 7m-7-7v14" /></svg>
               1.2k
             </div>
-            <div className="flex items-center gap-1 text-[#737373] text-[12px] font-ui font-medium">
-              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+            <div className="flex items-center gap-1.5 text-[#737373] text-[12px] font-ui font-medium">
+              <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
               48
             </div>
           </div>
