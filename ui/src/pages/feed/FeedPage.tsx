@@ -95,7 +95,7 @@ export function FeedPage() {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-[#EFEFEF]">
-      <div className="w-full max-w-[1060px] mx-auto">
+      <div className="w-full mx-auto">
         {/* Welcome header */}
         <div className="pt-6 pb-2 flex flex-col gap-1 px-4 sm:px-6">
           <h1 className="font-editorial text-[32px] font-normal leading-tight text-[#111111]">
@@ -190,13 +190,13 @@ export function FeedPage() {
               {(latestPosts.length > 0 || latestNews.isLoading) && (
                 <section className="mb-6">
                   {latestNews.isLoading ? (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                       {Array.from({ length: 6 }).map((_, i) => (
-                        <SkeletonCard key={i} tall />
+                        <div key={i} className="flex flex-col h-full"><SkeletonCard tall /></div>
                       ))}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                       {sortedLatest.slice(0, 6).map((post, i) => (
                         <PostCard
                           key={`${post.id}-${i}`}
@@ -220,18 +220,18 @@ export function FeedPage() {
             <FeaturedBanner />
           </div>
 
-          <div className="w-full max-w-[1060px] mx-auto px-4 pt-6 pb-4 sm:px-6">
+          <div className="w-full mx-auto px-4 pt-6 pb-4 sm:px-6">
             {/* Editorial Picks section (Moved to bottom as requested) */}
             {(editorialPosts.length > 0 || editorialPicks.isLoading) && (
               <section className="mb-8">
                 {editorialPicks.isLoading ? (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <SkeletonCard key={i} />
+                      <div key={i} className="flex flex-col h-full"><SkeletonCard /></div>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                     {editorialPosts.map((post, i) => (
                       <PostCard
                         key={`${post.id}-${i}`}
@@ -248,7 +248,7 @@ export function FeedPage() {
       )}
 
       {!isAll && (
-        <div className="w-full max-w-[1060px] mx-auto px-4 py-4 sm:px-6">
+        <div className="w-full mx-auto px-4 py-4 sm:px-6">
           {/* Non-All tabs: plain infinite scroll */}
           <MasonryFeed
             posts={posts}
