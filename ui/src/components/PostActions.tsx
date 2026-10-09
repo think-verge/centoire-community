@@ -138,25 +138,25 @@ export function PostActions({
           aria-pressed={voted === 1}
           onClick={toggleUpvote}
           title={voted === 1 ? "Remove upvote" : "Upvote"}
-          className={`flex items-center gap-1.5 transition-colors text-[12px] font-ui font-medium ${
-            voted === 1 ? "text-[#E4572E]" : "text-[#737373] hover:text-[#E4572E]"
+          className={`flex items-center gap-1.5 transition-colors text-[14px] font-ui font-semibold ${
+            voted === 1 ? "text-[#E4572E]" : "text-[#111111]/60 hover:text-[#E4572E]"
           }`}
         >
-          <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 11l7-7m0 0l7 7m-7-7v14" /></svg>
+          <svg className="size-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 11l7-7m0 0l7 7m-7-7v16" /></svg>
           {upvotes >= 1000 ? (upvotes/1000).toFixed(1) + 'k' : upvotes}
         </button>
         <button
           type="button"
           onClick={onOpenModal ?? (() => navigate(`/p/${post.slug}#comments`))}
-          className="flex items-center gap-1.5 text-[12px] font-ui font-medium text-[#737373] hover:text-[#111111]"
+          className="flex items-center gap-1.5 text-[14px] font-ui font-semibold text-[#111111]/60 hover:text-[#111111]"
           title="Comments"
         >
-          <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+          <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
           {post.commentCount}
         </button>
       </div>
 
-      <div className="relative ml-auto flex items-center gap-2 text-[#737373]">
+      <div className="relative ml-auto flex items-center gap-2 text-[#111111]/60">
         <div className="relative" ref={optionsRef}>
           <svg onClick={() => setOptionsOpen(!optionsOpen)} className="size-4 cursor-pointer hover:text-[#111111] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
           {optionsOpen && (
@@ -196,7 +196,7 @@ export function PostActions({
             onClick={handleBookmarkClick}
             title={bookmarked ? "Remove from saved" : "Save"}
             className={`flex items-center justify-center transition-colors ${
-              bookmarked ? "text-[#E4572E]" : "text-[#737373] hover:text-[#111111]"
+              bookmarked ? "text-[#E4572E]" : "text-[#111111]/60 hover:text-[#111111]"
             }`}
           >
             <svg className="size-4" fill={bookmarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>

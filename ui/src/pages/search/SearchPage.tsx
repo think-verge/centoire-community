@@ -63,9 +63,9 @@ export function SearchPage() {
       data.circles.length > 0 ||
       data.tags.length > 0);
 
-  const renderPosts = data?.posts ? [...data.posts, ...data.posts, ...data.posts] : [];
-  const renderPeople = data?.people ? [...data.people, ...data.people, ...data.people] : [];
-  const finalPeople = [...renderPeople, ...renderPeople, ...renderPeople];
+  const renderPosts = data?.posts ? Array(10).fill(data.posts).flat() : [];
+  const renderPeople = data?.people ? Array(10).fill(data.people).flat() : [];
+  const finalPeople = Array(10).fill(renderPeople).flat();
 
   const renderCircles = [
     {
@@ -94,32 +94,52 @@ export function SearchPage() {
     }
   ];
 
-  const finalCircles = [...renderCircles, ...renderCircles, ...renderCircles];
+  const finalCircles = Array(10).fill(renderCircles).flat();
 
   // Figma: Plus Jakarta Sans, SemiBold 600, 14px, uppercase, 8px gap, 16px side padding
   const pillBase =
-    "rounded-full border px-3 py-[5px] sm:px-4 sm:py-[7px] font-ui text-[12px] sm:text-[14px] leading-[16px] sm:leading-[18px] font-semibold uppercase tracking-normal transition-colors shrink-0 whitespace-nowrap";
-  const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/40";
-  const pillActive = "bg-[#E4572E] border-[#E4572E] text-white";
+    "rounded-full border px-3 py-[5px] sm:px-4 sm:py-[7px] font-ui text-[12px] sm:text-[13px] leading-[16px] sm:leading-[18px] uppercase tracking-normal transition-colors shrink-0 whitespace-nowrap";
+  const pillIdle = "bg-white border-[#111111]/20 text-black/60 hover:border-[#111111]/60 font-semibold";
+  const pillActive = "bg-[#E4572E] border-[#E4572E] text-white font-bold";
 
   // Horizontal rails: padding (with matching negative margin) leaves room for the
   // card shadow (0 4 10) so it is never clipped by overflow-x-auto.
   const railClass =
     "flex items-stretch gap-6 overflow-x-auto snap-x scroll-pl-3 hide-scrollbar scroll-smooth px-3 -mx-3 pt-3 -mt-3 pb-5 -mb-5";
   const gridClass = "grid gap-6 px-3 -mx-3 py-3 -my-3";
-  const gridStyle = { gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))" };
+  const gridStyle = { gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" };
   
-  // Responsive widths to fit exactly 1 to 10 cards based on the container width:
+  // Responsive widths to fit exactly 1 to 30 cards based on the container width:
   const railItemClass = "snap-start shrink-0 flex flex-col w-full " +
-    "@[560px]:w-[calc((100%-24px)/2)] " +
-    "@[850px]:w-[calc((100%-48px)/3)] " +
-    "@[1140px]:w-[calc((100%-72px)/4)] " +
-    "@[1430px]:w-[calc((100%-96px)/5)] " +
-    "@[1720px]:w-[calc((100%-120px)/6)] " +
-    "@[2010px]:w-[calc((100%-144px)/7)] " +
-    "@[2300px]:w-[calc((100%-168px)/8)] " +
-    "@[2590px]:w-[calc((100%-192px)/9)] " +
-    "@[2880px]:w-[calc((100%-216px)/10)]";
+    "@[504px]:w-[calc((100%-24px)/2)] " +
+    "@[768px]:w-[calc((100%-48px)/3)] " +
+    "@[1032px]:w-[calc((100%-72px)/4)] " +
+    "@[1296px]:w-[calc((100%-96px)/5)] " +
+    "@[1560px]:w-[calc((100%-120px)/6)] " +
+    "@[1824px]:w-[calc((100%-144px)/7)] " +
+    "@[2088px]:w-[calc((100%-168px)/8)] " +
+    "@[2352px]:w-[calc((100%-192px)/9)] " +
+    "@[2616px]:w-[calc((100%-216px)/10)] " +
+    "@[2880px]:w-[calc((100%-240px)/11)] " +
+    "@[3144px]:w-[calc((100%-264px)/12)] " +
+    "@[3408px]:w-[calc((100%-288px)/13)] " +
+    "@[3672px]:w-[calc((100%-312px)/14)] " +
+    "@[3936px]:w-[calc((100%-336px)/15)] " +
+    "@[4200px]:w-[calc((100%-360px)/16)] " +
+    "@[4464px]:w-[calc((100%-384px)/17)] " +
+    "@[4728px]:w-[calc((100%-408px)/18)] " +
+    "@[4992px]:w-[calc((100%-432px)/19)] " +
+    "@[5256px]:w-[calc((100%-456px)/20)] " +
+    "@[5520px]:w-[calc((100%-480px)/21)] " +
+    "@[5784px]:w-[calc((100%-504px)/22)] " +
+    "@[6048px]:w-[calc((100%-528px)/23)] " +
+    "@[6312px]:w-[calc((100%-552px)/24)] " +
+    "@[6576px]:w-[calc((100%-576px)/25)] " +
+    "@[6840px]:w-[calc((100%-600px)/26)] " +
+    "@[7104px]:w-[calc((100%-624px)/27)] " +
+    "@[7368px]:w-[calc((100%-648px)/28)] " +
+    "@[7632px]:w-[calc((100%-672px)/29)] " +
+    "@[7896px]:w-[calc((100%-696px)/30)]";
   const stretchCard = "h-full [&>article]:h-full [&>article]:mb-0 [&>article]:flex [&>article]:flex-col";
 
   return (
@@ -449,7 +469,7 @@ function DemoPostCard({ post, index }: { post: any, index?: number }) {
           className="h-full w-full object-cover"
         />
         {variant !== 1 && (
-          <div className="absolute top-3 right-3 bg-[#00C365] text-white rounded-full px-2 py-0.5 text-[12px] font-medium font-ui flex items-center gap-1 shadow-sm">
+          <div className="absolute top-2 right-2 bg-[#00C365] text-white rounded-full px-2 py-0.5 text-[12px] font-medium font-ui flex items-center gap-1 shadow-sm">
             {variant === 2 ? (
               <>
                 <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
@@ -464,19 +484,19 @@ function DemoPostCard({ post, index }: { post: any, index?: number }) {
           </div>
         )}
         {variant === 1 && (
-          <div className="absolute bottom-3 left-3 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
+          <div className="absolute bottom-2 left-2 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
             <span className="size-1.5 rounded-full bg-[#3CCBFF]"></span>
             Street Style
           </div>
         )}
         {variant === 2 && (
-          <div className="absolute bottom-3 left-3 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
+          <div className="absolute bottom-2 left-2 bg-[#111111]/40 backdrop-blur-md text-white rounded-full px-2.5 py-[2px] text-[12px] font-medium font-ui flex items-center gap-1.5 shadow-sm">
             <span className="size-1.5 rounded-full bg-[#FF6B00]"></span>
             Knitwear
           </div>
         )}
       </div>
-      <div className="p-4 flex flex-col flex-1 gap-1">
+      <div className="p-3 flex flex-col flex-1 gap-1">
         <p className="text-[12px] font-ui text-[#737373] flex items-center">
           12 Sep 24 
           <span className="w-[3px] h-[3px] rounded-full bg-[#111111]/30 mx-2 block"></span> 
@@ -489,24 +509,24 @@ function DemoPostCard({ post, index }: { post: any, index?: number }) {
         <div className="mt-auto pt-3 flex items-center justify-between border-t border-[#EAEAEA] border-opacity-60">
           <div className="flex items-center gap-2.5">
             {variant === 0 ? (
-              <div className="size-8 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[12px]">
+              <div className="size-8 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-semibold text-[14px]">
                 E
               </div>
             ) : (
-              <div className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#737373] flex items-center justify-center">
+              <div className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#111111]/60 flex items-center justify-center">
                 <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
               </div>
             )}
-            <div className="flex items-center gap-1.5 text-[#737373] text-[12px] font-ui font-medium">
-              <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 11l7-7m0 0l7 7m-7-7v14" /></svg>
+            <div className="flex items-center gap-1.5 text-[#111111]/60 text-[14px] font-ui font-semibold">
+              <svg className="size-[14px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 11l7-7m0 0l7 7m-7-7v16" /></svg>
               1.2k
             </div>
-            <div className="flex items-center gap-1.5 text-[#737373] text-[12px] font-ui font-medium">
-              <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+            <div className="flex items-center gap-1.5 text-[#111111]/60 text-[14px] font-ui font-semibold">
+              <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
               48
             </div>
           </div>
-          <div className="flex items-center gap-2 text-[#737373]">
+          <div className="flex items-center gap-2 text-[#111111]/60">
             <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
             <div className="border border-[#EAEAEA] rounded-[8px] p-1">
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" /></svg>
@@ -556,13 +576,13 @@ function DemoCreatorCard({ person }: { person: any }) {
   return (
     <div className="bg-white rounded-[16px] border border-[#111111]/10 flex flex-col h-full relative px-3 py-3 transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' }}>
       <div className="flex items-start">
-        <img src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="size-9 rounded-full object-cover" alt="" />
+        <img src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="size-8 rounded-full object-cover" alt="" />
       </div>
-      <h3 className="font-editorial text-[18px] font-normal text-[#111111] mt-3 flex items-center gap-2">
+      <h3 className="font-editorial text-[18px] font-normal text-[#111111] mt-1 flex items-center gap-2">
         {person.displayName}
-        <span className="bg-[#0057FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">VERIFIED</span>
+        <span className="bg-[#0044CC] text-white text-[10px] font-ui font-bold px-2 py-px rounded-full uppercase tracking-wider">VERIFIED</span>
       </h3>
-      <p className="font-ui text-[13px] text-[#111111]/60 mt-1 line-clamp-3 leading-[20px] flex-1">
+      <p className="font-ui text-[12px] text-[#111111]/60 mt-1 line-clamp-3 leading-[16px] flex-1">
         Senior fashion editor covering Shanghai Fashion Week and the next generation of Chinese designers.
       </p>
       <div className="mt-3 flex items-center justify-between">
