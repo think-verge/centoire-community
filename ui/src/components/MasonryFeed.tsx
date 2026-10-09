@@ -40,11 +40,9 @@ export function MasonryFeed({
 
   if (isLoading) {
     return (
-      <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
+      <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
         {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="mb-6 break-inside-avoid">
-            <SkeletonCard tall={i % 3 === 0} />
-          </div>
+          <SkeletonCard key={i} tall={i % 3 === 0} />
         ))}
       </div>
     );
@@ -56,17 +54,13 @@ export function MasonryFeed({
 
   return (
     <>
-      <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
+      <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
         {posts.map((post) => (
-          <div key={post.id} className="mb-6 break-inside-avoid">
-            <PostCard post={post} onOpenPost={onOpenPost} />
-          </div>
+          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} />
         ))}
         {isFetchingNextPage &&
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={`next-page-skeleton-${i}`} className="mb-6 break-inside-avoid">
-              <SkeletonCard tall={i % 2 === 0} />
-            </div>
+            <SkeletonCard key={`next-page-skeleton-${i}`} tall={i % 2 === 0} />
           ))}
       </div>
       <div ref={sentinelRef} aria-hidden />
@@ -79,12 +73,14 @@ export function MasonryFeed({
 
 function SkeletonCard({ tall }: { tall: boolean }) {
   return (
-    <div className="mb-4 break-inside-avoid rounded-xl border border-line bg-paper p-4">
-      {tall && <div className="mb-3 h-40 animate-pulse rounded-lg bg-cream" />}
-      <div className="h-3 w-16 animate-pulse rounded bg-cream" />
-      <div className="mt-2 h-5 w-4/5 animate-pulse rounded bg-cream" />
-      <div className="mt-1.5 h-5 w-3/5 animate-pulse rounded bg-cream" />
-      <div className="mt-4 h-3 w-2/5 animate-pulse rounded bg-cream" />
+    <div className="flex flex-col rounded-[16px] bg-white min-h-[320px] h-full" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
+      {tall && <div className="h-[158px] w-full shrink-0 animate-pulse rounded-t-[16px] bg-[var(--color-sand)]" />}
+      <div className="p-4 flex flex-col flex-1 gap-1">
+        <div className="h-3 w-16 animate-pulse rounded bg-[var(--color-sand)]" />
+        <div className="mt-2 h-5 w-4/5 animate-pulse rounded bg-[var(--color-sand)]" />
+        <div className="mt-1.5 h-5 w-3/5 animate-pulse rounded bg-[var(--color-sand)]" />
+        <div className="mt-4 h-3 w-2/5 animate-pulse rounded bg-[var(--color-sand)]" />
+      </div>
     </div>
   );
 }
