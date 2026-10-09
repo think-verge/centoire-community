@@ -20,7 +20,6 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
   const author = ref(post.authorId);
   const source = ref(post.sourceId);
   const circle = ref(post.circleId);
-  const tags = (post.tags as unknown[]).map(ref).filter(Boolean) as PopulatedRef[];
   return {
     id: post._id.toString(),
     slug: post.slug,
@@ -55,11 +54,7 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
       : null,
     category: post.category ?? null,
     subcategory: post.subcategory ?? null,
-    tags: tags.map((t) => ({
-      id: String(t._id),
-      name: (t.name as string) ?? "",
-      slug: (t.slug as string) ?? "",
-    })),
+    hashtags: post.hashtags ?? [],
     upvoteCount: post.upvoteCount,
     commentCount: post.commentCount,
     bookmarkCount: post.bookmarkCount,

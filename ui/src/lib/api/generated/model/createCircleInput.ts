@@ -21,10 +21,11 @@ export interface CreateCircleInput {
   about?: string;
   /** @maxItems 10 */
   rules?: string[];
-  /** @maxItems 5 */
-  tagIds?: string[];
-  /** @maxItems 5 */
-  tagNames?: string[];
+  /**
+   * @minItems 1
+   * @maxItems 5
+   */
+  hashtags: string[];
   avatarUrl?: string;
   coverImageUrl?: string;
 }

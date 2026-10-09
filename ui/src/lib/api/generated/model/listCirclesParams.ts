@@ -11,7 +11,7 @@ export type ListCirclesParams = {
  * @minLength 1
  */
 q?: string;
-tag?: string;
+hashtag?: string;
 /**
  * @minimum 1
  * @maximum 100

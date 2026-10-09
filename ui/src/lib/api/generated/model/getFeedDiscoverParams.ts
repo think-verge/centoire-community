@@ -11,7 +11,7 @@ import type { GetFeedDiscoverCategory } from './getFeedDiscoverCategory';
 
 export type GetFeedDiscoverParams = {
 sort?: GetFeedDiscoverSort;
-tag?: string;
+hashtag?: string;
 origin?: GetFeedDiscoverOrigin;
 source?: string;
 category?: GetFeedDiscoverCategory;

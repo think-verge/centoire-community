@@ -5,7 +5,6 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { CircleTagsItem } from './circleTagsItem';
 import type { CircleViewerRole } from './circleViewerRole';
 
 export interface Circle {
@@ -20,7 +19,7 @@ export interface Circle {
   avatarUrl: string | null;
   /** @nullable */
   coverImageUrl: string | null;
-  tags: CircleTagsItem[];
+  hashtags: string[];
   memberCount: number;
   postCount: number;
   /** @nullable */

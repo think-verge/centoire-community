@@ -25,13 +25,6 @@ export function serializeUser(user: IUser, opts: SerializeOptions = {}) {
     role: user.role,
     emailVerified: user.emailVerified,
     onboardingCompleted: Boolean(user.onboardingCompletedAt),
-    interests: (user.interests ?? []).map((tag) => {
-      const populated = tag as unknown as { _id: unknown; name?: string; slug?: string };
-      return {
-        id: String(populated._id ?? tag),
-        name: populated.name ?? "",
-        slug: populated.slug ?? "",
-      };
-    }),
+    followedHashtags: user.followedHashtags ?? [],
   };
 }

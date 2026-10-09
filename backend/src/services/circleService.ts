@@ -1,14 +1,14 @@
 import { Types } from "mongoose";
 import { Circle, type ICircle } from "../models/Circle.js";
 import { CircleMembership, type CircleRole } from "../models/CircleMembership.js";
-import { Tag } from "../models/Tag.js";
 import type { IUser } from "../models/User.js";
 import { serializeUser } from "./userSerializer.js";
 import { ApiError } from "../utils/api-error.js";
 import { slugify } from "../utils/slugify.js";
+import { MAX_CIRCLE_HASHTAGS, normalizeHashtag } from "../utils/hashtag.js";
+import * as hashtagService from "./hashtagService.js";
 
 export function serializeCircle(circle: ICircle, viewerRole?: CircleRole | null) {
-  const tags = circle.tags as unknown as Array<{ _id: unknown; name?: string; slug?: string }>;
   return {
     id: circle._id.toString(),
     name: circle.name,
@@ -18,11 +18,7 @@ export function serializeCircle(circle: ICircle, viewerRole?: CircleRole | null)
     rules: circle.rules,
     avatarUrl: circle.avatarUrl ?? null,
     coverImageUrl: circle.coverImageUrl ?? null,
-    tags: tags.map((tag) => ({
-      id: String(tag._id ?? tag),
-      name: tag.name ?? "",
-      slug: tag.slug ?? "",
-    })),
+    hashtags: circle.hashtags ?? [],
     memberCount: circle.memberCount,
     postCount: circle.postCount,
     viewerRole: viewerRole ?? null,
@@ -31,7 +27,7 @@ export function serializeCircle(circle: ICircle, viewerRole?: CircleRole | null)
 }
 
 export async function getBySlug(slug: string): Promise<ICircle> {
-  const circle = await Circle.findOne({ slug }).populate("tags", "name slug");
+  const circle = await Circle.findOne({ slug });
   if (!circle) throw new ApiError(404, "Circle not found");
   return circle;
 }
@@ -45,7 +41,6 @@ export async function getViewerRole(
   return membership?.role ?? null;
 }
 
-const MAX_CIRCLE_TAGS = 5;
 const MAX_SLUG_ATTEMPTS = 8;
 
 function escapeRegex(text: string): string {
@@ -56,34 +51,6 @@ function isDuplicateKey(err: unknown): boolean {
   return (err as { code?: number }).code === 11000;
 }
 
-async function resolveTagIds(input: { tagIds?: string[]; tagNames?: string[] }): Promise<string[]> {
-  const ids = new Set<string>(input.tagIds ?? []);
-  if (ids.size > 0) {
-    const found = await Tag.countDocuments({ _id: { $in: [...ids] } });
-    if (found !== ids.size) throw new ApiError(422, "tagIds: one or more tags do not exist");
-  }
-  const slugs = new Map<string, string>();
-  for (const name of input.tagNames ?? []) {
-    const tagSlug = slugify(name);
-    if (tagSlug && !slugs.has(tagSlug)) slugs.set(tagSlug, name);
-  }
-  const tags = await Promise.all(
-    [...slugs].map(([tagSlug, name]) =>
-      Tag.findOneAndUpdate(
-        { slug: tagSlug },
-        { $setOnInsert: { name, slug: tagSlug, category: "culture" } },
-        { upsert: true, new: true },
-      ),
-    ),
-  );
-  for (const tag of tags) ids.add(tag._id.toString());
-  if (ids.size < 1) throw new ApiError(422, "tags: pick at least one topic");
-  if (ids.size > MAX_CIRCLE_TAGS) {
-    throw new ApiError(422, `tags: a circle can have at most ${MAX_CIRCLE_TAGS} topics`);
-  }
-  return [...ids];
-}
-
 export async function createCircle(
   userId: string,
   input: {
@@ -91,8 +58,7 @@ export async function createCircle(
     description: string;
     about?: string;
     rules?: string[];
-    tagIds?: string[];
-    tagNames?: string[];
+    hashtags: string[];
     avatarUrl?: string;
     coverImageUrl?: string;
   },
@@ -101,7 +67,11 @@ export async function createCircle(
   if (await Circle.exists({ name: { $regex: `^${escapeRegex(name)}$`, $options: "i" } })) {
     throw new ApiError(409, "A circle with this name already exists");
   }
-  const tags = await resolveTagIds(input);
+  const hashtags = await hashtagService.ensureHashtags(input.hashtags, {
+    createdBy: userId,
+    max: MAX_CIRCLE_HASHTAGS,
+  });
+  if (hashtags.length < 1) throw new ApiError(422, "hashtags: pick at least one valid hashtag");
   const baseSlug = slugify(name);
 
   for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt++) {
@@ -114,7 +84,7 @@ export async function createCircle(
         description: input.description,
         about: input.about,
         rules: input.rules ?? [],
-        tags,
+        hashtags,
         avatarUrl: input.avatarUrl,
         coverImageUrl: input.coverImageUrl,
         createdBy: userId,
@@ -130,20 +100,20 @@ export async function createCircle(
       await Circle.deleteOne({ _id: circle._id }); // never leave an ownerless circle behind
       throw err;
     }
-    return circle.populate("tags", "name slug");
+    return circle;
   }
   throw new ApiError(409, "Could not allocate a unique handle for this circle, try a different name");
 }
 
 export async function listCircles(
-  query: { q?: string; tag?: string; limit?: number },
+  query: { q?: string; hashtag?: string; limit?: number },
   viewerId?: string,
 ) {
   const filter: Record<string, unknown> = {};
-  if (query.tag) {
-    const tag = await Tag.findOne({ slug: query.tag }).select("_id");
-    if (!tag) return [];
-    filter.tags = tag._id;
+  if (query.hashtag) {
+    const name = normalizeHashtag(query.hashtag);
+    if (!name) return [];
+    filter.hashtags = name;
   }
   const limit = query.limit ?? 50;
   let find = Circle.find(filter);
@@ -155,7 +125,7 @@ export async function listCircles(
   } else {
     find = find.sort({ memberCount: -1, _id: 1 });
   }
-  const circles = await find.limit(limit).populate("tags", "name slug");
+  const circles = await find.limit(limit);
 
   const roles = new Map<string, CircleRole>();
   if (viewerId && circles.length > 0) {

@@ -7,7 +7,8 @@ export interface ISource extends Document {
   siteUrl: string;
   feedUrl: string;
   faviconUrl?: string;
-  tags: Types.ObjectId[];
+  /** Default hashtags copied onto every post ingested from this source. */
+  hashtags: string[];
   /** Ingestion default only — individual posts from this source can still be
    *  re-tagged into a more specific category/subcategory (e.g. via AI backfill). */
   category?: PostCategory;
@@ -27,7 +28,7 @@ const sourceSchema = new Schema<ISource>(
     siteUrl: { type: String, required: true },
     feedUrl: { type: String, required: true, unique: true },
     faviconUrl: { type: String },
-    tags: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
+    hashtags: { type: [String], default: [] },
     category: { type: String, enum: POST_CATEGORIES },
     subcategory: { type: String },
     active: { type: Boolean, default: true },

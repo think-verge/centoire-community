@@ -5,6 +5,7 @@ import {
   registerCommunityPaths,
   registerUserContentPaths,
 } from "./community.js";
+import { registerHashtagPaths } from "./hashtags.js";
 import { registerHealthPaths } from "./health.js";
 import { registerEngagementPaths } from "./engagement.js";
 import { registerFeedPaths } from "./feed.js";
@@ -21,6 +22,7 @@ export function registerPaths(): void {
   registerHealthPaths();
   registerAuthPaths();
   registerInvitePaths();
+  registerHashtagPaths();
   registerCommunityPaths();
   registerPostPaths();
   registerFeedPaths();

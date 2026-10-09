@@ -152,7 +152,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           coverImageUrl,
           externalUrl: link,
           canonicalUrlHash: hash,
-          tags: source.tags,
+          hashtags: source.hashtags ?? [],
           category: source.category,
           subcategory: source.subcategory,
           country: country ?? undefined,

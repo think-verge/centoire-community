@@ -8,11 +8,11 @@
 import type { PostCard } from './postCard';
 import type { PublicUser } from './publicUser';
 import type { Circle } from './circle';
-import type { Tag } from './tag';
+import type { HashtagSuggestion } from './hashtagSuggestion';
 
 export interface SearchResults {
   posts: PostCard[];
   people: PublicUser[];
   circles: Circle[];
-  tags: Tag[];
+  hashtags: HashtagSuggestion[];
 }

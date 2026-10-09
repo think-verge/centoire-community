@@ -8,7 +8,8 @@ import { useServerFilter } from "../../components/filter/useServerFilter";
 import type { FilterFieldDef } from "../../components/filter/types";
 import { useGetFeedDiscoverInfinite } from "../../lib/api/generated/feed/feed";
 import { listSources } from "../../lib/api/generated/admin/admin";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
+import { cleanHashtag, formatCount } from "../../lib/hashtag";
 import type { PostCard } from "../../lib/api/generated/model";
 import type { GetFeedDiscoverOrigin } from "../../lib/api/generated/model";
 
@@ -37,8 +38,9 @@ export function DiscoverPage() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const sort = (params.get("sort") as "trending" | "new") ?? "trending";
-  const tag = params.get("tag") ?? undefined;
-  const { data: tags } = useListTags();
+  // "?tag=" is the pre-hashtag URL; accept it so old links still filter.
+  const hashtag = cleanHashtag(params.get("hashtag") ?? params.get("tag") ?? "") || undefined;
+  const { data: trending } = useGetTrendingHashtags({ limit: 20 }, { query: { staleTime: 5 * 60_000 } });
   const { activeFilters, filterCount } = useServerFilter(DISCOVER_FILTER_CONFIG);
 
   const origin = activeFilters.origin?.[0] as GetFeedDiscoverOrigin | undefined;
@@ -46,7 +48,7 @@ export function DiscoverPage() {
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedDiscoverInfinite(
-      { sort, tag, origin, source },
+      { sort, hashtag, origin, source },
       {
         query: {
           initialPageParam: undefined,
@@ -63,10 +65,11 @@ export function DiscoverPage() {
     setParams(nextParams, { replace: true });
   }
 
-  function setTag(slug: string | null) {
+  function setHashtag(name: string | null) {
     const nextParams = new URLSearchParams(params);
-    if (slug) nextParams.set("tag", slug);
-    else nextParams.delete("tag");
+    nextParams.delete("tag");
+    if (name) nextParams.set("hashtag", name);
+    else nextParams.delete("hashtag");
     setParams(nextParams, { replace: true });
   }
 
@@ -105,27 +108,27 @@ export function DiscoverPage() {
       <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
         <button
           type="button"
-          onClick={() => setTag(null)}
+          onClick={() => setHashtag(null)}
           className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-            !tag
+            !hashtag
               ? "border-crimson bg-crimson text-ink-inverse"
               : "border-line bg-paper text-ink-soft hover:border-ink-soft"
           }`}
         >
           All
         </button>
-        {(tags ?? []).map((t) => (
+        {(trending ?? []).map((t) => (
           <button
-            key={t.id}
+            key={t.name}
             type="button"
-            onClick={() => setTag(t.slug === tag ? null : t.slug)}
+            onClick={() => setHashtag(t.name === hashtag ? null : t.name)}
             className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-              tag === t.slug
+              hashtag === t.name
                 ? "border-crimson bg-crimson text-ink-inverse"
                 : "border-line bg-paper text-ink-soft hover:border-ink-soft"
             }`}
           >
-            {t.name}
+            #{t.name} <span className="opacity-70">{formatCount(t.postCount)}</span>
           </button>
         ))}
       </div>
@@ -142,8 +145,8 @@ export function DiscoverPage() {
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">Nothing here yet</p>
               <p className="mt-2 text-sm text-ink-soft">
-                {tag
-                  ? "No posts carry this tag yet — try another, or write the first one."
+                {hashtag
+                  ? `No posts use #${hashtag} yet — try another, or write the first one.`
                   : "Aggregated stories land here once sources are fetched."}
               </p>
             </div>

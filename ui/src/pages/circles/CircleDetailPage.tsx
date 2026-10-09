@@ -35,10 +35,10 @@ export function CircleDetailPage() {
   const posts = postPages?.pages.flatMap((page) => page.items) ?? [];
 
   const { data: members } = useListCircleMembers(slug ?? "");
-  const firstTag = circle?.tags[0];
+  const firstHashtag = circle?.hashtags[0];
   const { data: relatedPool } = useListCircles(
-    firstTag ? { tag: firstTag.slug, limit: 8 } : undefined,
-    { query: { enabled: Boolean(firstTag) } },
+    firstHashtag ? { hashtag: firstHashtag, limit: 8 } : undefined,
+    { query: { enabled: Boolean(firstHashtag) } },
   );
 
   const join = useJoinCircle({ mutation: { onSuccess: () => refetch() } });
@@ -196,15 +196,15 @@ export function CircleDetailPage() {
             <p className="font-ui text-[13px] text-[#5A5A5A] leading-[1.6] mb-4">
               {circle.about || circle.description}
             </p>
-            {circle.tags.length > 0 && (
+            {circle.hashtags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {circle.tags.map((tag) => (
+                {circle.hashtags.map((name) => (
                   <Link
-                    key={tag.id}
-                    to={`/t/${tag.slug}`}
-                    className="rounded-full border border-[#EAEAEA] bg-white px-2.5 py-1 font-ui text-[11px] text-[#111111] hover:border-[#111111]"
+                    key={name}
+                    to={`/hashtag/${name}`}
+                    className="rounded-full border border-[#EAEAEA] bg-white px-2.5 py-1 font-ui text-[11px] font-semibold text-[#111111] hover:border-[#111111]"
                   >
-                    {tag.name}
+                    #{name}
                   </Link>
                 ))}
               </div>

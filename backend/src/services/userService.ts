@@ -1,7 +1,9 @@
 import { Types } from "mongoose";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Follow } from "../models/Follow.js";
-import { Tag } from "../models/Tag.js";
+import { Hashtag } from "../models/Hashtag.js";
+import { diffHashtags } from "../utils/hashtag.js";
+import * as hashtagService from "./hashtagService.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 import { emitDomainEvent } from "../events/eventBus.js";
@@ -39,29 +41,21 @@ export async function updateMe(
   return user;
 }
 
-export async function setInterests(userId: string, tagIds: string[]): Promise<IUser> {
+export async function setInterests(userId: string, hashtags: string[]): Promise<IUser> {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
 
-  const objectIds = tagIds.map((id) => {
-    if (!Types.ObjectId.isValid(id)) throw new ApiError(422, "Invalid tag id");
-    return new Types.ObjectId(id);
-  });
-  const found = await Tag.countDocuments({ _id: { $in: objectIds } });
-  if (found !== objectIds.length) throw new ApiError(422, "One or more tags do not exist");
+  // Interests are followed hashtags, and following only works for ones that already exist.
+  const next = await hashtagService.filterExisting(hashtags);
+  if (next.length === 0) throw new ApiError(422, "Pick at least one existing hashtag");
 
-  const previous = new Set(user.interests.map(String));
-  user.interests = objectIds;
+  const { added, removed } = diffHashtags(user.followedHashtags ?? [], next);
+  user.followedHashtags = next;
   await user.save();
 
-  const next = new Set(tagIds);
-  const added = tagIds.filter((id) => !previous.has(id));
-  const removed = [...previous].filter((id) => !next.has(id));
-  if (added.length) {
-    await Tag.updateMany({ _id: { $in: added } }, { $inc: { followerCount: 1 } });
-  }
+  if (added.length) await Hashtag.updateMany({ name: { $in: added } }, { $inc: { followerCount: 1 } });
   if (removed.length) {
-    await Tag.updateMany({ _id: { $in: removed } }, { $inc: { followerCount: -1 } });
+    await Hashtag.updateMany({ name: { $in: removed }, followerCount: { $gt: 0 } }, { $inc: { followerCount: -1 } });
   }
   return user;
 }
@@ -70,8 +64,8 @@ export async function completeOnboarding(userId: string): Promise<IUser> {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
   if (!user.handle) throw new ApiError(422, "Set a handle before finishing onboarding");
-  if (user.interests.length < 3) {
-    throw new ApiError(422, "Pick at least 3 interests before finishing onboarding");
+  if ((user.followedHashtags ?? []).length < 3) {
+    throw new ApiError(422, "Pick at least 3 hashtags before finishing onboarding");
   }
   if (!user.onboardingCompletedAt) {
     user.onboardingCompletedAt = new Date();

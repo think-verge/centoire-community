@@ -12,7 +12,8 @@
     "seed": "tsx scripts/seed.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "migrate:hashtags": "tsx scripts/migrate-tags-to-hashtags.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",

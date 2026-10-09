@@ -13,6 +13,6 @@ cursor?: string;
 status?: GetModerationQueueStatus;
 origin?: GetModerationQueueOrigin;
 source?: string;
-tag?: string;
+hashtag?: string;
 author?: string;
 };

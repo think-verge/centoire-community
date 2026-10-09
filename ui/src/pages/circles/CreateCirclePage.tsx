@@ -1,20 +1,16 @@
 import { useState, type FormEvent, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCreateCircle } from "../../lib/api/generated/circles/circles";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { HashtagInput } from "../../components/HashtagInput";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
-const MAX_TOPICS = 5;
 
 export function CreateCirclePage() {
   const navigate = useNavigate();
-  const { data: tags } = useListTags();
   
   const [form, setForm] = useState({ name: "", description: "" });
-  const [tagIds, setTagIds] = useState<string[]>([]);
-  const [customTags, setCustomTags] = useState<{id: string, name: string}[]>([]);
-  const [topicInput, setTopicInput] = useState("");
+  const [hashtags, setHashtags] = useState<string[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
@@ -53,35 +49,17 @@ export function CreateCirclePage() {
     }
   };
 
-  function addTopic() {
-    const name = topicInput.trim().replace(/,+$/, "").trim();
-    if (!name || tagIds.length >= MAX_TOPICS) return;
-    const existing = [...(tags || []), ...customTags].find(
-      (t) => t.name.toLowerCase() === name.toLowerCase(),
-    );
-    let id = existing?.id;
-    if (!id) {
-      id = `custom-${Date.now()}`;
-      setCustomTags((prev) => [...prev, { id: id as string, name }]);
-    }
-    if (!tagIds.includes(id)) setTagIds((prev) => [...prev, id as string]);
-    setTopicError(null);
-    setTopicInput("");
-  }
-
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (tagIds.length === 0) {
-      setTopicError("Pick at least one topic for your circle.");
+    if (hashtags.length === 0) {
+      setTopicError("Add at least one hashtag for your circle.");
       return;
     }
-    const customIds = new Set(customTags.map((t) => t.id));
     createCircle.mutate({
       data: {
         name: form.name,
         description: form.description,
-        tagIds: tagIds.filter((id) => !customIds.has(id)),
-        tagNames: customTags.filter((t) => tagIds.includes(t.id)).map((t) => t.name),
+        hashtags,
         avatarUrl: avatarUrl || undefined,
         // isPrivate is just local state as agreed
       },
@@ -191,42 +169,22 @@ export function CreateCirclePage() {
               </p>
             </div>
 
-            {/* Topics */}
+            {/* Hashtags */}
             <div>
-              <label className="block font-ui text-[14px] font-bold text-[#111111] mb-2">Topics <span className="text-[#E5552D]">*</span></label>
-              <div className="w-full rounded-[10px] border border-[#D0D0D0] bg-white px-3 py-2 min-h-[50px] flex flex-wrap items-center gap-2">
-                {[...(tags || []), ...customTags].filter(t => tagIds.includes(t.id)).map(tag => (
-                  <span key={tag.id} className="flex items-center gap-1.5 bg-[#F5F5F5] rounded-full px-3.5 py-1.5 font-ui text-[13px] font-medium text-[#111111]">
-                    {tag.name}
-                    <button type="button" onClick={() => setTagIds(prev => prev.filter(id => id !== tag.id))} className="text-[#A3A3A3] hover:text-[#555555] flex items-center justify-center">
-                      <svg className="size-[16px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                  </span>
-                ))}
-                
-                <input 
-                  type="text"
-                  placeholder="Add up to 5 topics, press Enter..."
-                  value={topicInput}
-                  onChange={(e) => setTopicInput(e.target.value)}
-                  list="topic-suggestions"
-                  onBlur={addTopic}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addTopic();
-                    }
-                  }}
-                  className="bg-transparent font-ui text-[14px] placeholder:text-[#A3A3A3] text-[#111111] focus:outline-none flex-1 min-w-[150px] ml-1"
-                />
-                <datalist id="topic-suggestions">
-                  {(tags ?? []).map((t) => (
-                    <option key={t.id} value={t.name} />
-                  ))}
-                </datalist>
-              </div>
+              <label htmlFor="circle-hashtags" className="block font-ui text-[14px] font-bold text-[#111111] mb-2">
+                Hashtags <span className="text-[#E5552D]">*</span>
+              </label>
+              <HashtagInput
+                id="circle-hashtags"
+                value={hashtags}
+                onChange={(next) => {
+                  setHashtags(next);
+                  setTopicError(null);
+                }}
+              />
+              <p className="mt-2 font-ui text-[12px] text-[#8A8A8A]">
+                Up to 5 hashtags that describe your Circle. Pick a suggestion or create a new one.
+              </p>
             </div>
 
             {topicError && (
@@ -298,7 +256,7 @@ export function CreateCirclePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createCircle.isPending || uploading || tagIds.length === 0}
+                  disabled={createCircle.isPending || uploading || hashtags.length === 0}
                   className="rounded-full bg-[#E5552D] px-5 py-3 font-ui text-[13px] font-bold text-white hover:bg-[#CC4824] transition-colors disabled:opacity-50 flex items-center gap-2 shadow-[0_2px_8px_rgba(229,85,45,0.3)]"
                 >
                   {createCircle.isPending ? "Creating..." : "Create Circle"}

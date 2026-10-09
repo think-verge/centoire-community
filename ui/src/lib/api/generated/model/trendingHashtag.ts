@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type PostCardTagsItem = {
-  id: string;
+export interface TrendingHashtag {
   name: string;
-  slug: string;
-};
+  postCount: number;
+  recentCount: number;
+}

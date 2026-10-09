@@ -59,9 +59,9 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
               {post.subcategory && ` · ${post.subcategory}`}
             </span>
           )}
-          {post.tags.map((tag) => (
-            <RouterLink key={tag.id} to={`/t/${tag.slug}`} className="kicker hover:underline">
-              {tag.name}
+          {post.hashtags.map((name) => (
+            <RouterLink key={name} to={`/hashtag/${name}`} className="font-ui text-xs font-semibold text-[var(--color-coral)] hover:underline">
+              #{name}
             </RouterLink>
           ))}
           {post.circle && (

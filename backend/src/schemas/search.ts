@@ -1,11 +1,12 @@
 import { registry, z, jsonResponse } from "./registry.js";
 import { PublicUserSchema } from "./auth.js";
-import { CircleSchema, TagSchema } from "./community.js";
+import { CircleSchema } from "./community.js";
+import { HashtagSuggestionSchema } from "./hashtags.js";
 import { PostCardSchema } from "./posts.js";
 
 export const SearchQuerySchema = z.object({
   q: z.string().min(1).max(100),
-  type: z.enum(["all", "posts", "people", "circles", "tags"]).optional(),
+  type: z.enum(["all", "posts", "people", "circles", "hashtags"]).optional(),
 });
 
 export const SearchResultsSchema = registry.register(
@@ -14,7 +15,7 @@ export const SearchResultsSchema = registry.register(
     posts: z.array(PostCardSchema),
     people: z.array(PublicUserSchema),
     circles: z.array(CircleSchema),
-    tags: z.array(TagSchema),
+    hashtags: z.array(HashtagSuggestionSchema),
   }),
 );
 
