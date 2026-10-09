@@ -16,8 +16,11 @@ export interface CreateSourceInput {
   siteUrl: string;
   feedUrl: string;
   faviconUrl?: string;
-  /** @maxItems 5 */
-  tagIds?: string[];
+  /**
+   * @minItems 0
+   * @maxItems 5
+   */
+  hashtags?: string[];
   /** @nullable */
   category?: CreateSourceInputCategory;
   /** @nullable */

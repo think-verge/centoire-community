@@ -15,7 +15,7 @@ export const FeedCursorQuerySchema = z.object({
 
 export const DiscoverQuerySchema = z.object({
   sort: z.enum(["trending", "new"]).optional(),
-  tag: z.string().optional(),
+  hashtag: z.string().optional(),
   origin: z.enum(["native", "aggregated"]).optional(),
   source: z.string().optional(),
   category: PostCategorySchema.optional(),

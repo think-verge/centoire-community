@@ -23,6 +23,63 @@
           "detail"
         ]
       },
+      "HashtagSuggestion": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "postCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "postCount"
+        ]
+      },
+      "TrendingHashtag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "recentCount": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "postCount",
+          "recentCount"
+        ]
+      },
+      "Hashtag": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "postCount": {
+            "type": "number"
+          },
+          "followerCount": {
+            "type": "number"
+          },
+          "following": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "postCount",
+          "followerCount",
+          "following"
+        ]
+      },
       "ViewerState": {
         "type": "object",
         "properties": {
@@ -181,26 +238,10 @@
             "type": "string",
             "nullable": true
           },
-          "tags": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "slug": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name",
-                "slug"
-              ]
+              "type": "string"
             }
           },
           "upvoteCount": {
@@ -243,7 +284,7 @@
           "circle",
           "category",
           "subcategory",
-          "tags",
+          "hashtags",
           "upvoteCount",
           "commentCount",
           "bookmarkCount",
@@ -333,11 +374,14 @@
               "nullable": true
             }
           },
-          "tagIds": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
+            "minItems": 0,
             "maxItems": 5
           },
           "circleId": {
@@ -391,11 +435,14 @@
               "nullable": true
             }
           },
-          "tagIds": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
+            "minItems": 0,
             "maxItems": 5
           },
           "circleId": {
@@ -480,21 +527,9 @@
             "type": "string",
             "nullable": true
           },
-          "tag": {
-            "type": "object",
-            "nullable": true,
-            "properties": {
-              "slug": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "slug",
-              "name"
-            ]
+          "hashtag": {
+            "type": "string",
+            "nullable": true
           },
           "country": {
             "type": "string",
@@ -516,29 +551,10 @@
         "required": [
           "category",
           "subcategory",
-          "tag",
+          "hashtag",
           "country",
           "q",
           "sort"
-        ]
-      },
-      "TagRef": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug"
         ]
       },
       "PublicUser": {
@@ -617,10 +633,10 @@
               "onboardingCompleted": {
                 "type": "boolean"
               },
-              "interests": {
+              "followedHashtags": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/TagRef"
+                  "type": "string"
                 }
               }
             },
@@ -629,7 +645,7 @@
               "role",
               "emailVerified",
               "onboardingCompleted",
-              "interests"
+              "followedHashtags"
             ]
           }
         ]
@@ -778,48 +794,6 @@
           "nextCursor"
         ]
       },
-      "Tag": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "slug": {
-            "type": "string"
-          },
-          "category": {
-            "type": "string",
-            "enum": [
-              "style",
-              "craft",
-              "business",
-              "culture"
-            ]
-          },
-          "description": {
-            "type": "string",
-            "nullable": true
-          },
-          "postCount": {
-            "type": "number"
-          },
-          "followerCount": {
-            "type": "number"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "slug",
-          "category",
-          "description",
-          "postCount",
-          "followerCount"
-        ]
-      },
       "Circle": {
         "type": "object",
         "properties": {
@@ -853,26 +827,10 @@
             "type": "string",
             "nullable": true
           },
-          "tags": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "slug": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name",
-                "slug"
-              ]
+              "type": "string"
             }
           },
           "memberCount": {
@@ -903,7 +861,7 @@
           "rules",
           "avatarUrl",
           "coverImageUrl",
-          "tags",
+          "hashtags",
           "memberCount",
           "postCount",
           "viewerRole",
@@ -953,17 +911,19 @@
       "SetInterestsInput": {
         "type": "object",
         "properties": {
-          "tagIds": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
             "minItems": 1,
             "maxItems": 20
           }
         },
         "required": [
-          "tagIds"
+          "hashtags"
         ]
       },
       "CreateCircleInput": {
@@ -991,21 +951,14 @@
             },
             "maxItems": 10
           },
-          "tagIds": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "pattern": "^[a-f\\d]{24}$"
-            },
-            "maxItems": 5
-          },
-          "tagNames": {
+          "hashtags": {
             "type": "array",
             "items": {
               "type": "string",
               "minLength": 1,
-              "maxLength": 40
+              "maxLength": 60
             },
+            "minItems": 1,
             "maxItems": 5
           },
           "avatarUrl": {
@@ -1019,7 +972,8 @@
         },
         "required": [
           "name",
-          "description"
+          "description",
+          "hashtags"
         ]
       },
       "OnboardingSuggestions": {
@@ -1849,10 +1803,10 @@
               "$ref": "#/components/schemas/Circle"
             }
           },
-          "tags": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Tag"
+              "$ref": "#/components/schemas/HashtagSuggestion"
             }
           }
         },
@@ -1860,7 +1814,7 @@
           "posts",
           "people",
           "circles",
-          "tags"
+          "hashtags"
         ]
       },
       "Source": {
@@ -1882,26 +1836,10 @@
             "type": "string",
             "nullable": true
           },
-          "tags": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "slug": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name",
-                "slug"
-              ]
+              "type": "string"
             }
           },
           "category": {
@@ -1946,7 +1884,7 @@
           "siteUrl",
           "feedUrl",
           "faviconUrl",
-          "tags",
+          "hashtags",
           "category",
           "subcategory",
           "active",
@@ -1975,11 +1913,14 @@
             "type": "string",
             "format": "uri"
           },
-          "tagIds": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
+            "minItems": 0,
             "maxItems": 5
           },
           "category": {
@@ -2028,11 +1969,14 @@
             "type": "string",
             "format": "uri"
           },
-          "tagIds": {
+          "hashtags": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
+            "minItems": 0,
             "maxItems": 5
           },
           "category": {
@@ -2537,37 +2481,55 @@
         }
       }
     },
-    "/tags": {
+    "/hashtags": {
       "get": {
         "tags": [
-          "tags"
+          "hashtags"
         ],
-        "operationId": "listTags",
+        "operationId": "searchHashtags",
+        "summary": "Typeahead: hashtags starting with q, most used first (empty q = most popular)",
         "parameters": [
           {
             "schema": {
               "type": "string",
+              "maxLength": 60
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "enum": [
-                "style",
-                "craft",
-                "business",
-                "culture"
+                "true",
+                "false"
               ]
             },
             "required": false,
-            "name": "category",
+            "name": "featured",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "All tags",
+            "description": "Matching hashtags with usage counts",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Tag"
+                    "$ref": "#/components/schemas/HashtagSuggestion"
                   }
                 }
               }
@@ -2576,35 +2538,169 @@
         }
       }
     },
-    "/tags/{slug}": {
+    "/hashtags/trending": {
       "get": {
         "tags": [
-          "tags"
+          "hashtags"
         ],
-        "operationId": "getTag",
+        "operationId": "getTrendingHashtags",
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 40
+            },
+            "required": false,
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hashtags trending this week",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrendingHashtag"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hashtags/{name}": {
+      "get": {
+        "tags": [
+          "hashtags"
+        ],
+        "operationId": "getHashtag",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
             },
             "required": true,
-            "name": "slug",
+            "name": "name",
             "in": "path"
           }
         ],
         "responses": {
           "200": {
-            "description": "Tag detail",
+            "description": "Hashtag detail",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Tag"
+                  "$ref": "#/components/schemas/Hashtag"
                 }
               }
             }
           },
           "404": {
-            "description": "Tag not found",
+            "description": "Hashtag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/hashtags/{name}/follow": {
+      "put": {
+        "tags": [
+          "hashtags"
+        ],
+        "operationId": "followHashtag",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Followed"
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hashtag not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "hashtags"
+        ],
+        "operationId": "unfollowHashtag",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60
+            },
+            "required": true,
+            "name": "name",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unfollowed"
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Hashtag not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2849,7 +2945,7 @@
               "type": "string"
             },
             "required": false,
-            "name": "tag",
+            "name": "hashtag",
             "in": "query"
           },
           {
@@ -3475,7 +3571,7 @@
               "type": "string"
             },
             "required": false,
-            "name": "tag",
+            "name": "hashtag",
             "in": "query"
           },
           {
@@ -4342,7 +4438,7 @@
                 "posts",
                 "people",
                 "circles",
-                "tags"
+                "hashtags"
               ]
             },
             "required": false,
@@ -4461,7 +4557,7 @@
               "type": "string"
             },
             "required": false,
-            "name": "tag",
+            "name": "hashtag",
             "in": "query"
           },
           {

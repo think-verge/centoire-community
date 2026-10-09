@@ -67,17 +67,17 @@ export function PostSidebar({ post }: { post: PostDetail }) {
         )}
       </div>
 
-      {post.tags.length > 0 && (
+      {post.hashtags.length > 0 && (
         <div>
-          <p className="kicker mb-2">Topics</p>
+          <p className="kicker mb-2">Hashtags</p>
           <div className="flex flex-wrap gap-1.5">
-            {post.tags.map((tag) => (
+            {post.hashtags.map((name) => (
               <Link
-                key={tag.id}
-                to={`/t/${tag.slug}`}
-                className="rounded-full border border-line px-2.5 py-1 text-xs font-medium text-ink-soft hover:border-ink-soft hover:text-ink"
+                key={name}
+                to={`/hashtag/${name}`}
+                className="rounded-full border border-line px-2.5 py-1 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
               >
-                {tag.name}
+                #{name}
               </Link>
             ))}
           </div>

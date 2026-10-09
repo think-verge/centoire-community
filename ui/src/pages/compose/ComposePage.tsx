@@ -13,7 +13,7 @@ import {
   usePublishPost,
 } from "../../lib/api/generated/posts/posts";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { HashtagInput } from "../../components/HashtagInput";
 import { useListCircles } from "../../lib/api/generated/circles/circles";
 import type { PostDetail } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
@@ -26,14 +26,13 @@ export function ComposePage() {
 
   const [postId, setPostId] = useState<string | null>(routeId ?? null);
   const [title, setTitle] = useState("");
-  const [tagIds, setTagIds] = useState<string[]>([]);
+  const [hashtags, setHashtags] = useState<string[]>([]);
   const [circleId, setCircleId] = useState<string>(searchParams.get("circle") ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(!routeId);
 
-  const { data: tags } = useListTags();
   const { data: circles } = useListCircles();
   const coverInputRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -62,7 +61,7 @@ export function ComposePage() {
     getPost(routeId)
       .then((post: PostDetail) => {
         setTitle(post.title);
-        setTagIds(post.tags.map((t) => t.id));
+        setHashtags(post.hashtags);
         setCircleId(post.circle?.id ?? "");
         setCoverImageUrl(post.coverImageUrl);
         if (post.content) editor.commands.setContent(post.content);
@@ -80,7 +79,7 @@ export function ComposePage() {
         const body = {
           title: currentTitle,
           content: editor.getJSON() as Record<string, unknown>,
-          tagIds,
+          hashtags,
           circleId: circleId || null,
           coverImageUrl,
         };
@@ -102,7 +101,7 @@ export function ComposePage() {
         return null;
       }
     },
-    [editor, postId, tagIds, circleId, coverImageUrl],
+    [editor, postId, hashtags, circleId, coverImageUrl],
   );
 
   const persistRef = useRef(persist);
@@ -119,7 +118,7 @@ export function ComposePage() {
 
   useEffect(() => {
     scheduleSave();
-  }, [title, tagIds, circleId, coverImageUrl, scheduleSave]);
+  }, [title, hashtags, circleId, coverImageUrl, scheduleSave]);
 
   const publishMutation = usePublishPost({
     mutation: {
@@ -189,7 +188,8 @@ export function ComposePage() {
           <Button
             onClick={handlePublish}
             loading={publishMutation.isPending}
-            disabled={!title.trim()}
+            disabled={!title.trim() || hashtags.length < 1}
+            title={hashtags.length < 1 ? "Add at least one hashtag to publish" : undefined}
           >
             Publish
           </Button>
@@ -241,32 +241,13 @@ export function ComposePage() {
 
       <div className="mt-8 space-y-5 border-t border-line pt-6">
         <div>
-          <p className="kicker mb-2">Tags (up to 5)</p>
-          <div className="flex flex-wrap gap-2">
-            {(tags ?? []).map((tag) => {
-              const active = tagIds.includes(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  aria-pressed={active}
-                  disabled={!active && tagIds.length >= 5}
-                  onClick={() =>
-                    setTagIds((prev) =>
-                      active ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
-                    )
-                  }
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-40 ${
-                    active
-                      ? "border-crimson bg-crimson text-ink-inverse"
-                      : "border-line bg-paper text-ink-soft hover:border-ink-soft"
-                  }`}
-                >
-                  {tag.name}
-                </button>
-              );
-            })}
-          </div>
+          <label htmlFor="post-hashtags" className="kicker mb-2 block">
+            Hashtags (1 to 5)
+          </label>
+          <HashtagInput id="post-hashtags" value={hashtags} onChange={setHashtags} />
+          <p className="mt-1.5 text-xs text-ink-faint">
+            Start typing to see popular hashtags and how many posts use them, or create a new one. Needed to publish.
+          </p>
         </div>
         <div>
           <p className="kicker mb-2">Post to a circle (optional)</p>
@@ -275,7 +256,7 @@ export function ComposePage() {
             onChange={(e) => setCircleId(e.target.value)}
             className="w-full max-w-xs rounded-lg border border-line bg-white px-3 py-2 text-sm focus:border-crimson focus:outline-none"
           >
-            <option value="">No circle — just my followers & tags</option>
+            <option value="">No circle — just my followers & hashtags</option>
             {(circles ?? [])
               .filter((c) => c.viewerRole)
               .map((c) => (

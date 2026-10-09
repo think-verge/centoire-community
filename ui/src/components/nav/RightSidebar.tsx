@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
 import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
 import { apiClient } from "../../lib/api/http";
-import type { ListTagsCategory } from "../../lib/api/generated/model";
+import { formatCount } from "../../lib/hashtag";
 import { AvatarBubble } from "../AppShell";
 
 export type RightSidebarContext =
@@ -13,16 +13,6 @@ export type RightSidebarContext =
   | { type: "discover" }
   | { type: "search" }
   | { type: "category"; category: string };
-
-// Category → tag category mapping for Trending Topics
-const CATEGORY_TAG_FILTER: Record<string, ListTagsCategory> = {
-  fashion: "style",
-  lifestyle: "style",
-  art: "culture",
-  beauty: "style",
-  ai_technology: "business",
-  business_intelligence: "business",
-};
 
 const CATEGORY_LABELS: Record<string, string> = {
   fashion: "Fashion",
@@ -56,10 +46,10 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
   const category = isCategory ? context.category : undefined;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : undefined;
 
-  const tagFilter = category ? CATEGORY_TAG_FILTER[category] : undefined;
-  const { data: tags = [] } = useListTags(
-    tagFilter ? { category: tagFilter } : undefined,
-    { query: {} },
+  // Hashtags trending this week; on a category page, trending within that category's posts.
+  const { data: hashtags = [] } = useGetTrendingHashtags(
+    { limit: 12, ...(category ? { category } : {}) },
+    { query: { staleTime: 5 * 60_000 } },
   );
 
   const { data: latestPostsData } = useGetFeedDiscover({ sort: "trending" });
@@ -154,44 +144,31 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
         </>
       )}
 
-      {/* Trending Topics */}
+      {/* Trending hashtags */}
       <section>
         <p className="mb-3 font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-          {isCategory && categoryLabel ? `Trending in ${categoryLabel}` : "Trending Topics"}
+          {isCategory && categoryLabel ? `Trending in ${categoryLabel}` : "Trending hashtags"}
         </p>
-        {(tags as { id: string; slug: string; name: string }[]).length > 0 ? (
+        {hashtags.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {(tags as { id: string; slug: string; name: string }[]).slice(0, 12).map((tag, i) => (
+            {hashtags.map((tag, i) => (
               <Link
-                key={tag.id}
-                to={`/t/${tag.slug}`}
-                className={`rounded-full border px-3 py-1 font-ui text-[11px] transition-colors ${
+                key={tag.name}
+                to={`/hashtag/${tag.name}`}
+                title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-ui text-[11px] transition-colors ${
                   i === 0
                     ? "border-[var(--color-coral)] bg-[var(--color-coral)] text-white"
                     : "border-[var(--color-hairline)] text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
                 }`}
               >
                 #{tag.name}
+                <span className={i === 0 ? "text-white/80" : "text-[var(--color-taupe)]"}>{formatCount(tag.postCount)}</span>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {["StreetStyle", "FashionWeek", "Minimalist", "Accessories", "Denim", "Luxury"].map(
-              (name, i) => (
-                <span
-                  key={name}
-                  className={`rounded-full border px-3 py-1 font-ui text-[11px] ${
-                    i === 0
-                      ? "border-[var(--color-coral)] bg-[var(--color-coral)] text-white"
-                      : "border-[var(--color-hairline)] text-[var(--color-stone)]"
-                  }`}
-                >
-                  #{name}
-                </span>
-              ),
-            )}
-          </div>
+          <p className="font-ui text-xs text-[var(--color-taupe)]">No hashtags are trending yet.</p>
         )}
       </section>
 

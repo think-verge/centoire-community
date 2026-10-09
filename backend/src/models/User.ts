@@ -17,7 +17,8 @@ export interface IUser extends Document {
   avatarUrl?: string;
   bio?: string;
   role: UserRole;
-  interests: Types.ObjectId[];
+  /** Hashtags the user follows; drive For You ranking. */
+  followedHashtags: string[];
   onboardingCompletedAt?: Date;
   reputation: number;
   followerCount: number;
@@ -49,7 +50,7 @@ const userSchema = new Schema<IUser>(
     avatarUrl: { type: String },
     bio: { type: String, maxlength: 160 },
     role: { type: String, enum: ["member", "creator", "editor", "admin"], default: "member" },
-    interests: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
+    followedHashtags: { type: [String], default: [] },
     onboardingCompletedAt: { type: Date },
     reputation: { type: Number, default: 0 },
     followerCount: { type: Number, default: 0 },

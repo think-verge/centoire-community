@@ -18,14 +18,14 @@ import { onboardingRouter } from "./onboardingRoutes.js";
 import { postRouter } from "./postRoutes.js";
 import { searchRouter } from "./searchRoutes.js";
 import { sourceRouter } from "./sourceRoutes.js";
-import { tagRouter } from "./tagRoutes.js";
+import { adminHashtagRouter, hashtagRouter } from "./hashtagRoutes.js";
 import { uploadRouter } from "./uploadRoutes.js";
 import { userRouter } from "./userRoutes.js";
 
 export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
-apiRouter.use("/tags", tagRouter);
+apiRouter.use("/hashtags", hashtagRouter);
 apiRouter.use("/users", userRouter);
 apiRouter.use("/onboarding", onboardingRouter);
 apiRouter.use("/circles", circleRouter);
@@ -39,6 +39,7 @@ apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/admin/sources", sourceRouter);
 apiRouter.use("/admin/posts", adminPostRouter);
 apiRouter.use("/admin/invites", inviteRouter);
+apiRouter.use("/admin/hashtags", adminHashtagRouter);
 apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/search", searchRouter);

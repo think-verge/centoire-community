@@ -2,7 +2,6 @@ import { Types } from "mongoose";
 import { Circle } from "../models/Circle.js";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Post, type IPost } from "../models/Post.js";
-import { Tag } from "../models/Tag.js";
 import { User, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 import { readTimeMinutes, tiptapToPlainText } from "../utils/read-time.js";
@@ -15,11 +14,13 @@ import { fireAiProcessing } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
 import { extractArticleHtml, stripHtml } from "./ingestionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
+import { MAX_POST_HASHTAGS, diffHashtags, normalizeHashtags } from "../utils/hashtag.js";
+import * as hashtagService from "./hashtagService.js";
 
 interface PostInput {
   title: string;
   content?: unknown;
-  tagIds?: string[];
+  hashtags?: string[];
   circleId?: string | null;
   coverImageUrl?: string | null;
   category?: PostCategory | null;
@@ -49,7 +50,8 @@ export async function createPost(userId: string, input: PostInput): Promise<IPos
     title: input.title,
     slug: slugifyWithId(input.title),
     content: input.content,
-    tags: input.tagIds ?? [],
+    // Drafts only remember names; Hashtag documents are created when the post is published.
+    hashtags: normalizeHashtags(input.hashtags ?? [], MAX_POST_HASHTAGS),
     circleId: input.circleId ?? undefined,
     coverImageUrl: input.coverImageUrl ?? undefined,
     category: input.category ?? undefined,
@@ -73,8 +75,18 @@ export async function updatePost(
 
   if (input.title !== undefined) post.title = input.title;
   if (input.content !== undefined) post.content = input.content;
-  if (input.tagIds !== undefined) {
-    post.tags = input.tagIds.map((id) => new Types.ObjectId(id));
+  if (input.hashtags !== undefined) {
+    const next = normalizeHashtags(input.hashtags, MAX_POST_HASHTAGS);
+    if (post.status === "published") {
+      // Live post: keep it tagged, create any new hashtags, and move the usage counts.
+      if (next.length === 0) throw new ApiError(422, "A published post needs at least one hashtag");
+      const allowed = await hashtagService.ensureHashtags(next, { createdBy: userId });
+      if (allowed.length === 0) throw new ApiError(422, "Those hashtags can't be used");
+      await hashtagService.adjustCounts(diffHashtags(post.hashtags, allowed));
+      post.hashtags = allowed;
+    } else {
+      post.hashtags = next;
+    }
   }
   if (input.circleId !== undefined) {
     post.circleId = input.circleId ? new Types.ObjectId(input.circleId) : undefined;
@@ -98,6 +110,13 @@ export async function updatePost(
 // Safe to call on aggregated posts — null-guards authorId before touching user/reputation.
 export async function finalizePublish(post: IPost): Promise<void> {
   const firstPublish = !post.publishedAt;
+  if (firstPublish) {
+    // Create hashtags that are new and drop any that were blocked since the draft was written.
+    post.hashtags = await hashtagService.ensureHashtags(post.hashtags, {
+      createdBy: post.authorId?.toString(),
+      max: MAX_POST_HASHTAGS,
+    });
+  }
   post.status = "published";
   post.publishedAt = post.publishedAt ?? new Date();
   post.reviewedAt = post.reviewedAt ?? new Date();
@@ -107,8 +126,8 @@ export async function finalizePublish(post: IPost): Promise<void> {
     if (post.authorId) {
       await User.updateOne({ _id: post.authorId }, { $inc: { postCount: 1 } });
     }
-    if (post.tags.length) {
-      await Tag.updateMany({ _id: { $in: post.tags } }, { $inc: { postCount: 1 } });
+    if (post.hashtags.length) {
+      await hashtagService.adjustCounts({ added: post.hashtags });
     }
     if (post.circleId) {
       await Circle.updateOne({ _id: post.circleId }, { $inc: { postCount: 1 } });
@@ -138,6 +157,7 @@ export async function publishPost(userId: string, postId: string, role: UserRole
   if (post.status === "published" || post.status === "pending_review") return post;
   if (!post.title.trim()) throw new ApiError(422, "Give your post a title before publishing");
   if (!post.contentText?.trim()) throw new ApiError(422, "Write something before publishing");
+  if (post.hashtags.length < 1) throw new ApiError(422, "Add at least one hashtag before publishing");
 
   if (!post.country) {
     post.country = (await inferCountry({ title: post.title, excerpt: post.excerpt })) ?? undefined;
@@ -188,8 +208,11 @@ export async function deletePost(
   const isOwner = post.authorId?.toString() === userId;
   const canModerate = role === "admin" || role === "editor";
   if (!isOwner && !canModerate) throw new ApiError(403, "You cannot delete this post");
+  const wasPublished = post.status === "published";
   post.status = "removed";
   await post.save();
+  // Usage counts only include live posts.
+  if (wasPublished) await hashtagService.adjustCounts({ removed: post.hashtags });
 }
 
 async function getOwnPost(userId: string, postId: string): Promise<IPost> {
@@ -210,7 +233,6 @@ export async function getBySlug(
   const post = await Post.findOne({ slug })
     .populate("authorId", "handle displayName avatarUrl reputation role")
     .populate("sourceId", "name siteUrl faviconUrl")
-    .populate("tags", "name slug")
     .populate("circleId", "name slug");
   if (!post || post.status === "removed") throw new ApiError(404, "Post not found");
   const isAuthor = post.authorId?._id?.toString() === viewerId;
@@ -258,6 +280,5 @@ export async function incrementViews(postId: Types.ObjectId): Promise<void> {
 export async function listDrafts(userId: string): Promise<IPost[]> {
   return Post.find({ authorId: userId, status: "draft" })
     .sort({ updatedAt: -1 })
-    .populate("tags", "name slug")
     .populate("circleId", "name slug");
 }

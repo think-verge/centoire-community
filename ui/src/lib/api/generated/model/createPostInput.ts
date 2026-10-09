@@ -16,8 +16,11 @@ export interface CreatePostInput {
    */
   title: string;
   content?: CreatePostInputContent;
-  /** @maxItems 5 */
-  tagIds?: string[];
+  /**
+   * @minItems 0
+   * @maxItems 5
+   */
+  hashtags?: string[];
   /** @nullable */
   circleId?: string | null;
   /** @nullable */

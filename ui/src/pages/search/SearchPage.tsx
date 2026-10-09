@@ -2,8 +2,9 @@ import { useState, useRef, Fragment } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PostDrawer } from "../../components/PostDrawer";
 import { useSearch } from "../../lib/api/generated/search/search";
+import { postsLabel } from "../../lib/hashtag";
 
-const TYPES = ["ALL", "PEOPLE", "POSTS", "CIRCLES"] as const;
+const TYPES = ["ALL", "PEOPLE", "POSTS", "CIRCLES", "HASHTAGS"] as const;
 type SearchType = (typeof TYPES)[number];
 
 export function SearchPage() {
@@ -61,7 +62,7 @@ export function SearchPage() {
     (data.posts.length > 0 ||
       data.people.length > 0 ||
       data.circles.length > 0 ||
-      data.tags.length > 0);
+      data.hashtags.length > 0);
 
   const renderPosts = data?.posts ? Array(10).fill(data.posts).flat() : [];
   const renderPeople = data?.people ? Array(10).fill(data.people).flat() : [];
@@ -160,9 +161,6 @@ export function SearchPage() {
                 {index === 0 && <div className="h-[34px] w-px bg-[#C4C4C4]"></div>}
               </Fragment>
             ))}
-            <button className={`${pillBase} ${pillIdle}`}>
-              TAGS
-            </button>
             <button className={`${pillBase} ${pillIdle} flex items-center gap-1.5`}>
               +4 MORE
               <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
@@ -240,6 +238,25 @@ export function SearchPage() {
                   </div>
                 )}
               </div>
+
+              {/* Hashtags */}
+              {(type === "ALL" || type === "HASHTAGS") && data.hashtags.length > 0 && (
+                <section className="flex flex-col gap-3">
+                  <p className="font-ui text-[14px] font-bold uppercase tracking-wider text-[#111111]/60">HASHTAGS</p>
+                  <div className="flex flex-wrap gap-2">
+                    {data.hashtags.map((h) => (
+                      <Link
+                        key={h.name}
+                        to={`/hashtag/${h.name}`}
+                        className="inline-flex items-center gap-2 rounded-full border border-[#EAEAEA] bg-white px-4 py-2 font-ui text-[14px] font-semibold text-[#111111] hover:border-[#111111]"
+                      >
+                        #{h.name}
+                        <span className="text-[12px] font-medium text-[#8A8A8A]">{postsLabel(h.postCount)}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {/* Related Posts */}
               {(type === "ALL" || type === "POSTS") && data.posts.length > 0 && (

@@ -31,14 +31,13 @@ interface KeysetCursor extends Record<string, unknown> {
 const CARD_POPULATE = [
   { path: "authorId", select: "handle displayName avatarUrl role" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
-  { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
 ];
 
 /** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 + creator*3 - hoursOld/6
  *  Note: cache creatorIds if the creator roster grows large (currently invite-only, so small). */
 function scoreStages(
-  interestIds: Types.ObjectId[],
+  interests: string[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
   creatorIds: Types.ObjectId[],
@@ -46,7 +45,7 @@ function scoreStages(
   return [
     {
       $addFields: {
-        tagMatchCount: { $size: { $setIntersection: ["$tags", interestIds] } },
+        tagMatchCount: { $size: { $setIntersection: [{ $ifNull: ["$hashtags", []] }, interests] } },
         authorFollowed: {
           $cond: [{ $in: ["$authorId", followedIds] }, 1, 0],
         },
@@ -129,7 +128,7 @@ async function buildPage(
 
 async function rankedFeed(
   match: Record<string, unknown>,
-  interestIds: Types.ObjectId[],
+  interests: string[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
   creatorIds: Types.ObjectId[],
@@ -141,7 +140,7 @@ async function rankedFeed(
 
   const results = await Post.aggregate<{ _id: Types.ObjectId }>([
     { $match: match },
-    ...(scoreStages(interestIds, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
+    ...(scoreStages(interests, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
     { $skip: offset },
     { $limit: PAGE_SIZE + 1 },
     { $project: { _id: 1 } },
@@ -159,8 +158,8 @@ async function getCreatorIds(): Promise<Types.ObjectId[]> {
 }
 
 export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
-  const user = await User.findById(userId).select("interests");
-  const interestIds = (user?.interests ?? []) as Types.ObjectId[];
+  const user = await User.findById(userId).select("followedHashtags");
+  const interests = user?.followedHashtags ?? [];
   const [followedIds, circleIds, creatorIds] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
@@ -172,12 +171,12 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
     status: "published",
     publishedAt: { $gte: since },
     $or: [
-      { tags: { $in: interestIds } },
+      { hashtags: { $in: interests } },
       { circleId: { $in: circleIds } },
       { authorId: { $in: followedIds } },
     ],
   };
-  return rankedFeed(match, interestIds, followedIds, circleIds, creatorIds, cursor, userId);
+  return rankedFeed(match, interests, followedIds, circleIds, creatorIds, cursor, userId);
 }
 
 /** Shared "new"-sort pagination: keyset cursor on (publishedAt, _id). Used by
@@ -217,7 +216,7 @@ async function keysetPublishedFeed(
 export async function discover(
   options: {
     sort: "trending" | "new";
-    tagId?: Types.ObjectId;
+    hashtag?: string;
     sourceId?: Types.ObjectId;
     origin?: string;
     category?: PostCategory;
@@ -229,7 +228,7 @@ export async function discover(
   userId?: string,
 ): Promise<FeedPage> {
   const base: Record<string, unknown> = { status: "published" };
-  if (options.tagId) base.tags = options.tagId;
+  if (options.hashtag) base.hashtags = options.hashtag;
   if (options.sourceId) base.sourceId = options.sourceId;
   if (options.origin) base.origin = options.origin;
   if (options.category) base.category = options.category;

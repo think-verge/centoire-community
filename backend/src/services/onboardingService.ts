@@ -12,7 +12,7 @@ export interface OnboardingSuggestions {
 
 export async function getSuggestions(userId: string): Promise<OnboardingSuggestions> {
   const user = await User.findById(userId);
-  const interestIds = user?.interests ?? [];
+  const interests = user?.followedHashtags ?? [];
 
   // Creators: only role:"creator" users — invite-only privileged accounts.
   // Primary: creators who share the user's interests.
@@ -21,7 +21,7 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
     _id: { $ne: userId },
     role: "creator",
     handle: { $exists: true },
-    interests: { $in: interestIds },
+    followedHashtags: { $in: interests },
   })
     .sort({ reputation: -1, followerCount: -1 })
     .limit(12);
@@ -38,7 +38,7 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
     creators = [...creators, ...fallback];
   }
 
-  const matchingCircles = await Circle.find({ tags: { $in: interestIds } })
+  const matchingCircles = await Circle.find({ hashtags: { $in: interests } })
     .sort({ memberCount: -1 })
     .limit(12);
   let circles = matchingCircles;

@@ -8,7 +8,6 @@ export async function create(req: Request, res: Response): Promise<void> {
   const post = await postService.createPost(req.user!.userId, { ...req.body, role: req.user!.role });
   await post.populate([
     { path: "authorId", select: "handle displayName avatarUrl role" },
-    { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
   res.status(201).json(serializePostCard(post));
@@ -18,7 +17,6 @@ export async function update(req: Request, res: Response): Promise<void> {
   const post = await postService.updatePost(req.user!.userId, req.params.id as string, req.body);
   await post.populate([
     { path: "authorId", select: "handle displayName avatarUrl role" },
-    { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
   res.json(serializePostDetail(post));
@@ -28,7 +26,6 @@ export async function publish(req: Request, res: Response): Promise<void> {
   const post = await postService.publishPost(req.user!.userId, req.params.id as string, req.user!.role);
   await post.populate([
     { path: "authorId", select: "handle displayName avatarUrl role" },
-    { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
   res.json(serializePostCard(post));

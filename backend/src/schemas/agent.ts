@@ -10,7 +10,7 @@ export const AgentSearchFiltersSchema = registry.register(
   z.object({
     category: PostCategorySchema.nullable(),
     subcategory: z.string().nullable(),
-    tag: z.object({ slug: z.string(), name: z.string() }).nullable(),
+    hashtag: z.string().nullable(),
     country: z.string().nullable(),
     q: z.string().nullable(),
     sort: z.enum(["trending", "new"]).nullable(),

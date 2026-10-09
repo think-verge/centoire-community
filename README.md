@@ -15,7 +15,7 @@ The home for everyone in fashion — a daily.dev-style community platform: one p
 cd backend
 cp .env.example .env        # set MONGODB_URI (+ optional Cloudinary/Google/Resend keys)
 npm install
-npm run seed                # tags, RSS sources, starter circles, admin user
+npm run seed                # hashtags, RSS sources, starter circles, admin user
 npm run dev                 # http://localhost:8000
 
 # 2. UI (second terminal)
@@ -58,7 +58,8 @@ With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 |---|---|---|
 | backend | `npm run dev` | tsx watch dev server |
 | backend | `npm run openapi` | export OpenAPI spec from Zod |
-| backend | `npm run seed` | idempotent seed (tags/sources/circles/admin) |
+| backend | `npm run migrate:hashtags` | one-off, additive migration from the old Tag system to hashtags (`-- --dry-run` first, `-- --cleanup` later) |
+| backend | `npm run seed` | idempotent seed (hashtags/sources/circles/admin) |
 | backend | `npm test` | vitest unit tests |
 | backend | `npx tsx scripts/fetch-sources.ts` | one-off RSS pull |
 | ui | `npm run dev` | Vite dev server with /api proxy |
@@ -89,7 +90,7 @@ configuration whenever the Let's Encrypt certificate is present.
 ## Architecture notes
 
 - **For You ranking** (`backend/src/services/feedService.ts`): Mongo aggregation —
-  `score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 − hoursOld/6` over a
+  `score = log10(upvotes+1)*4 + hashtagMatch*2 + follow*6 + circle*4 − hoursOld/6` over a
   45-day window; offset cursor capped at 400 (swap for a precomputed rank score at scale).
 - **Reputation** is an append-only ledger (`ReputationEvent`) with a denormalized total
   on the user: +2 publish, +10 post upvote, +5 comment upvote, reversed on unvote.

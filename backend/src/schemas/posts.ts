@@ -1,5 +1,6 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 import { POST_CATEGORIES } from "../config/categoryTaxonomy.js";
+import { hashtagNames } from "./hashtags.js";
 
 export const PostCategorySchema = z.enum(POST_CATEGORIES);
 
@@ -47,7 +48,7 @@ export const PostCardSchema = registry.register(
     circle: PostCircleRefSchema.nullable(),
     category: PostCategorySchema.nullable(),
     subcategory: z.string().nullable(),
-    tags: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
+    hashtags: z.array(z.string()),
     upvoteCount: z.number(),
     commentCount: z.number(),
     bookmarkCount: z.number(),
@@ -85,7 +86,8 @@ export const CreatePostInputSchema = registry.register(
   z.object({
     title: z.string().min(1).max(200),
     content: z.record(z.string(), z.unknown()).optional(),
-    tagIds: z.array(z.string()).max(5).optional(),
+    /** Up to 5 hashtag names (1-5 required to publish). Normalized and created server-side. */
+    hashtags: hashtagNames(0, 5).optional(),
     circleId: z.string().nullable().optional(),
     coverImageUrl: z.string().url().nullable().optional(),
     category: PostCategorySchema.nullable().optional(),

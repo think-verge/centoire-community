@@ -2,19 +2,7 @@ import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.j
 import { CurrentUserSchema, PublicUserSchema } from "./auth.js";
 import { PostCardSchema } from "./posts.js";
 import { FeedPageSchema } from "./feed.js";
-
-export const TagSchema = registry.register(
-  "Tag",
-  z.object({
-    id: z.string(),
-    name: z.string(),
-    slug: z.string(),
-    category: z.enum(["style", "craft", "business", "culture"]),
-    description: z.string().nullable(),
-    postCount: z.number(),
-    followerCount: z.number(),
-  }),
-);
+import { hashtagNames } from "./hashtags.js";
 
 export const CircleSchema = registry.register(
   "Circle",
@@ -27,7 +15,7 @@ export const CircleSchema = registry.register(
     rules: z.array(z.string()),
     avatarUrl: z.string().nullable(),
     coverImageUrl: z.string().nullable(),
-    tags: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
+    hashtags: z.array(z.string()),
     memberCount: z.number(),
     postCount: z.number(),
     viewerRole: z.enum(["owner", "moderator", "member"]).nullable(),
@@ -55,7 +43,7 @@ export const UpdateMeInputSchema = registry.register(
 
 export const SetInterestsInputSchema = registry.register(
   "SetInterestsInput",
-  z.object({ tagIds: z.array(z.string()).min(1).max(20) }),
+  z.object({ hashtags: hashtagNames(1, 20) }),
 );
 
 export const CreateCircleInputSchema = registry.register(
@@ -65,13 +53,10 @@ export const CreateCircleInputSchema = registry.register(
     description: z.string().min(1).max(160),
     about: z.string().max(4000).optional(),
     rules: z.array(z.string().max(300)).max(10).optional(),
-    tagIds: z.array(z.string().regex(/^[a-f\d]{24}$/i, "Invalid tag id")).max(5).optional(),
-    tagNames: z.array(z.string().trim().min(1).max(40)).max(5).optional(),
+    /** 1-5 hashtag names; normalized and created on the server. */
+    hashtags: hashtagNames(1, 5),
     avatarUrl: z.string().url().optional(),
     coverImageUrl: z.string().url().optional(),
-  }).refine((c) => (c.tagIds?.length ?? 0) + (c.tagNames?.length ?? 0) >= 1, {
-    message: "Pick at least one topic",
-    path: ["tagIds"],
   }),
 );
 
@@ -85,13 +70,9 @@ export const OnboardingSuggestionsSchema = registry.register(
   }),
 );
 
-export const TagListQuerySchema = z.object({
-  category: z.enum(["style", "craft", "business", "culture"]).optional(),
-});
-
 export const CircleListQuerySchema = z.object({
   q: z.string().trim().min(1).optional(),
-  tag: z.string().optional(),
+  hashtag: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
@@ -100,26 +81,6 @@ export const CircleSlugParamsSchema = z.object({ slug: z.string().min(1).max(80)
 export const CirclePostsQuerySchema = z.object({ cursor: z.string().optional() });
 
 export function registerCommunityPaths(): void {
-  registry.registerPath({
-    method: "get",
-    path: "/tags",
-    tags: ["tags"],
-    operationId: "listTags",
-    request: { query: TagListQuerySchema },
-    responses: { 200: jsonResponse("All tags", z.array(TagSchema)) },
-  });
-  registry.registerPath({
-    method: "get",
-    path: "/tags/{slug}",
-    tags: ["tags"],
-    operationId: "getTag",
-    request: { params: z.object({ slug: z.string() }) },
-    responses: {
-      200: jsonResponse("Tag detail", TagSchema),
-      404: errorResponse("Tag not found"),
-    },
-  });
-
   registry.registerPath({
     method: "get",
     path: "/users/{handle}",
