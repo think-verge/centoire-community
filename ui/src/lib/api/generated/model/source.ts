@@ -5,6 +5,9 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { SourceMethod } from './sourceMethod';
+import type { SourceSpec } from './sourceSpec';
+import type { SourceLastRun } from './sourceLastRun';
 import type { SourceCategory } from './sourceCategory';
 import type { SourceLastStatus } from './sourceLastStatus';
 
@@ -12,9 +15,18 @@ export interface Source {
   id: string;
   name: string;
   siteUrl: string;
-  feedUrl: string;
+  /** @nullable */
+  feedUrl: string | null;
   /** @nullable */
   faviconUrl: string | null;
+  method: SourceMethod;
+  requiresLogin: boolean;
+  /** @nullable */
+  credentialRef: string | null;
+  scrapeIntervalMin: number;
+  spec: SourceSpec;
+  /** @nullable */
+  lastRun: SourceLastRun;
   hashtags: string[];
   /** @nullable */
   category: SourceCategory;

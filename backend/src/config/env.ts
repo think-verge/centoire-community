@@ -30,6 +30,13 @@ export const env = {
   INGESTION_CRON: process.env.INGESTION_CRON ?? "*/30 * * * *",
   AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
   AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
+  /** Shared secret for the external scraper-agent (separate from the AI agent's). */
+  SCRAPER_SECRET: process.env.SCRAPER_SECRET ?? "dev-scraper-secret",
+  /** "agent": scraping is done by the external scraper-agent via jobs; "rss": legacy in-process RSS fetch. */
+  INGESTION_MODE: process.env.INGESTION_MODE === "rss" ? "rss" : "agent",
+  /** How long a leased scrape job may go without a heartbeat before it is handed to another worker. */
+  SCRAPE_LEASE_SECONDS: Number(process.env.SCRAPE_LEASE_SECONDS ?? 300),
+  SCRAPE_MAX_ATTEMPTS: Number(process.env.SCRAPE_MAX_ATTEMPTS ?? 3),
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
 };
 

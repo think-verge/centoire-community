@@ -22,3 +22,5 @@ sourceRouter.patch(
 );
 sourceRouter.delete("/:id", asyncHandler(sourceController.remove));
 sourceRouter.post("/:id/fetch", asyncHandler(sourceController.fetchNow));
+sourceRouter.post("/:id/discover", asyncHandler(sourceController.rediscover));
+sourceRouter.get("/:id/jobs", asyncHandler(sourceController.jobs));

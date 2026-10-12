@@ -6,12 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PostDetailAllOfContent } from './postDetailAllOfContent';
+import type { PostDetailAllOfContentAccess } from './postDetailAllOfContentAccess';
 
 export type PostDetailAllOf = {
   /** @nullable */
   content: PostDetailAllOfContent;
   /** @nullable */
   contentHtml: string | null;
+  contentAccess: PostDetailAllOfContentAccess;
+  contentLocked: boolean;
   viewCount: number;
   /** @nullable */
   rejectionReason: string | null;

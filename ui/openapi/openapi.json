@@ -314,6 +314,16 @@
                 "type": "string",
                 "nullable": true
               },
+              "contentAccess": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "members"
+                ]
+              },
+              "contentLocked": {
+                "type": "boolean"
+              },
               "viewCount": {
                 "type": "number"
               },
@@ -335,6 +345,8 @@
             "required": [
               "content",
               "contentHtml",
+              "contentAccess",
+              "contentLocked",
               "viewCount",
               "rejectionReason",
               "authorFollowedByViewer",
@@ -1830,11 +1842,107 @@
             "type": "string"
           },
           "feedUrl": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "faviconUrl": {
             "type": "string",
             "nullable": true
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "rss"
+            ]
+          },
+          "requiresLogin": {
+            "type": "boolean"
+          },
+          "credentialRef": {
+            "type": "string",
+            "nullable": true
+          },
+          "scrapeIntervalMin": {
+            "type": "number"
+          },
+          "spec": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "discovering",
+                  "ready",
+                  "needs_rediscovery",
+                  "needs_human"
+                ]
+              },
+              "store": {
+                "type": "string",
+                "enum": [
+                  "full",
+                  "excerpt"
+                ]
+              },
+              "hash": {
+                "type": "string",
+                "nullable": true
+              },
+              "discoveredAt": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "store",
+              "hash",
+              "discoveredAt"
+            ]
+          },
+          "lastRun": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "error"
+                ]
+              },
+              "errorCode": {
+                "type": "string",
+                "nullable": true
+              },
+              "errorMessage": {
+                "type": "string",
+                "nullable": true
+              },
+              "itemsSeen": {
+                "type": "number"
+              },
+              "imported": {
+                "type": "number"
+              },
+              "duplicates": {
+                "type": "number"
+              },
+              "finishedAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "errorCode",
+              "errorMessage",
+              "itemsSeen",
+              "imported",
+              "duplicates",
+              "finishedAt"
+            ]
           },
           "hashtags": {
             "type": "array",
@@ -1884,6 +1992,12 @@
           "siteUrl",
           "feedUrl",
           "faviconUrl",
+          "method",
+          "requiresLogin",
+          "credentialRef",
+          "scrapeIntervalMin",
+          "spec",
+          "lastRun",
           "hashtags",
           "category",
           "subcategory",
@@ -1907,11 +2021,33 @@
           },
           "feedUrl": {
             "type": "string",
+            "nullable": true,
             "format": "uri"
           },
           "faviconUrl": {
             "type": "string",
             "format": "uri"
+          },
+          "requiresLogin": {
+            "type": "boolean"
+          },
+          "credentialRef": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "scrapeIntervalMin": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "store": {
+            "type": "string",
+            "enum": [
+              "full",
+              "excerpt"
+            ]
           },
           "hashtags": {
             "type": "array",
@@ -1945,8 +2081,7 @@
         },
         "required": [
           "name",
-          "siteUrl",
-          "feedUrl"
+          "siteUrl"
         ]
       },
       "UpdateSourceInput": {
@@ -1963,11 +2098,33 @@
           },
           "feedUrl": {
             "type": "string",
+            "nullable": true,
             "format": "uri"
           },
           "faviconUrl": {
             "type": "string",
             "format": "uri"
+          },
+          "requiresLogin": {
+            "type": "boolean"
+          },
+          "credentialRef": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 60,
+            "pattern": "^[a-z0-9][a-z0-9_-]*$"
+          },
+          "scrapeIntervalMin": {
+            "type": "integer",
+            "minimum": 5,
+            "maximum": 10080
+          },
+          "store": {
+            "type": "string",
+            "enum": [
+              "full",
+              "excerpt"
+            ]
           },
           "hashtags": {
             "type": "array",
@@ -2028,6 +2185,93 @@
           "itemsSeen",
           "imported",
           "skippedDuplicates"
+        ]
+      },
+      "ScrapeEnqueueResult": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "agent",
+              "rss"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "discover",
+              "scrape"
+            ]
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "jobId": {
+            "type": "string",
+            "nullable": true
+          },
+          "stats": {
+            "$ref": "#/components/schemas/FetchStats"
+          }
+        },
+        "required": [
+          "mode",
+          "type",
+          "created",
+          "jobId"
+        ]
+      },
+      "ScrapeJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "discover",
+              "scrape"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "leased",
+              "done",
+              "failed"
+            ]
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "attempts",
+          "errorCode",
+          "errorMessage",
+          "createdAt",
+          "finishedAt"
         ]
       }
     },
@@ -4401,11 +4645,74 @@
         ],
         "responses": {
           "200": {
-            "description": "Import stats",
+            "description": "Queued job (or legacy import stats)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FetchStats"
+                  "$ref": "#/components/schemas/ScrapeEnqueueResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources/{id}/discover": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "rediscoverSource",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Queued discovery job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScrapeEnqueueResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/sources/{id}/jobs": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "listSourceJobs",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent scrape jobs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScrapeJob"
+                  }
                 }
               }
             }

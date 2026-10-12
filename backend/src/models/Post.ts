@@ -21,6 +21,11 @@ export interface IPost extends Document {
   canonicalUrlHash?: string;
   /** Normalized hashtag names (see utils/hashtag.ts), 1-5 once published. */
   hashtags: string[];
+  /** "members": full text is only returned to signed-in viewers (paid/licensed sources). */
+  contentAccess: "open" | "members";
+  /** When/how an agent-scraped post was captured (provenance). */
+  scrapedAt?: Date;
+  scrapeSpecHash?: string;
   circleId?: Types.ObjectId;
   category?: PostCategory;
   subcategory?: string;
@@ -68,6 +73,9 @@ const postSchema = new Schema<IPost>(
     externalUrl: { type: String },
     canonicalUrlHash: { type: String, unique: true, sparse: true },
     hashtags: { type: [String], default: [] },
+    contentAccess: { type: String, enum: ["open", "members"], default: "open" },
+    scrapedAt: { type: Date },
+    scrapeSpecHash: { type: String },
     circleId: { type: Schema.Types.ObjectId, ref: "Circle" },
     category: { type: String, enum: POST_CATEGORIES },
     subcategory: { type: String },

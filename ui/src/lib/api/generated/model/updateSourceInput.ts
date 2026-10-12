@@ -5,6 +5,7 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateSourceInputStore } from './updateSourceInputStore';
 import type { UpdateSourceInputCategory } from './updateSourceInputCategory';
 
 export interface UpdateSourceInput {
@@ -14,8 +15,22 @@ export interface UpdateSourceInput {
    */
   name?: string;
   siteUrl?: string;
-  feedUrl?: string;
+  /** @nullable */
+  feedUrl?: string | null;
   faviconUrl?: string;
+  requiresLogin?: boolean;
+  /**
+   * @maxLength 60
+   * @nullable
+   * @pattern ^[a-z0-9][a-z0-9_-]*$
+   */
+  credentialRef?: string | null;
+  /**
+   * @minimum 5
+   * @maximum 10080
+   */
+  scrapeIntervalMin?: number;
+  store?: UpdateSourceInputStore;
   /**
    * @minItems 0
    * @maxItems 5

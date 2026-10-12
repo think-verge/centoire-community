@@ -6,6 +6,7 @@ import "./Circle.js";
 import "./CircleMembership.js";
 import "./Follow.js";
 import "./Source.js";
+import "./ScrapeJob.js";
 import "./Post.js";
 import "./Comment.js";
 import "./Vote.js";

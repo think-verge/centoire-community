@@ -11,6 +11,7 @@ import {
 } from "./engagementRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
 import { internalRouter } from "./internalRoutes.js";
+import { scrapeInternalRouter } from "./scrapeInternalRoutes.js";
 import { inviteRouter } from "./inviteRoutes.js";
 import { moderationRouter } from "./moderationRoutes.js";
 import { notificationRouter } from "./notificationRoutes.js";
@@ -44,6 +45,8 @@ apiRouter.use("/moderation", moderationRouter);
 apiRouter.use("/notifications", notificationRouter);
 apiRouter.use("/search", searchRouter);
 apiRouter.use("/agent", agentRouter);
+// The scraper-agent has its own secret, so its router is mounted before the AI agent's /internal guard.
+apiRouter.use("/internal/scrape", scrapeInternalRouter);
 apiRouter.use("/internal", internalRouter);
 
 apiRouter.get("/health", (_req, res) => {

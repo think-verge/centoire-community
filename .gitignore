@@ -4,3 +4,12 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# scraper-agent
+.venv/
+__pycache__/
+*.egg-info/
+scraper-agent/var/
+scraper-agent/.env
+.pytest_cache/
+.ruff_cache/

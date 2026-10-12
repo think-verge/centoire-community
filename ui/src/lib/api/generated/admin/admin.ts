@@ -29,9 +29,10 @@ import type {
   CreateInviteInput,
   CreateSourceInput,
   ErrorResponse,
-  FetchStats,
   Invite,
   InviteList,
+  ScrapeEnqueueResult,
+  ScrapeJob,
   Source,
   UpdateSourceInput
 } from '.././model';
@@ -560,7 +561,7 @@ const {mutation: mutationOptions} = options ?
 ) => {
       
       
-      return customInstance<FetchStats>(
+      return customInstance<ScrapeEnqueueResult>(
       {url: `/admin/sources/${id}/fetch`, method: 'POST', signal
     },
       );
@@ -610,4 +611,145 @@ const {mutation: mutationOptions} = options ?
 
       return useMutation(mutationOptions, queryClient);
     }
+    export const rediscoverSource = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ScrapeEnqueueResult>(
+      {url: `/admin/sources/${id}/discover`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getRediscoverSourceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rediscoverSource>>, TError,{id: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof rediscoverSource>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['rediscoverSource'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rediscoverSource>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  rediscoverSource(id,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RediscoverSourceMutationResult = NonNullable<Awaited<ReturnType<typeof rediscoverSource>>>
     
+    export type RediscoverSourceMutationError = ErrorType<unknown>
+
+    export const useRediscoverSource = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rediscoverSource>>, TError,{id: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rediscoverSource>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+
+      const mutationOptions = getRediscoverSourceMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const listSourceJobs = (
+    id: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ScrapeJob[]>(
+      {url: `/admin/sources/${id}/jobs`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getListSourceJobsQueryKey = (id?: string,) => {
+    return [
+    `/admin/sources/${id}/jobs`
+    ] as const;
+    }
+
+    
+export const getListSourceJobsQueryOptions = <TData = Awaited<ReturnType<typeof listSourceJobs>>, TError = ErrorType<unknown>>(id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSourceJobsQueryKey(id);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSourceJobs>>> = ({ signal }) => listSourceJobs(id, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListSourceJobsQueryResult = NonNullable<Awaited<ReturnType<typeof listSourceJobs>>>
+export type ListSourceJobsQueryError = ErrorType<unknown>
+
+
+export function useListSourceJobs<TData = Awaited<ReturnType<typeof listSourceJobs>>, TError = ErrorType<unknown>>(
+ id: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSourceJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listSourceJobs>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSourceJobs<TData = Awaited<ReturnType<typeof listSourceJobs>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSourceJobs>>,
+          TError,
+          Awaited<ReturnType<typeof listSourceJobs>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListSourceJobs<TData = Awaited<ReturnType<typeof listSourceJobs>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListSourceJobs<TData = Awaited<ReturnType<typeof listSourceJobs>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listSourceJobs>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListSourceJobsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

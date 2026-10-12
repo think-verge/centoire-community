@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scraper-agent"
+version = "0.1.0"
+description = "Centoire scraping agent: discovers how to scrape each source, records it as YAML, and replays it."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "httpx>=0.27",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.4",
+  "pyyaml>=6.0",
+  "parsel>=1.9",
+  "lxml>=5.2",
+  "nh3>=0.2.18",
+  "feedparser>=6.0",
+  "python-dateutil>=2.9",
+  "trafilatura>=1.12",
+  "langgraph>=0.2",
+  "langchain-core>=0.3",
+  "langchain-google-genai>=2.0",
+  "playwright>=1.47",
+  "filelock>=3.13",
+  "langchain-mcp-adapters>=0.1",
+]
+
+[project.optional-dependencies]
+anthropic = ["langchain-anthropic>=0.3"]
+patchright = ["patchright>=1.47"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "respx>=0.21", "ruff>=0.6"]
+
+[project.scripts]
+scraper = "scraper_agent.jobs.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scraper_agent"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["tests"]
+markers = ["browser: needs a local Chromium (deselect with -m 'not browser')", "live: calls a real LLM/network (needs keys)"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["E501"]  # long lines are fine for readable test data and messages

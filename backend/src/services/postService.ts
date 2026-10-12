@@ -255,6 +255,9 @@ export async function getFullContent(
   const post = await getBySlug(slug, viewerId, viewerRole);
   const hostname = post.externalUrl ? new URL(post.externalUrl).hostname.replace(/^www\./, "") : "";
 
+  // Paid/licensed full text is for signed-in members only.
+  if (post.contentAccess === "members" && !viewerId) return { contentHtml: null, source: hostname };
+
   if (post.contentHtml) {
     return { contentHtml: post.contentHtml, source: hostname };
   }

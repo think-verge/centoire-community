@@ -8,8 +8,29 @@ export const SourceSchema = registry.register(
     id: z.string(),
     name: z.string(),
     siteUrl: z.string(),
-    feedUrl: z.string(),
+    feedUrl: z.string().nullable(),
     faviconUrl: z.string().nullable(),
+    method: z.enum(["agent", "rss"]),
+    requiresLogin: z.boolean(),
+    credentialRef: z.string().nullable(),
+    scrapeIntervalMin: z.number(),
+    spec: z.object({
+      status: z.enum(["none", "discovering", "ready", "needs_rediscovery", "needs_human"]),
+      store: z.enum(["full", "excerpt"]),
+      hash: z.string().nullable(),
+      discoveredAt: z.string().nullable(),
+    }),
+    lastRun: z
+      .object({
+        status: z.enum(["ok", "error"]),
+        errorCode: z.string().nullable(),
+        errorMessage: z.string().nullable(),
+        itemsSeen: z.number(),
+        imported: z.number(),
+        duplicates: z.number(),
+        finishedAt: z.string(),
+      })
+      .nullable(),
     hashtags: z.array(z.string()),
     category: PostCategorySchema.nullable(),
     subcategory: z.string().nullable(),
@@ -25,8 +46,17 @@ export const CreateSourceInputSchema = registry.register(
   z.object({
     name: z.string().min(1).max(80),
     siteUrl: z.string().url(),
-    feedUrl: z.string().url(),
+    feedUrl: z.string().url().nullable().optional(),
     faviconUrl: z.string().url().optional(),
+    requiresLogin: z.boolean().optional(),
+    credentialRef: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9_-]*$/, "lowercase letters, digits, - and _ only")
+      .max(60)
+      .nullable()
+      .optional(),
+    scrapeIntervalMin: z.number().int().min(5).max(10080).optional(),
+    store: z.enum(["full", "excerpt"]).optional(),
     hashtags: hashtagNames(0, 5).optional(),
     category: PostCategorySchema.nullable().optional(),
     subcategory: z.string().nullable().optional(),
@@ -48,6 +78,32 @@ export const FetchStatsSchema = registry.register(
     imported: z.number(),
     skippedDuplicates: z.number(),
     error: z.string().optional(),
+  }),
+);
+
+export const ScrapeEnqueueResultSchema = registry.register(
+  "ScrapeEnqueueResult",
+  z.object({
+    mode: z.enum(["agent", "rss"]),
+    type: z.enum(["discover", "scrape"]),
+    /** false when an identical job was already waiting or running. */
+    created: z.boolean(),
+    jobId: z.string().nullable(),
+    stats: FetchStatsSchema.optional(),
+  }),
+);
+
+export const ScrapeJobSchema = registry.register(
+  "ScrapeJob",
+  z.object({
+    id: z.string(),
+    type: z.enum(["discover", "scrape"]),
+    status: z.enum(["queued", "leased", "done", "failed"]),
+    attempts: z.number(),
+    errorCode: z.string().nullable(),
+    errorMessage: z.string().nullable(),
+    createdAt: z.string(),
+    finishedAt: z.string().nullable(),
   }),
 );
 
@@ -92,6 +148,22 @@ export function registerSourcePaths(): void {
     tags: ["admin"],
     operationId: "fetchSourceNow",
     request: { params: z.object({ id: z.string() }) },
-    responses: { 200: jsonResponse("Import stats", FetchStatsSchema) },
+    responses: { 200: jsonResponse("Queued job (or legacy import stats)", ScrapeEnqueueResultSchema) },
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/admin/sources/{id}/discover",
+    tags: ["admin"],
+    operationId: "rediscoverSource",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 200: jsonResponse("Queued discovery job", ScrapeEnqueueResultSchema) },
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/admin/sources/{id}/jobs",
+    tags: ["admin"],
+    operationId: "listSourceJobs",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 200: jsonResponse("Recent scrape jobs", z.array(ScrapeJobSchema)) },
   });
 }

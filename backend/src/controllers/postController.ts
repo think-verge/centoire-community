@@ -19,7 +19,7 @@ export async function update(req: Request, res: Response): Promise<void> {
     { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "circleId", select: "name slug" },
   ]);
-  res.json(serializePostDetail(post));
+  res.json(serializePostDetail(post, undefined, undefined, true));
 }
 
 export async function publish(req: Request, res: Response): Promise<void> {
@@ -51,7 +51,7 @@ export async function getBySlug(req: Request, res: Response): Promise<void> {
     authorFollowedByViewer = await isFollowing(req.user.userId, authorId);
   }
 
-  res.json(serializePostDetail(post, viewer, authorFollowedByViewer));
+  res.json(serializePostDetail(post, viewer, authorFollowedByViewer, Boolean(req.user)));
 }
 
 export async function getFullContent(req: Request, res: Response): Promise<void> {

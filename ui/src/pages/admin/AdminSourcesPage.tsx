@@ -9,16 +9,22 @@ import {
   useDeleteSource,
   useFetchSourceNow,
   useListSources,
+  useRediscoverSource,
   useUpdateSource,
 } from "../../lib/api/generated/admin/admin";
 import { HashtagInput } from "../../components/HashtagInput";
-import type { Source } from "../../lib/api/generated/model";
+import type { ScrapeEnqueueResult, Source } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
 import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, POST_CATEGORIES, type PostCategoryValue } from "../../lib/categoryTaxonomy";
 
 export function AdminSourcesPage() {
   const { user } = useAuth();
-  const { data: sources, isLoading } = useListSources();
+  const { data: sources, isLoading } = useListSources({
+    query: {
+      // Discovery and scrapes run on the scraper VM: keep the list fresh while any source is mid-discovery.
+      refetchInterval: (query) => (query.state.data?.some((s) => s.spec.status === "discovering") ? 4000 : false),
+    },
+  });
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Source | null>(null);
   const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
@@ -44,7 +50,7 @@ export function AdminSourcesPage() {
           <p className="kicker mb-1">Admin</p>
           <h1 className="font-display-serif text-3xl font-semibold">Content sources</h1>
           <p className="mt-1 text-sm text-ink-soft">
-            RSS feeds the ingestion worker pulls into the aggregated feed every 30 minutes.
+            Sites the scraper agent reads into the aggregated feed. New sources are discovered automatically; paid sources use a login stored on the scraper VM.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -82,18 +88,22 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
     void queryClient.invalidateQueries({ queryKey: getListSourcesQueryKey() });
   }
 
-  const fetchNow = useFetchSourceNow({
-    mutation: {
-      onSuccess: (result) => {
-        setStats(
-          result.error
-            ? `Fetch failed: ${result.error}`
-            : `${result.imported} imported, ${result.skippedDuplicates} duplicates of ${result.itemsSeen} seen`,
-        );
-        refresh();
-      },
-    },
-  });
+  function reportQueued(result: ScrapeEnqueueResult) {
+    if (result.stats) {
+      setStats(
+        result.stats.error
+          ? `Fetch failed: ${result.stats.error}`
+          : `${result.stats.imported} imported, ${result.stats.skippedDuplicates} duplicates of ${result.stats.itemsSeen} seen`,
+      );
+    } else if (!result.created) {
+      setStats(`A ${result.type} job is already queued or running`);
+    } else {
+      setStats(result.type === "discover" ? "Discovery queued: the scraper agent will pick it up shortly" : "Scrape queued");
+    }
+    refresh();
+  }
+  const fetchNow = useFetchSourceNow({ mutation: { onSuccess: reportQueued } });
+  const rediscover = useRediscoverSource({ mutation: { onSuccess: reportQueued } });
   const updateSource = useUpdateSource({ mutation: { onSuccess: refresh } });
   const deleteSource = useDeleteSource({ mutation: { onSuccess: refresh } });
 
@@ -119,20 +129,25 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
                 error
               </span>
             )}
+            <SpecChip source={source} />
             {!source.active && (
               <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
                 paused
               </span>
             )}
           </div>
-          <p className="truncate text-xs text-ink-faint">{source.feedUrl}</p>
+          <p className="truncate text-xs text-ink-faint">
+            {source.siteUrl}
+            {source.requiresLogin && ` · login: ${source.credentialRef ?? "?"}`}
+            {` · stores ${source.spec.store === "full" ? "full text (members only)" : "excerpts"}`}
+          </p>
           <p className="mt-0.5 text-xs text-ink-soft">
             {source.category ? CATEGORY_LABELS[source.category] : "No category"}
             {source.subcategory && ` · ${source.subcategory}`}
             {" — "}
             {source.hashtags.map((h) => `#${h}`).join(" ") || "No hashtags"}
-            {source.lastFetchedAt &&
-              ` · last fetched ${new Date(source.lastFetchedAt).toLocaleString()}`}
+            {source.lastRun &&
+              ` · last run ${new Date(source.lastRun.finishedAt).toLocaleString()}: ${source.lastRun.imported} new, ${source.lastRun.duplicates} duplicates of ${source.lastRun.itemsSeen}`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -144,6 +159,16 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
           >
             Fetch now
           </Button>
+          {source.method === "agent" && (
+            <Button
+              variant="ghost"
+              className="!px-2 !py-1.5 text-xs"
+              loading={rediscover.isPending}
+              onClick={() => rediscover.mutate({ id: source.id })}
+            >
+              Re-discover
+            </Button>
+          )}
           <Button variant="ghost" className="!px-2 !py-1.5 text-xs" onClick={onEdit}>
             Edit
           </Button>
@@ -164,10 +189,31 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
         </div>
       </div>
       {stats && <p className="mt-2 text-xs font-medium text-ink-soft">{stats}</p>}
-      {source.lastStatus === "error" && source.lastError && (
-        <p className="mt-2 text-xs text-crimson">{source.lastError}</p>
+      {source.lastRun?.status === "error" && (
+        <p className="mt-2 text-xs text-crimson">
+          {source.lastRun.errorCode ? `${source.lastRun.errorCode}: ` : ""}
+          {source.lastRun.errorMessage}
+        </p>
       )}
     </div>
+  );
+}
+
+const SPEC_CHIPS: Record<Source["spec"]["status"], { label: string; tone: string }> = {
+  none: { label: "not discovered", tone: "bg-cream text-ink-faint" },
+  discovering: { label: "discovering…", tone: "bg-gold-tint text-gold" },
+  ready: { label: "ready", tone: "bg-gold-tint text-gold" },
+  needs_rediscovery: { label: "needs re-discovery", tone: "bg-crimson-tint text-crimson" },
+  needs_human: { label: "needs a human", tone: "bg-crimson-tint text-crimson" },
+};
+
+function SpecChip({ source }: { source: Source }) {
+  if (source.method !== "agent") return null;
+  const chip = SPEC_CHIPS[source.spec.status];
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${chip.tone}`}>
+      {chip.label}
+    </span>
   );
 }
 
@@ -178,7 +224,10 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
     name: source?.name ?? "",
     siteUrl: source?.siteUrl ?? "",
     feedUrl: source?.feedUrl ?? "",
+    credentialRef: source?.credentialRef ?? "",
   });
+  const [requiresLogin, setRequiresLogin] = useState(source?.requiresLogin ?? false);
+  const [store, setStore] = useState<"full" | "excerpt">(source?.spec.store ?? "excerpt");
   const [hashtags, setHashtags] = useState<string[]>(source?.hashtags ?? []);
   const [category, setCategory] = useState<PostCategoryValue | "">(source?.category ?? "");
   const [subcategory, setSubcategory] = useState(source?.subcategory ?? "");
@@ -194,7 +243,12 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const data = {
-      ...form,
+      name: form.name,
+      siteUrl: form.siteUrl,
+      feedUrl: form.feedUrl || null,
+      requiresLogin,
+      credentialRef: requiresLogin ? form.credentialRef : null,
+      store,
       hashtags,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       category: (category || null) as any,
@@ -221,7 +275,7 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
       >
         <p className="kicker mb-1">{isEdit ? "Edit source" : "New source"}</p>
         <h2 className="font-display-serif text-2xl font-semibold">
-          {isEdit ? "Edit RSS source" : "Add an RSS source"}
+          {isEdit ? "Edit source" : "Add a source"}
         </h2>
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <Field
@@ -240,13 +294,47 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
             required
           />
           <Field
-            label="Feed URL"
+            label="Feed URL (optional)"
             type="url"
-            placeholder="https://…/rss"
+            placeholder="https://…/rss — a hint; the agent finds the layout itself"
             value={form.feedUrl}
             onChange={(e) => setForm({ ...form, feedUrl: e.target.value })}
-            required
           />
+          <div className="space-y-3 rounded-lg border border-line p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink">
+              <input type="checkbox" checked={requiresLogin} onChange={(e) => setRequiresLogin(e.target.checked)} />
+              Articles need a login (paid site)
+            </label>
+            {requiresLogin && (
+              <Field
+                label="Credential name"
+                placeholder="e.g. bof"
+                value={form.credentialRef}
+                onChange={(e) => setForm({ ...form, credentialRef: e.target.value.toLowerCase() })}
+                required
+              />
+            )}
+            {requiresLogin && (
+              <p className="text-xs text-ink-faint">
+                Passwords are never entered here: add this name with its username and password to the secrets file on the scraper VM.
+              </p>
+            )}
+            <div>
+              <label htmlFor="source-store" className="mb-1.5 block text-sm font-medium text-ink">
+                What to keep
+              </label>
+              <select
+                id="source-store"
+                value={store}
+                onChange={(e) => setStore(e.target.value as "full" | "excerpt")}
+                className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-crimson focus:outline-none"
+              >
+                <option value="excerpt">Excerpt + link out (default)</option>
+                <option value="full">Full text, shown to signed-in members only</option>
+              </select>
+              <p className="mt-1 text-xs text-ink-faint">Choose full text only if we have the publisher's permission.</p>
+            </div>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="source-category" className="mb-1.5 block text-sm font-medium text-ink">

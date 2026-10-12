@@ -65,6 +65,10 @@ export const PostDetailSchema = registry.register(
   PostCardSchema.extend({
     content: z.record(z.string(), z.unknown()).nullable(),
     contentHtml: z.string().nullable(),
+    /** "members": full text is only returned to signed-in viewers. */
+    contentAccess: z.enum(["open", "members"]),
+    /** True when the viewer is not allowed to see the full text of this members-only post. */
+    contentLocked: z.boolean(),
     viewCount: z.number(),
     rejectionReason: z.string().nullable(),
     authorFollowedByViewer: z.boolean(),

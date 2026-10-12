@@ -4,12 +4,8 @@ import { extract } from "@extractus/article-extractor";
 import { Post } from "../models/Post.js";
 import { Source, type ISource } from "../models/Source.js";
 import { canonicalUrlHash } from "../utils/url-hash.js";
-import { slugifyWithId } from "../utils/slugify.js";
 import { readTimeMinutes } from "../utils/read-time.js";
-import { evaluate as evaluatePolicy } from "./policyService.js";
-import { finalizePublish } from "./postService.js";
-import { fireAiProcessing } from "./aiService.js";
-import { inferCountry } from "./regionService.js";
+import { upsertAggregatedPost } from "./aggregatedPostService.js";
 
 const parser = new Parser({
   timeout: 15_000,
@@ -42,7 +38,6 @@ const OG_IMAGE_TIMEOUT_MS = 3_000;
 const MAX_ITEMS_PER_FETCH = 25;
 
 const ARTICLE_EXTRACT_TIMEOUT_MS = 10_000;
-const POST_TTL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
 export async function extractArticleHtml(url: string): Promise<string | null> {
   try {
@@ -95,6 +90,10 @@ async function fetchOgImage(pageUrl: string): Promise<string | undefined> {
   }
 }
 
+/**
+ * Legacy in-process RSS fetch (INGESTION_MODE=rss). The external scraper-agent replaces this; it is
+ * kept so the cut-over can be rolled back. Post creation goes through the shared upsertAggregatedPost.
+ */
 export async function fetchSource(source: ISource): Promise<FetchStats> {
   const stats: FetchStats = {
     sourceId: source._id.toString(),
@@ -105,6 +104,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
   };
 
   try {
+    if (!source.feedUrl) throw new Error("Source has no feedUrl for RSS ingestion");
     const feedXml = await fetchFeedXml(source.feedUrl);
     const feed = await parser.parseString(feedXml);
     const items = (feed.items ?? []).slice(0, MAX_ITEMS_PER_FETCH);
@@ -115,90 +115,48 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
       const title = item.title?.trim();
       if (!link || !title) continue;
 
-      const hash = canonicalUrlHash(link);
-      const exists = await Post.exists({ canonicalUrlHash: hash });
-      if (exists) {
+      if (await Post.exists({ canonicalUrlHash: canonicalUrlHash(link) })) {
         stats.skippedDuplicates += 1;
         continue;
       }
 
       // Priority 1: use RSS body (content:encoded or content) if substantial (>500 chars)
-      // Many paywalled sites still publish full text in their RSS feed.
       const rssBodyRaw = ((item as unknown as Record<string, unknown>)["content:encoded"] as string | undefined) ?? item.content ?? "";
       const rssBodyStripped = stripHtml(String(rssBodyRaw));
       const hasRssBody = rssBodyStripped.length > 500;
-
       const rawSummary = item.contentSnippet ?? item.content ?? item.summary ?? "";
       const excerpt = stripHtml(String(rawSummary)).slice(0, 300);
-      const enclosureUrl = item.enclosure?.url;
-      const coverImageUrl = enclosureUrl ?? (await fetchOgImage(link));
-      const publishedAt = item.isoDate ? new Date(item.isoDate) : new Date();
+      const coverImageUrl = item.enclosure?.url ?? (await fetchOgImage(link));
 
-      // Check policy before creating — determines initial status (Phase 1: identity only)
-      const policyOutcome = await evaluatePolicy({ sourceId: source._id.toString(), origin: "aggregated" });
-      const country = await inferCountry({ title, excerpt });
-
-      try {
-        const post = await Post.create({
-          origin: "aggregated",
-          status: "pending_review", // default; overridden below if policy matches
-          sourceId: source._id,
-          title: title.slice(0, 200),
-          slug: slugifyWithId(title),
+      const { outcome, post } = await upsertAggregatedPost(
+        { ...source.toObject(), spec: { store: "full" } },
+        {
+          url: link,
+          title,
           excerpt,
-          // Use RSS body immediately if available; URL extraction fills in later otherwise
-          contentHtml: hasRssBody ? rssBodyRaw : undefined,
+          contentHtml: hasRssBody ? String(rssBodyRaw) : undefined,
           contentText: hasRssBody ? rssBodyStripped : excerpt,
           coverImageUrl,
-          externalUrl: link,
-          canonicalUrlHash: hash,
-          hashtags: source.hashtags ?? [],
-          category: source.category,
-          subcategory: source.subcategory,
-          country: country ?? undefined,
-          publishedAt,
-          readTimeMinutes: readTimeMinutes(hasRssBody ? rssBodyStripped : excerpt),
-          expiresAt: new Date(Date.now() + POST_TTL_MS),
+          publishedAt: item.isoDate ? new Date(item.isoDate) : new Date(),
+        },
+      );
+      if (outcome === "duplicate") {
+        stats.skippedDuplicates += 1;
+        continue;
+      }
+      if (post.status !== "rejected") stats.imported += 1;
+
+      // Priority 2: fire-and-forget URL extraction when the RSS body was insufficient
+      if (!hasRssBody) {
+        void extractArticleHtml(link).then((contentHtml) => {
+          if (contentHtml) {
+            const text = stripHtml(contentHtml);
+            Post.updateOne(
+              { _id: post._id },
+              { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
+            ).catch(() => {});
+          }
         });
-
-        // Priority 2: fire-and-forget URL extraction when RSS body was insufficient
-        if (!hasRssBody) {
-          void extractArticleHtml(link).then((contentHtml) => {
-            if (contentHtml) {
-              console.log(`[ingestion] extracted ${contentHtml.length}c from ${link}`);
-              const text = stripHtml(contentHtml);
-              Post.updateOne(
-                { _id: post._id },
-                { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
-              ).catch(() => {});
-            } else {
-              console.warn(`[ingestion] extraction null for ${link}`);
-            }
-          });
-        }
-
-        // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
-        void fireAiProcessing(post._id.toString(), { origin: "aggregated", url: link });
-
-        if (policyOutcome === "auto_approve") {
-          await finalizePublish(post);
-          stats.imported += 1;
-        } else if (policyOutcome === "auto_reject") {
-          post.status = "rejected";
-          post.reviewedAt = new Date();
-          post.rejectionReason = "Rejected by moderation policy";
-          await post.save();
-          // rejected posts don't count as imported
-        } else {
-          // pending_review — tag/post counts deferred until editor approves
-          stats.imported += 1;
-        }
-      } catch (err: unknown) {
-        if ((err as { code?: number }).code === 11000) {
-          stats.skippedDuplicates += 1; // raced with another fetch
-        } else {
-          throw err;
-        }
       }
     }
 
@@ -216,7 +174,6 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
 
   return stats;
 }
-
 
 export async function fetchAllActiveSources(): Promise<FetchStats[]> {
   const sources = await Source.find({ active: true });

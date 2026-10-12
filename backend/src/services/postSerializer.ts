@@ -71,11 +71,16 @@ export function serializePostDetail(
   post: IPost,
   viewer?: ViewerState,
   authorFollowedByViewer?: boolean,
+  /** Signed-in viewers may read members-only (paid/licensed) full text; anonymous viewers get the excerpt. */
+  authenticated = false,
 ) {
+  const locked = post.contentAccess === "members" && !authenticated;
   return {
     ...serializePostCard(post, viewer),
-    content: (post.content as Record<string, unknown>) ?? null,
-    contentHtml: post.contentHtml ?? null,
+    content: locked ? null : ((post.content as Record<string, unknown>) ?? null),
+    contentHtml: locked ? null : (post.contentHtml ?? null),
+    contentAccess: post.contentAccess ?? "open",
+    contentLocked: locked,
     viewCount: post.viewCount,
     rejectionReason: post.rejectionReason ?? null,
     authorFollowedByViewer: authorFollowedByViewer ?? false,

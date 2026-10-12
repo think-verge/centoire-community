@@ -13,7 +13,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "migrate:hashtags": "tsx scripts/migrate-tags-to-hashtags.ts"
+    "migrate:hashtags": "tsx scripts/migrate-tags-to-hashtags.ts",
+    "migrate:sources": "tsx scripts/migrate-sources-for-agent.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.120.0",
