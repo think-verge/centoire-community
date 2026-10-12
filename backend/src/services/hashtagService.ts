@@ -1,4 +1,4 @@
-import type { AnyBulkWriteOperation } from "mongodb";
+import type { mongo } from "mongoose";
 import { Hashtag, type IHashtag } from "../models/Hashtag.js";
 import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
@@ -153,7 +153,7 @@ export async function filterExisting(names: readonly unknown[]): Promise<string[
 
 /** Applies +1 / -1 usage-count changes. Decrements never go below zero. */
 export async function adjustCounts(delta: { added?: readonly string[]; removed?: readonly string[] }): Promise<void> {
-  const ops: AnyBulkWriteOperation<IHashtag>[] = [];
+  const ops: mongo.AnyBulkWriteOperation<IHashtag>[] = [];
   for (const name of delta.added ?? []) {
     ops.push({ updateOne: { filter: { name }, update: { $inc: { postCount: 1 } } } });
   }
@@ -196,7 +196,7 @@ export async function reconcileCounts(): Promise<{ updated: number; zeroed: numb
     { $unwind: "$hashtags" },
     { $group: { _id: "$hashtags", n: { $sum: 1 } } },
   ]);
-  const ops: AnyBulkWriteOperation<IHashtag>[] = actual.map((a) => ({
+  const ops: mongo.AnyBulkWriteOperation<IHashtag>[] = actual.map((a) => ({
     updateOne: { filter: { name: a._id, postCount: { $ne: a.n } }, update: { $set: { postCount: a.n } } },
   }));
   const used = actual.map((a) => a._id);
