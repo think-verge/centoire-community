@@ -58,7 +58,6 @@ With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 |---|---|---|
 | backend | `npm run dev` | tsx watch dev server |
 | backend | `npm run openapi` | export OpenAPI spec from Zod |
-| backend | `npm run migrate:hashtags` | one-off, additive migration from the old Tag system to hashtags (`-- --dry-run` first, `-- --cleanup` later) |
 | backend | `npm run seed` | idempotent seed (hashtags/sources/circles/admin) |
 | backend | `npm test` | vitest unit tests |
 | backend | `npx tsx scripts/fetch-sources.ts` | one-off RSS pull |

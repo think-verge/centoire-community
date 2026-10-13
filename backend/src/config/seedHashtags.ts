@@ -1,6 +1,6 @@
 /**
  * Curated hashtags. `featured` ones are shown to new users in onboarding; the rest make the typeahead
- * useful from day one. Used by scripts/seed.ts and scripts/migrate-tags-to-hashtags.ts.
+ * useful from day one. Used by scripts/seed.ts.
  * Names are normalized (no #, no spaces): see utils/hashtag.ts.
  */
 export interface SeedHashtag {
