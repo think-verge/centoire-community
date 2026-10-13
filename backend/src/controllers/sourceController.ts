@@ -74,3 +74,15 @@ export async function fetchNow(req: Request, res: Response): Promise<void> {
   const stats = await ingestionService.fetchSource(source);
   res.json(stats);
 }
+
+export async function follow(req: Request, res: Response): Promise<void> {
+  const { followSource } = await import("../services/userService.js");
+  await followSource(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}
+
+export async function unfollow(req: Request, res: Response): Promise<void> {
+  const { unfollowSource } = await import("../services/userService.js");
+  await unfollowSource(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}

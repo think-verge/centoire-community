@@ -11,8 +11,8 @@ const PAGE_SIZE = 20;
  *  Cap the walk depth; replace with a precomputed rankScore + decay cron when
  *  the corpus outgrows this. */
 const MAX_RANKED_OFFSET = 400;
-const FOR_YOU_WINDOW_DAYS = 45;
-const TRENDING_WINDOW_DAYS = 7;
+const FOR_YOU_WINDOW_DAYS = 90;
+const TRENDING_WINDOW_DAYS = 90;
 
 export interface FeedPage {
   items: ReturnType<typeof serializePostCard>[];
@@ -29,7 +29,7 @@ interface KeysetCursor extends Record<string, unknown> {
 }
 
 const CARD_POPULATE = [
-  { path: "authorId", select: "handle displayName avatarUrl role" },
+  { path: "authorId", select: "handle displayName avatarUrl role followerCount" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
   { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
@@ -46,18 +46,50 @@ function scoreStages(
   return [
     {
       $addFields: {
-        tagMatchCount: { $size: { $setIntersection: ["$tags", interestIds] } },
-        authorFollowed: {
-          $cond: [{ $in: ["$authorId", followedIds] }, 1, 0],
-        },
-        inJoinedCircle: {
-          $cond: [{ $in: ["$circleId", circleIds] }, 1, 0],
-        },
-        authorIsCreator: {
-          $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
-        },
+        tagMatchCount:
+          interestIds.length === 0
+            ? 0
+            : {
+                $size: {
+                  $ifNull: [
+                    {
+                      $setIntersection: [
+                        { $cond: [{ $isArray: "$tags" }, "$tags", []] },
+                        interestIds,
+                      ],
+                    },
+                    [],
+                  ],
+                },
+              },
+        authorFollowed:
+          followedIds.length === 0
+            ? 0
+            : {
+                $cond: [{ $in: ["$authorId", followedIds] }, 1, 0],
+              },
+        inJoinedCircle:
+          circleIds.length === 0
+            ? 0
+            : {
+                $cond: [{ $in: ["$circleId", circleIds] }, 1, 0],
+              },
+        authorIsCreator:
+          creatorIds.length === 0
+            ? 0
+            : {
+                $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
+              },
         hoursSincePublished: {
-          $divide: [{ $subtract: [new Date(), "$publishedAt"] }, 1000 * 60 * 60],
+          $divide: [
+            {
+              $subtract: [
+                new Date(),
+                { $ifNull: ["$publishedAt", new Date()] },
+              ],
+            },
+            1000 * 60 * 60,
+          ],
         },
       },
     },
@@ -65,13 +97,13 @@ function scoreStages(
       $addFields: {
         score: {
           $add: [
-            { $multiply: [{ $log10: { $add: ["$upvoteCount", 1] } }, 4] },
+            { $multiply: [{ $log10: { $add: [{ $ifNull: ["$upvoteCount", 0] }, 1] } }, 4] },
             { $multiply: ["$tagMatchCount", 2] },
             { $multiply: ["$authorFollowed", 6] },
             { $multiply: ["$inJoinedCircle", 4] },
             { $multiply: ["$authorIsCreator", 3] },
             { $multiply: [{ $ifNull: ["$aiQualityScore", 0] }, 2] },
-            { $multiply: [{ $divide: ["$hoursSincePublished", 6] }, -1] },
+            { $multiply: [{ $divide: [{ $ifNull: ["$hoursSincePublished", 0] }, 6] }, -1] },
           ],
         },
       },
@@ -92,16 +124,18 @@ async function viewerStates(
 ): Promise<Map<string, ViewerState>> {
   const map = new Map<string, ViewerState>();
   if (!userId || postIds.length === 0) return map;
-  const [{ Vote }, { Bookmark }] = await Promise.all([
+  const [{ Vote }, { Bookmark }, { PostReport }] = await Promise.all([
     import("../models/Vote.js"),
     import("../models/Bookmark.js"),
+    import("../models/PostReport.js"),
   ]);
-  const [votes, bookmarks] = await Promise.all([
+  const [votes, bookmarks, reports] = await Promise.all([
     Vote.find({ userId, targetType: "post", targetId: { $in: postIds } }),
     Bookmark.find({ userId, postId: { $in: postIds } }),
+    PostReport.find({ reporterId: userId, postId: { $in: postIds } }),
   ]);
   for (const id of postIds) {
-    map.set(id.toString(), { voted: null, bookmarked: false });
+    map.set(id.toString(), { voted: null, bookmarked: false, reported: false });
   }
   for (const vote of votes) {
     const entry = map.get(vote.targetId.toString());
@@ -111,7 +145,17 @@ async function viewerStates(
     const entry = map.get(bookmark.postId.toString());
     if (entry) entry.bookmarked = true;
   }
+  for (const report of reports) {
+    const entry = map.get(report.postId.toString());
+    if (entry) entry.reported = true;
+  }
   return map;
+}
+
+async function getDismissedPostIds(userId?: string): Promise<Types.ObjectId[]> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return [];
+  const user = await User.findById(userId).select("dismissedPosts").lean();
+  return ((user as any)?.dismissedPosts ?? []) as Types.ObjectId[];
 }
 
 async function buildPage(
@@ -121,8 +165,24 @@ async function buildPage(
 ): Promise<FeedPage> {
   const posts = await hydrate(ids);
   const states = await viewerStates(ids, userId);
+  const followedUserIds = userId ? await userService.getFollowedUserIds(userId) : [];
+  const followedSet = new Set(followedUserIds.map((id) => id.toString()));
+  const followedSourceIds = userId ? await userService.getFollowedSourceIds(userId) : [];
+  const followedSourceSet = new Set(followedSourceIds.map((id) => id.toString()));
+
   return {
-    items: posts.map((p) => serializePostCard(p, states.get(p._id.toString()))),
+    items: posts.map((p) => {
+      const state = states.get(p._id.toString()) ?? { voted: null, bookmarked: false };
+      const authorId = p.authorId ? String((p.authorId as { _id?: unknown })._id ?? p.authorId) : null;
+      if (authorId) {
+        state.authorFollowed = followedSet.has(authorId);
+      }
+      const sourceId = p.sourceId ? String((p.sourceId as { _id?: unknown })._id ?? p.sourceId) : null;
+      if (sourceId) {
+        state.sourceFollowed = followedSourceSet.has(sourceId);
+      }
+      return serializePostCard(p, state);
+    }),
     nextCursor,
   };
 }
@@ -136,6 +196,11 @@ async function rankedFeed(
   cursor: string | undefined,
   userId?: string,
 ): Promise<FeedPage> {
+  const dismissed = await getDismissedPostIds(userId);
+  if (dismissed.length > 0) {
+    match._id = { $nin: dismissed };
+  }
+
   const offset = decodeCursor<RankedCursor>(cursor)?.offset ?? 0;
   if (offset >= MAX_RANKED_OFFSET) return { items: [], nextCursor: null };
 
@@ -154,7 +219,7 @@ async function rankedFeed(
 }
 
 async function getCreatorIds(): Promise<Types.ObjectId[]> {
-  const creators = await User.find({ role: "creator" }).select("_id");
+  const creators = await User.find({ role: { $in: ["creator", "admin"] } }).select("_id");
   return creators.map((u) => u._id);
 }
 
@@ -168,15 +233,17 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
   ]);
 
   const since = new Date(Date.now() - FOR_YOU_WINDOW_DAYS * 24 * 60 * 60 * 1000);
-  const match = {
+  const match: Record<string, unknown> = {
     status: "published",
     publishedAt: { $gte: since },
-    $or: [
-      { tags: { $in: interestIds } },
-      { circleId: { $in: circleIds } },
-      { authorId: { $in: followedIds } },
-    ],
   };
+  const orConditions: Record<string, unknown>[] = [];
+  if (interestIds.length > 0) orConditions.push({ tags: { $in: interestIds } });
+  if (circleIds.length > 0) orConditions.push({ circleId: { $in: circleIds } });
+  if (followedIds.length > 0) orConditions.push({ authorId: { $in: followedIds } });
+  if (orConditions.length > 0) {
+    match.$or = orConditions;
+  }
   return rankedFeed(match, interestIds, followedIds, circleIds, creatorIds, cursor, userId);
 }
 
@@ -188,7 +255,11 @@ async function keysetPublishedFeed(
   userId?: string,
 ): Promise<FeedPage> {
   const decoded = decodeCursor<KeysetCursor>(cursor);
+  const dismissed = await getDismissedPostIds(userId);
   const filter: Record<string, unknown> = { ...base, publishedAt: { $ne: null } };
+  if (dismissed.length > 0) {
+    filter._id = { $nin: dismissed };
+  }
   if (decoded) {
     filter.$or = [
       { publishedAt: { $lt: new Date(decoded.publishedAt) } },
@@ -277,15 +348,25 @@ export async function circleFeed(
 }
 
 export async function following(userId: string, cursor?: string): Promise<FeedPage> {
-  const [followedIds, circleIds] = await Promise.all([
+  const [followedIds, circleIds, followedSourceIds, dismissed] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
+    userService.getFollowedSourceIds(userId),
+    getDismissedPostIds(userId),
   ]);
   const decoded = decodeCursor<KeysetCursor>(cursor);
+  const orConditions: Record<string, unknown>[] = [];
+  if (followedIds.length > 0) orConditions.push({ authorId: { $in: followedIds } });
+  if (circleIds.length > 0) orConditions.push({ circleId: { $in: circleIds } });
+  if (followedSourceIds.length > 0) orConditions.push({ sourceId: { $in: followedSourceIds } });
+
   const filter: Record<string, unknown> = {
     status: "published",
-    $or: [{ authorId: { $in: followedIds } }, { circleId: { $in: circleIds } }],
+    $or: orConditions.length > 0 ? orConditions : [{ _id: null }],
   };
+  if (dismissed.length > 0) {
+    filter._id = { $nin: dismissed };
+  }
   if (decoded) {
     filter.$and = [
       {

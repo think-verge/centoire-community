@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Follow } from "../models/Follow.js";
+import { Source } from "../models/Source.js";
+import { SourceFollow } from "../models/SourceFollow.js";
 import { Tag } from "../models/Tag.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
@@ -114,6 +116,39 @@ export async function getMembershipCircleIds(userId: string): Promise<Types.Obje
 
 export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
   const follow = await Follow.findOne({ followerId, followeeId });
+  return Boolean(follow);
+}
+
+export async function followSource(followerId: string, sourceId: string): Promise<void> {
+  if (!Types.ObjectId.isValid(sourceId)) throw new ApiError(400, "Invalid source ID");
+  const source = await Source.findById(sourceId);
+  if (!source) throw new ApiError(404, "Source not found");
+  try {
+    await SourceFollow.create({ followerId, sourceId });
+  } catch (err: unknown) {
+    if ((err as { code?: number }).code === 11000) return; // already following
+    throw err;
+  }
+  await User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } });
+  await Source.updateOne({ _id: sourceId }, { $inc: { followerCount: 1 } });
+}
+
+export async function unfollowSource(followerId: string, sourceId: string): Promise<void> {
+  if (!Types.ObjectId.isValid(sourceId)) throw new ApiError(400, "Invalid source ID");
+  const deleted = await SourceFollow.findOneAndDelete({ followerId, sourceId });
+  if (!deleted) return;
+  await User.updateOne({ _id: followerId }, { $inc: { followingCount: -1 } });
+  await Source.updateOne({ _id: sourceId }, { $inc: { followerCount: -1 } });
+}
+
+export async function getFollowedSourceIds(userId: string): Promise<Types.ObjectId[]> {
+  const follows = await SourceFollow.find({ followerId: userId }).select("sourceId");
+  return follows.map((f) => f.sourceId);
+}
+
+export async function isFollowingSource(followerId: string, sourceId: string): Promise<boolean> {
+  if (!Types.ObjectId.isValid(sourceId)) return false;
+  const follow = await SourceFollow.findOne({ followerId, sourceId });
   return Boolean(follow);
 }
 

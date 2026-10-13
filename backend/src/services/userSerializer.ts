@@ -12,6 +12,7 @@ export function serializeUser(user: IUser, opts: SerializeOptions = {}) {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl ?? null,
     bio: user.bio ?? null,
+    role: user.role,
     reputation: user.reputation,
     followerCount: user.followerCount,
     followingCount: user.followingCount,
@@ -22,7 +23,6 @@ export function serializeUser(user: IUser, opts: SerializeOptions = {}) {
   return {
     ...base,
     email: user.email,
-    role: user.role,
     emailVerified: user.emailVerified,
     onboardingCompleted: Boolean(user.onboardingCompletedAt),
     interests: (user.interests ?? []).map((tag) => {

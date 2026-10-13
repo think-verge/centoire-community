@@ -10,7 +10,7 @@ import { serializeUser } from "./userSerializer.js";
 export type SearchType = "all" | "posts" | "people" | "circles" | "tags";
 
 const CARD_POPULATE = [
-  { path: "authorId", select: "handle displayName avatarUrl" },
+  { path: "authorId", select: "handle displayName avatarUrl role followerCount" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
   { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
@@ -18,8 +18,10 @@ const CARD_POPULATE = [
 
 export async function search(q: string, type: SearchType) {
   const limit = type === "all" ? 5 : 20;
-  const textQuery = { $text: { $search: q } };
-  const score = { score: { $meta: "textScore" } };
+  const trimmed = q ? q.trim() : "";
+  const hasText = trimmed.length > 0;
+  const textQuery = hasText ? { $text: { $search: trimmed } } : {};
+  const score = hasText ? { score: { $meta: "textScore" } } : {};
 
   const wantPosts = type === "all" || type === "posts";
   const wantPeople = type === "all" || type === "people";
@@ -28,21 +30,26 @@ export async function search(q: string, type: SearchType) {
 
   const [posts, people, circles, tags] = await Promise.all([
     wantPosts
-      ? Post.find({ ...textQuery, status: "published" }, score)
-          .sort(score)
+      ? Post.find({ ...textQuery, status: "published" }, hasText ? score : {})
+          .sort(hasText ? (score as any) : { publishedAt: -1 })
           .limit(limit)
           .populate(CARD_POPULATE)
       : [],
     wantPeople
-      ? User.find({ ...textQuery, handle: { $exists: true } }, score)
-          .sort(score)
+      ? User.find({ ...textQuery, handle: { $exists: true } }, hasText ? score : {})
+          .sort(hasText ? (score as any) : { followerCount: -1 })
           .limit(limit)
       : [],
     wantCircles
-      ? Circle.find(textQuery, score).sort(score).limit(limit).populate("tags", "name slug")
+      ? Circle.find(textQuery, hasText ? score : {})
+          .sort(hasText ? (score as any) : { memberCount: -1 })
+          .limit(limit)
+          .populate("tags", "name slug")
       : [],
     wantTags
-      ? Tag.find({ name: { $regex: q, $options: "i" } }).limit(limit)
+      ? hasText
+        ? Tag.find({ name: { $regex: trimmed, $options: "i" } }).limit(limit)
+        : Tag.find({}).sort({ postCount: -1 }).limit(limit)
       : [],
   ]);
 

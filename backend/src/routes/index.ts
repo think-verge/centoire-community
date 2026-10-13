@@ -36,6 +36,7 @@ apiRouter.use("/comments", commentRouter);
 apiRouter.use("/bookmarks", bookmarkRouter);
 apiRouter.use("/bookmark-folders", bookmarkFolderRouter);
 apiRouter.use("/uploads", uploadRouter);
+apiRouter.use("/sources", sourceRouter);
 apiRouter.use("/admin/sources", sourceRouter);
 apiRouter.use("/admin/posts", adminPostRouter);
 apiRouter.use("/admin/invites", inviteRouter);

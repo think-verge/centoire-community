@@ -8,6 +8,7 @@ const PostAuthorSchema = z.object({
   handle: z.string().nullable(),
   displayName: z.string(),
   avatarUrl: z.string().nullable(),
+  followerCount: z.number().optional(),
 });
 
 const PostSourceSchema = z.object({
@@ -28,6 +29,7 @@ export const ViewerStateSchema = registry.register(
   z.object({
     voted: z.union([z.literal(1), z.literal(-1)]).nullable(),
     bookmarked: z.boolean(),
+    authorFollowed: z.boolean().optional(),
   }),
 );
 

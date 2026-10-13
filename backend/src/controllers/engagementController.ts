@@ -120,3 +120,99 @@ export async function deleteComment(req: Request, res: Response): Promise<void> 
   res.status(204).end();
 }
 
+export async function reportPost(req: Request, res: Response): Promise<void> {
+  const { PostReport } = await import("../models/PostReport.js");
+  const reporterId = req.user?.userId;
+  if (reporterId) {
+    const existing = await PostReport.findOne({ postId: req.params.id, reporterId });
+    if (existing) {
+      res.json({ alreadyReported: true, message: "Post already reported" });
+      return;
+    }
+  }
+  await PostReport.create({
+    postId: req.params.id,
+    reporterId,
+    reason: req.body?.reason ?? "Reported by user",
+  });
+  res.status(201).json({ reported: true });
+}
+
+export async function notInterested(req: Request, res: Response): Promise<void> {
+  const { User } = await import("../models/User.js");
+  const { Types } = await import("mongoose");
+  if (req.user?.userId && Types.ObjectId.isValid(req.params.id as string)) {
+    await User.updateOne(
+      { _id: req.user.userId },
+      { $addToSet: { dismissedPosts: new Types.ObjectId(req.params.id as string) } },
+    );
+  }
+  res.status(204).end();
+}
+
+export async function followPostSource(req: Request, res: Response): Promise<void> {
+  const { Post } = await import("../models/Post.js");
+  const { Source } = await import("../models/Source.js");
+  const { followSource } = await import("../services/userService.js");
+  const post = await Post.findById(req.params.id);
+  if (!post) {
+    res.status(404).json({ message: "Post not found" });
+    return;
+  }
+  let sId = post.sourceId?.toString();
+  if (!sId && post.externalUrl) {
+    try {
+      const u = new URL(post.externalUrl);
+      const hostname = u.hostname.replace(/^www\./, "");
+      let existing = await Source.findOne({ siteUrl: new RegExp(hostname, "i") });
+      if (!existing) {
+        existing = await Source.create({
+          name: hostname.split(".")[0].toUpperCase(),
+          siteUrl: `${u.protocol}//${u.host}`,
+          feedUrl: `${u.protocol}//${u.host}/rss`,
+          createdBy: req.user!.userId,
+        });
+      }
+      sId = existing._id.toString();
+      await Post.updateOne({ _id: post._id }, { sourceId: existing._id });
+    } catch {
+      // ignore
+    }
+  }
+  if (!sId) {
+    res.status(404).json({ message: "Post or source not found" });
+    return;
+  }
+  await followSource(req.user!.userId, sId);
+  res.status(204).end();
+}
+
+export async function unfollowPostSource(req: Request, res: Response): Promise<void> {
+  const { Post } = await import("../models/Post.js");
+  const { Source } = await import("../models/Source.js");
+  const { unfollowSource } = await import("../services/userService.js");
+  const post = await Post.findById(req.params.id);
+  if (!post) {
+    res.status(404).json({ message: "Post not found" });
+    return;
+  }
+  let sId = post.sourceId?.toString();
+  if (!sId && post.externalUrl) {
+    try {
+      const hostname = new URL(post.externalUrl).hostname.replace(/^www\./, "");
+      const existing = await Source.findOne({ siteUrl: new RegExp(hostname, "i") });
+      if (existing) {
+        sId = existing._id.toString();
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (!sId) {
+    res.status(404).json({ message: "Post or source not found" });
+    return;
+  }
+  await unfollowSource(req.user!.userId, sId);
+  res.status(204).end();
+}
+

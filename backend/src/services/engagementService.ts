@@ -40,6 +40,13 @@ export async function setVote(
 
   if (existing?.value === value) return;
 
+  if (targetType === "post" && value === -1) {
+    const postDoc = await Post.findById(targetId).select("upvoteCount");
+    if ((postDoc?.upvoteCount ?? 0) <= 0 && existing?.value !== 1) {
+      throw new ApiError(400, "Cannot downvote a post with 0 votes");
+    }
+  }
+
   const Model = target.model as typeof Post & typeof Comment;
   const rep = REP_BY_TARGET[targetType];
   const isSelfVote = target.authorId === userId;

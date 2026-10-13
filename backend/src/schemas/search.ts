@@ -4,7 +4,7 @@ import { CircleSchema, TagSchema } from "./community.js";
 import { PostCardSchema } from "./posts.js";
 
 export const SearchQuerySchema = z.object({
-  q: z.string().min(1).max(100),
+  q: z.string().max(100).default("").optional(),
   type: z.enum(["all", "posts", "people", "circles", "tags"]).optional(),
 });
 
