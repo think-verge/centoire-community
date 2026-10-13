@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
+import { PostDrawer } from "../../components/PostDrawer";
 import { useGetFeedDiscoverInfinite } from "../../lib/api/generated/feed/feed";
 import { useGetTag } from "../../lib/api/generated/tags/tags";
+import type { PostCard as PostCardType } from "../../lib/api/generated/model";
 
 export function TagPage() {
   const { slug } = useParams();
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const { data: tag } = useGetTag(slug ?? "");
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedDiscoverInfinite(
@@ -34,6 +38,7 @@ export function TagPage() {
           hasNextPage={Boolean(hasNextPage)}
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
+          onOpenPost={(post: PostCardType) => setSelectedSlug(post.slug)}
           emptyState={
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">
@@ -44,6 +49,10 @@ export function TagPage() {
           }
         />
       </div>
+
+      {selectedSlug && (
+        <PostDrawer slug={selectedSlug} onClose={() => setSelectedSlug(null)} />
+      )}
     </div>
   );
 }

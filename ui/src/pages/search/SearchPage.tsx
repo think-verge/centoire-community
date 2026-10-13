@@ -43,10 +43,11 @@ export function SearchPage() {
     }
   };
 
+  const shouldFetch = q.trim().length > 0 || type !== "ALL";
   const { data, isLoading } = useSearch(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    { q, type: type === "ALL" ? "all" : type.toLowerCase() as any },
-    { query: { enabled: q.trim().length > 0 } },
+    { q, type: type === "ALL" ? "all" : (type.toLowerCase() as any) },
+    { query: { enabled: shouldFetch } },
   );
 
   function submit(nextType: SearchType) {
@@ -64,8 +65,7 @@ export function SearchPage() {
       data.tags.length > 0);
 
   const renderPosts = data?.posts ? Array(10).fill(data.posts).flat() : [];
-  const renderPeople = data?.people ? Array(10).fill(data.people).flat() : [];
-  const finalPeople = Array(10).fill(renderPeople).flat();
+  const finalPeople = data?.people ?? [];
 
   const renderCircles = [
     {
@@ -181,7 +181,7 @@ export function SearchPage() {
         </div>
 
         <div className="w-full">
-          {!q && (
+          {!q && type === "ALL" && (
             <div className="text-center py-20">
               <h1 className="font-editorial text-[36px] font-normal text-[#111111]">Search Centoire</h1>
               <p className="mt-4 text-[14px] font-ui text-[#737373]">
@@ -190,29 +190,29 @@ export function SearchPage() {
             </div>
           )}
 
-          {isLoading && q && (
+          {isLoading && (
             <div className="py-20 text-center text-[#737373] font-ui text-[14px]">
-              Generating AI insights...
+              {q ? "Generating AI insights..." : "Loading directory..."}
             </div>
           )}
 
-          {q && data && !hasResults && (
+          {q && data && !hasResults && !isLoading && (
             <div className="mt-10 rounded-[20px] border border-dashed border-[#EAEAEA] p-12 text-center">
               <p className="font-editorial text-2xl font-semibold text-[#111111]">No results for "{q}"</p>
               <p className="mt-2 text-sm text-[#737373] font-ui">Try a different term or browse Discover.</p>
             </div>
           )}
 
-          {q && data && hasResults && (
+          {data && hasResults && (q || type !== "ALL") && !isLoading && (
             <div className="flex flex-col gap-6">
 
               {/* Header Area */}
               <div>
                 <p className="font-ui text-[14px] font-bold leading-none uppercase tracking-wider text-[#111111]/60 mb-3">
-                  AI SEARCH RESULTS FOR
+                  {q ? "AI SEARCH RESULTS FOR" : type === "PEOPLE" ? "DIRECTORY" : "DISCOVER"}
                 </p>
                 <h1 className="font-editorial text-[28px] font-medium leading-none text-[#111111] tracking-normal mb-5">
-                  {q}
+                  {q ? q : type === "PEOPLE" ? "Top Voices & Creators" : type === "POSTS" ? "Latest Posts" : "Featured Communities"}
                 </h1>
 
                 {/* Source Badge under heading for ALL / POSTS / PEOPLE */}
@@ -223,7 +223,7 @@ export function SearchPage() {
                     <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=50&h=50&fit=crop" className="size-[26px] rounded-full border border-white relative z-10 object-cover" alt="" />
                   </div>
                   <span className="font-ui text-[12px] font-medium text-[#737373]">
-                    Source: c/fashion, c'trends +4 more
+                    {type === "PEOPLE" ? "Fashion editors, critics, and creative contributors" : "Source: c/fashion, c/trends +4 more"}
                   </span>
                 </div>
 
@@ -261,7 +261,7 @@ export function SearchPage() {
                       <div ref={postsRef} onScroll={() => handleScroll(postsRef, 'posts')} className={railClass} style={{ scrollbarWidth: 'none' }}>
                         {renderPosts.map((post, index) => (
                           <div key={`${post.id}-${index}`} className={`${railItemClass} ${stretchCard}`}>
-                            <DemoPostCard post={post} index={index} />
+                            <DemoPostCard post={post} index={index} onOpenPost={(slug) => setSelectedSlug(slug)} />
                           </div>
                         ))}
                       </div>
@@ -269,7 +269,7 @@ export function SearchPage() {
                       <div className={`${gridClass} !gap-x-6 !gap-y-4`} style={gridStyle}>
                         {renderPosts.map((post, index) => (
                           <div key={`${post.id}-${index}`} className={`flex flex-col ${stretchCard}`}>
-                            <DemoPostCard post={post} index={index} />
+                            <DemoPostCard post={post} index={index} onOpenPost={(slug) => setSelectedSlug(slug)} />
                           </div>
                         ))}
                       </div>
@@ -457,11 +457,23 @@ function SectionHeader({
 // INLINE DEMO CARDS TO MATCH FIGMA SCREENSHOTS EXACTLY
 // -----------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function DemoPostCard({ post, index }: { post: any, index?: number }) {
+function DemoPostCard({
+  post,
+  index,
+  onOpenPost,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  post: any;
+  index?: number;
+  onOpenPost?: (slug: string) => void;
+}) {
   const variant = (index ?? 0) % 3;
   return (
-    <article className="group break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(17, 17, 17, 0.1)' }}>
+    <article
+      onClick={() => onOpenPost?.(post.slug)}
+      className="group cursor-pointer break-inside-avoid overflow-hidden rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300"
+      style={{ boxShadow: '0px 4px 10px rgba(17, 17, 17, 0.1)' }}
+    >
       <div className="relative h-[158px] w-full shrink-0">
         <img
           src={post.coverImageUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500&h=300&fit=crop"}
@@ -574,19 +586,29 @@ function DemoCircleCard({ circle }: { circle: any }) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function DemoCreatorCard({ person }: { person: any }) {
   return (
-    <div className="bg-white rounded-[16px] border border-[#111111]/10 flex flex-col h-full relative px-3 py-3 transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)' }}>
+    <div className="bg-white rounded-[16px] border border-[#111111]/10 flex flex-col h-full relative px-4 py-4 transition-shadow duration-300" style={{ boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.06)' }}>
       <div className="flex items-start">
-        <img src={person.avatarUrl || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop"} className="size-8 rounded-full object-cover" alt="" />
+        {person.avatarUrl ? (
+          <img src={person.avatarUrl} className="size-10 rounded-full object-cover" alt="" />
+        ) : (
+          <div className="size-10 rounded-full bg-[#3A76C4] flex items-center justify-center text-white text-xs font-semibold">
+            {(person.displayName || "E").charAt(0).toUpperCase()}
+          </div>
+        )}
       </div>
-      <h3 className="font-editorial text-[18px] font-normal text-[#111111] mt-1 flex items-center gap-2">
-        {person.displayName}
-        <span className="bg-[#0044CC] text-white text-[10px] font-ui font-bold px-2 py-px rounded-full uppercase tracking-wider">VERIFIED</span>
+      <h3 className="font-editorial text-[18px] font-normal text-[#111111] mt-2 flex items-center gap-2">
+        <Link to={person.handle ? `/u/${person.handle}` : "#"} className="hover:underline">
+          {person.displayName}
+        </Link>
+        {person.role === "admin" || person.role === "creator" ? (
+          <span className="bg-[#0044CC] text-white text-[10px] font-ui font-bold px-2 py-px rounded-full uppercase tracking-wider">VERIFIED</span>
+        ) : null}
       </h3>
       <p className="font-ui text-[12px] text-[#111111]/60 mt-1 line-clamp-3 leading-[16px] flex-1">
-        Senior fashion editor covering Shanghai Fashion Week and the next generation of Chinese designers.
+        {person.bio || (person.role === "admin" ? "Editorial Team" : person.role === "creator" ? "Fashion Creator" : "Fashion contributor and creative voice.")}
       </p>
-      <div className="mt-3 flex items-center justify-between">
-        <span className="font-ui text-[12px] text-[#111111]/60">12.4k followers</span>
+      <div className="mt-4 flex items-center justify-between">
+        <span className="font-ui text-[12px] text-[#111111]/60">{person.followerCount ?? 0} followers</span>
         <button className="border border-[#111111]/60 text-[#111111] rounded-full w-[81px] h-[28px] flex items-center justify-center text-[12px] font-semibold font-ui hover:bg-black/5 transition-colors">
           Follow
         </button>
