@@ -1,14 +1,5 @@
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 
-export const TagRefSchema = registry.register(
-  "TagRef",
-  z.object({
-    id: z.string(),
-    name: z.string(),
-    slug: z.string(),
-  }),
-);
-
 export const PublicUserSchema = registry.register(
   "PublicUser",
   z.object({
@@ -32,7 +23,7 @@ export const CurrentUserSchema = registry.register(
     role: z.enum(["member", "creator", "editor", "admin"]),
     emailVerified: z.boolean(),
     onboardingCompleted: z.boolean(),
-    interests: z.array(TagRefSchema),
+    followedHashtags: z.array(z.string()),
   }),
 );
 

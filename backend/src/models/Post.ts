@@ -19,7 +19,8 @@ export interface IPost extends Document {
   coverImageUrl?: string;
   externalUrl?: string;
   canonicalUrlHash?: string;
-  tags: Types.ObjectId[];
+  /** Normalized hashtag names (see utils/hashtag.ts), 1-5 once published. */
+  hashtags: string[];
   circleId?: Types.ObjectId;
   category?: PostCategory;
   subcategory?: string;
@@ -66,7 +67,7 @@ const postSchema = new Schema<IPost>(
     coverImageUrl: { type: String },
     externalUrl: { type: String },
     canonicalUrlHash: { type: String, unique: true, sparse: true },
-    tags: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
+    hashtags: { type: [String], default: [] },
     circleId: { type: Schema.Types.ObjectId, ref: "Circle" },
     category: { type: String, enum: POST_CATEGORIES },
     subcategory: { type: String },
@@ -96,7 +97,7 @@ const postSchema = new Schema<IPost>(
 
 postSchema.index({ status: 1, publishedAt: -1 });
 postSchema.index({ status: 1, createdAt: -1 }); // for moderation queue ordering
-postSchema.index({ status: 1, tags: 1, publishedAt: -1 });
+postSchema.index({ status: 1, hashtags: 1, publishedAt: -1 });
 postSchema.index({ status: 1, circleId: 1, publishedAt: -1 });
 postSchema.index({ authorId: 1, status: 1, updatedAt: -1 });
 postSchema.index({ status: 1, category: 1, publishedAt: -1 });

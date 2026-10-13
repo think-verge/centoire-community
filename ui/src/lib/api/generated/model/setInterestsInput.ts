@@ -11,5 +11,5 @@ export interface SetInterestsInput {
    * @minItems 1
    * @maxItems 20
    */
-  tagIds: string[];
+  hashtags: string[];
 }

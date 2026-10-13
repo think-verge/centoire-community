@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
 import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
 import { apiClient } from "../../lib/api/http";
-import type { ListTagsCategory } from "../../lib/api/generated/model";
+import { formatCount } from "../../lib/hashtag";
+
 
 export type RightSidebarContext =
   | { type: "feed" }
@@ -14,37 +15,12 @@ export type RightSidebarContext =
   | { type: "search" }
   | { type: "category"; category: string };
 
-// Category → tag category mapping for Trending Topics
-const CATEGORY_TAG_FILTER: Record<string, ListTagsCategory> = {
-  fashion: "style",
-  lifestyle: "style",
-  art: "culture",
-  beauty: "style",
-  ai_technology: "business",
-  business_intelligence: "business",
-};
-
 const CATEGORY_LABELS: Record<string, string> = {
   fashion: "Fashion",
   art: "Art",
   lifestyle: "Lifestyle",
   beauty: "Beauty",
 };
-
-const FIGMA_TAG_ORDER = [
-  "StreetStyle",
-  "FashionWeek",
-  "Minimalist",
-  "Accessories",
-  "Denim",
-  "Resort Wear",
-  "Athleisure",
-  "Luxury",
-  "Boho Chic",
-  "Tailoring",
-  "Vintage",
-  "Sustainability",
-];
 
 type FeaturedUser = {
   id: string;
@@ -74,10 +50,6 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&gt;/g, ">");
 }
 
-function formatTagName(name: string): string {
-  return name.replace(/([a-z])([A-Z])/g, "$1 $2");
-}
-
 function getCreatorHeadline(creator: FeaturedUser): string {
   if (creator.bio && creator.bio.trim()) {
     return creator.bio.trim();
@@ -102,10 +74,10 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
   const category = isCategory ? context.category : undefined;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : undefined;
 
-  const tagFilter = category ? CATEGORY_TAG_FILTER[category] : undefined;
-  const { data: rawTags = [], isLoading: isLoadingTags } = useListTags(
-    tagFilter ? { category: tagFilter } : undefined,
-    { query: {} },
+  // Hashtags trending this week; on a category page, trending within that category's posts.
+  const { data: hashtags = [], isLoading: isLoadingHashtags } = useGetTrendingHashtags(
+    { limit: 12, ...(category ? { category } : {}) },
+    { query: { staleTime: 5 * 60_000 } },
   );
 
   const { data: latestPostsData, isLoading: isLoadingPosts } = useGetFeedDiscover({ sort: "new" });
@@ -113,7 +85,6 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
 
   const { data: featuredUsers = [], isLoading: isLoadingUsers } = useFeaturedUsers();
 
-  const [activeTagId, setActiveTagId] = useState<string | null>(null);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
   const followMutation = useFollowUser({
@@ -152,24 +123,7 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
     }
   };
 
-  // Sort tags prioritizing standard fashion tags matching Figma order
-  const displayTags = [...(rawTags as { id: string; slug: string; name: string }[])]
-    .sort((a, b) => {
-      const idxA = FIGMA_TAG_ORDER.indexOf(a.name);
-      const idxB = FIGMA_TAG_ORDER.indexOf(b.name);
-      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-      if (idxA !== -1) return -1;
-      if (idxB !== -1) return 1;
-      return 0;
-    })
-    .slice(0, 10);
 
-  // Sync active tag with current /t/:slug URL pathname if present, otherwise activeTagId, otherwise first tag
-  const tagSlugFromUrl = location.pathname.match(/^\/t\/([^/]+)$/)?.[1];
-  const matchedTagFromUrl = tagSlugFromUrl
-    ? displayTags.find((t) => t.slug === tagSlugFromUrl)?.id
-    : undefined;
-  const currentActiveTagId = activeTagId ?? matchedTagFromUrl ?? displayTags[0]?.id;
 
   return (
     <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[280px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-[#D4D4D4] bg-white p-5 xl:flex">
@@ -266,30 +220,33 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
       {/* Section 2: TRENDING TOPICS */}
       <section className="flex flex-col gap-4">
         <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
-          TRENDING TOPICS
+          {isCategory && categoryLabel ? `TRENDING IN ${categoryLabel.toUpperCase()}` : "TRENDING TOPICS"}
         </h3>
         <div className="flex flex-wrap gap-2">
-          {isLoadingTags
+          {isLoadingHashtags
             ? [0, 1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
                   className="h-6 w-16 animate-pulse rounded-full bg-[#F5F5F5]"
                 />
               ))
-            : displayTags.map((tag) => {
-                const isActive = currentActiveTagId === tag.id;
+            : hashtags.map((tag) => {
+                const isActive = location.pathname === `/hashtag/${tag.name}`;
                 return (
                   <Link
-                    key={tag.id}
-                    to={`/t/${tag.slug}`}
-                    onClick={() => setActiveTagId(tag.id)}
-                    className={`rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-colors ${
+                    key={tag.name}
+                    to={`/hashtag/${tag.name}`}
+                    title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-colors ${
                       isActive
                         ? "border border-[#E5552D] bg-[#E5552D] text-white hover:bg-[#d44820]"
                         : "border border-[#D4D4D4] bg-white text-[#111111] hover:border-[#111111] hover:text-[#111111]"
                     }`}
                   >
-                    #{formatTagName(tag.name)}
+                    #{tag.name}
+                    <span className={isActive ? "text-white/80 text-[10px]" : "text-[#737373] text-[10px]"}>
+                      {formatCount(tag.postCount)}
+                    </span>
                   </Link>
                 );
               })}

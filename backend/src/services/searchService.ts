@@ -1,18 +1,16 @@
 import { Circle } from "../models/Circle.js";
 import { Post } from "../models/Post.js";
-import { Tag } from "../models/Tag.js";
 import { User } from "../models/User.js";
 import { serializeCircle } from "./circleService.js";
 import { serializePostCard } from "./postSerializer.js";
-import { serializeTag } from "./tagService.js";
+import * as hashtagService from "./hashtagService.js";
 import { serializeUser } from "./userSerializer.js";
 
-export type SearchType = "all" | "posts" | "people" | "circles" | "tags";
+export type SearchType = "all" | "posts" | "people" | "circles" | "hashtags";
 
 const CARD_POPULATE = [
   { path: "authorId", select: "handle displayName avatarUrl role followerCount" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
-  { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
 ];
 
@@ -26,9 +24,9 @@ export async function search(q: string, type: SearchType) {
   const wantPosts = type === "all" || type === "posts";
   const wantPeople = type === "all" || type === "people";
   const wantCircles = type === "all" || type === "circles";
-  const wantTags = type === "all" || type === "tags";
+  const wantHashtags = type === "all" || type === "hashtags";
 
-  const [posts, people, circles, tags] = await Promise.all([
+  const [posts, people, circles, hashtags] = await Promise.all([
     wantPosts
       ? Post.find({ ...textQuery, status: "published" }, hasText ? score : {})
           .sort(hasText ? (score as any) : { publishedAt: -1 })
@@ -44,19 +42,14 @@ export async function search(q: string, type: SearchType) {
       ? Circle.find(textQuery, hasText ? score : {})
           .sort(hasText ? (score as any) : { memberCount: -1 })
           .limit(limit)
-          .populate("tags", "name slug")
       : [],
-    wantTags
-      ? hasText
-        ? Tag.find({ name: { $regex: trimmed, $options: "i" } }).limit(limit)
-        : Tag.find({}).sort({ postCount: -1 }).limit(limit)
-      : [],
+    wantHashtags ? hashtagService.search({ q: trimmed, limit }) : [],
   ]);
 
   return {
     posts: posts.map((p) => serializePostCard(p)),
     people: people.map((u) => serializeUser(u)),
     circles: circles.map((c) => serializeCircle(c)),
-    tags: tags.map(serializeTag),
+    hashtags,
   };
 }

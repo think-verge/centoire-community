@@ -9,7 +9,7 @@ export interface ICircle extends Document {
   rules: string[];
   avatarUrl?: string;
   coverImageUrl?: string;
-  tags: Types.ObjectId[];
+  hashtags: string[];
   createdBy: Types.ObjectId;
   memberCount: number;
   postCount: number;
@@ -26,7 +26,7 @@ const circleSchema = new Schema<ICircle>(
     rules: { type: [String], default: [] },
     avatarUrl: { type: String },
     coverImageUrl: { type: String },
-    tags: [{ type: Schema.Types.ObjectId, ref: "Tag" }],
+    hashtags: { type: [String], default: [] },
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     memberCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
@@ -36,6 +36,6 @@ const circleSchema = new Schema<ICircle>(
 
 circleSchema.index({ name: "text", description: "text" });
 circleSchema.index({ memberCount: -1 });
-circleSchema.index({ tags: 1, memberCount: -1 });
+circleSchema.index({ hashtags: 1, memberCount: -1 });
 
 export const Circle = mongoose.model<ICircle>("Circle", circleSchema);

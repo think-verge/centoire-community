@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * @nullable
- */
-export type AgentSearchFiltersTag = {
-  slug: string;
+export interface HashtagSuggestion {
   name: string;
-} | null;
+  postCount: number;
+}

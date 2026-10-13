@@ -3,7 +3,7 @@ import * as circleService from "../services/circleService.js";
 import * as feedService from "../services/feedService.js";
 
 export async function list(req: Request, res: Response): Promise<void> {
-  const query = (req.validatedQuery ?? {}) as { q?: string; tag?: string; limit?: number };
+  const query = (req.validatedQuery ?? {}) as { q?: string; hashtag?: string; limit?: number };
   res.json(await circleService.listCircles(query, req.user?.userId));
 }
 

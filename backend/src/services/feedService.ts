@@ -31,14 +31,13 @@ interface KeysetCursor extends Record<string, unknown> {
 const CARD_POPULATE = [
   { path: "authorId", select: "handle displayName avatarUrl role followerCount" },
   { path: "sourceId", select: "name siteUrl faviconUrl" },
-  { path: "tags", select: "name slug" },
   { path: "circleId", select: "name slug" },
 ];
 
 /** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 + creator*3 - hoursOld/6
  *  Note: cache creatorIds if the creator roster grows large (currently invite-only, so small). */
 function scoreStages(
-  interestIds: Types.ObjectId[],
+  interests: string[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
   creatorIds: Types.ObjectId[],
@@ -46,40 +45,16 @@ function scoreStages(
   return [
     {
       $addFields: {
-        tagMatchCount:
-          interestIds.length === 0
-            ? 0
-            : {
-                $size: {
-                  $ifNull: [
-                    {
-                      $setIntersection: [
-                        { $cond: [{ $isArray: "$tags" }, "$tags", []] },
-                        interestIds,
-                      ],
-                    },
-                    [],
-                  ],
-                },
-              },
-        authorFollowed:
-          followedIds.length === 0
-            ? 0
-            : {
-                $cond: [{ $in: ["$authorId", followedIds] }, 1, 0],
-              },
-        inJoinedCircle:
-          circleIds.length === 0
-            ? 0
-            : {
-                $cond: [{ $in: ["$circleId", circleIds] }, 1, 0],
-              },
-        authorIsCreator:
-          creatorIds.length === 0
-            ? 0
-            : {
-                $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
-              },
+        tagMatchCount: { $size: { $setIntersection: [{ $ifNull: ["$hashtags", []] }, interests] } },
+        authorFollowed: {
+          $cond: [{ $in: ["$authorId", followedIds] }, 1, 0],
+        },
+        inJoinedCircle: {
+          $cond: [{ $in: ["$circleId", circleIds] }, 1, 0],
+        },
+        authorIsCreator: {
+          $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
+        },
         hoursSincePublished: {
           $divide: [
             {
@@ -189,7 +164,7 @@ async function buildPage(
 
 async function rankedFeed(
   match: Record<string, unknown>,
-  interestIds: Types.ObjectId[],
+  interests: string[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
   creatorIds: Types.ObjectId[],
@@ -206,7 +181,7 @@ async function rankedFeed(
 
   const results = await Post.aggregate<{ _id: Types.ObjectId }>([
     { $match: match },
-    ...(scoreStages(interestIds, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
+    ...(scoreStages(interests, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
     { $skip: offset },
     { $limit: PAGE_SIZE + 1 },
     { $project: { _id: 1 } },
@@ -224,8 +199,8 @@ async function getCreatorIds(): Promise<Types.ObjectId[]> {
 }
 
 export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
-  const user = await User.findById(userId).select("interests");
-  const interestIds = (user?.interests ?? []) as Types.ObjectId[];
+  const user = await User.findById(userId).select("followedHashtags");
+  const interests = user?.followedHashtags ?? [];
   const [followedIds, circleIds, creatorIds] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
@@ -238,13 +213,13 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
     publishedAt: { $gte: since },
   };
   const orConditions: Record<string, unknown>[] = [];
-  if (interestIds.length > 0) orConditions.push({ tags: { $in: interestIds } });
+  if (interests.length > 0) orConditions.push({ hashtags: { $in: interests } });
   if (circleIds.length > 0) orConditions.push({ circleId: { $in: circleIds } });
   if (followedIds.length > 0) orConditions.push({ authorId: { $in: followedIds } });
   if (orConditions.length > 0) {
     match.$or = orConditions;
   }
-  return rankedFeed(match, interestIds, followedIds, circleIds, creatorIds, cursor, userId);
+  return rankedFeed(match, interests, followedIds, circleIds, creatorIds, cursor, userId);
 }
 
 /** Shared "new"-sort pagination: keyset cursor on (publishedAt, _id). Used by
@@ -288,7 +263,7 @@ async function keysetPublishedFeed(
 export async function discover(
   options: {
     sort: "trending" | "new";
-    tagId?: Types.ObjectId;
+    hashtag?: string;
     sourceId?: Types.ObjectId;
     origin?: string;
     category?: PostCategory;
@@ -300,7 +275,7 @@ export async function discover(
   userId?: string,
 ): Promise<FeedPage> {
   const base: Record<string, unknown> = { status: "published" };
-  if (options.tagId) base.tags = options.tagId;
+  if (options.hashtag) base.hashtags = options.hashtag;
   if (options.sourceId) base.sourceId = options.sourceId;
   if (options.origin) base.origin = options.origin;
   if (options.category) base.category = options.category;

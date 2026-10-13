@@ -1,6 +1,6 @@
+import { normalizeHashtag } from "../utils/hashtag.js";
 import { Types } from "mongoose";
 import { Post, type IPost } from "../models/Post.js";
-import { Tag } from "../models/Tag.js";
 import { User } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 import { emitRejection, finalizePublish } from "./postService.js";
@@ -17,7 +17,7 @@ export interface QueueParams {
   status?: "pending_review" | "rejected" | "all";
   origin?: "native" | "aggregated";
   source?: string;
-  tag?: string;
+  hashtag?: string;
   author?: string;
 }
 
@@ -45,10 +45,10 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
     filter.sourceId = new Types.ObjectId(params.source);
   }
 
-  // Tag filter (slug → ObjectId)
-  if (params.tag) {
-    const tag = await Tag.findOne({ slug: params.tag }).select("_id").lean();
-    if (tag) filter.tags = tag._id;
+  // Hashtag filter (normalized name)
+  if (params.hashtag) {
+    const name = normalizeHashtag(params.hashtag);
+    if (name) filter.hashtags = name;
   }
 
   // Author filter (email → userId); return empty results if user not found
@@ -63,7 +63,6 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
     .limit(QUEUE_PAGE_SIZE + 1)
     .populate("authorId", "handle displayName avatarUrl role")
     .populate("sourceId", "name siteUrl faviconUrl")
-    .populate("tags", "name slug")
     .populate("circleId", "name slug");
 
   const hasMore = items.length > QUEUE_PAGE_SIZE;

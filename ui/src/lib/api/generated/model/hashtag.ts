@@ -5,8 +5,10 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { ListTagsCategory } from './listTagsCategory';
 
-export type ListTagsParams = {
-category?: ListTagsCategory;
-};
+export interface Hashtag {
+  name: string;
+  postCount: number;
+  followerCount: number;
+  following: boolean;
+}

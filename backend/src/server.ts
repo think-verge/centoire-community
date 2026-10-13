@@ -3,6 +3,7 @@ import { connectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { startIngestionCron } from "./workers/rssCron.js";
 import { startCleanupCron } from "./workers/cleanupCron.js";
+import { startHashtagCountsCron } from "./workers/hashtagCountsCron.js";
 
 async function main(): Promise<void> {
   await connectDb();
@@ -12,6 +13,7 @@ async function main(): Promise<void> {
   });
   startIngestionCron();
   startCleanupCron();
+  startHashtagCountsCron();
 }
 
 main().catch((err) => {

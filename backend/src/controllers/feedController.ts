@@ -1,8 +1,7 @@
 import type { Request, Response } from "express";
 import { Types } from "mongoose";
-import { Tag } from "../models/Tag.js";
 import * as feedService from "../services/feedService.js";
-import { ApiError } from "../utils/api-error.js";
+import { normalizeHashtag } from "../utils/hashtag.js";
 import type { PostCategory } from "../config/categoryTaxonomy.js";
 
 export async function forYou(req: Request, res: Response): Promise<void> {
@@ -20,7 +19,7 @@ export async function following(req: Request, res: Response): Promise<void> {
 export async function discover(req: Request, res: Response): Promise<void> {
   const query = (req.validatedQuery ?? {}) as {
     sort?: "trending" | "new";
-    tag?: string;
+    hashtag?: string;
     origin?: "native" | "aggregated";
     source?: string;
     category?: PostCategory;
@@ -29,12 +28,8 @@ export async function discover(req: Request, res: Response): Promise<void> {
     q?: string;
     cursor?: string;
   };
-  let tagId: Types.ObjectId | undefined;
-  if (query.tag) {
-    const tag = await Tag.findOne({ slug: query.tag }).select("_id");
-    if (!tag) throw new ApiError(404, "Tag not found");
-    tagId = tag._id;
-  }
+  // An unknown or malformed hashtag simply has no posts; return an empty page rather than a 404.
+  const hashtag = query.hashtag ? (normalizeHashtag(query.hashtag) ?? "\u0000none") : undefined;
   let sourceId: Types.ObjectId | undefined;
   if (query.source && Types.ObjectId.isValid(query.source)) {
     sourceId = new Types.ObjectId(query.source);
@@ -42,7 +37,7 @@ export async function discover(req: Request, res: Response): Promise<void> {
   const page = await feedService.discover(
     {
       sort: query.sort ?? "trending",
-      tagId,
+      hashtag,
       sourceId,
       origin: query.origin,
       category: query.category,

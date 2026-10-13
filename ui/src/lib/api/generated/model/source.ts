@@ -5,7 +5,6 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { SourceTagsItem } from './sourceTagsItem';
 import type { SourceCategory } from './sourceCategory';
 import type { SourceLastStatus } from './sourceLastStatus';
 
@@ -16,7 +15,7 @@ export interface Source {
   feedUrl: string;
   /** @nullable */
   faviconUrl: string | null;
-  tags: SourceTagsItem[];
+  hashtags: string[];
   /** @nullable */
   category: SourceCategory;
   /** @nullable */

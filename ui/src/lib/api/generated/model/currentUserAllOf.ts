@@ -6,12 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CurrentUserAllOfRole } from './currentUserAllOfRole';
-import type { TagRef } from './tagRef';
 
 export type CurrentUserAllOf = {
   email: string;
   role: CurrentUserAllOfRole;
   emailVerified: boolean;
   onboardingCompleted: boolean;
-  interests: TagRef[];
+  followedHashtags: string[];
 };

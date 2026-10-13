@@ -1,3 +1,4 @@
+import { hashtagNames } from "./hashtags.js";
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 import { PostCategorySchema } from "./posts.js";
 
@@ -9,7 +10,7 @@ export const SourceSchema = registry.register(
     siteUrl: z.string(),
     feedUrl: z.string(),
     faviconUrl: z.string().nullable(),
-    tags: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
+    hashtags: z.array(z.string()),
     category: PostCategorySchema.nullable(),
     subcategory: z.string().nullable(),
     active: z.boolean(),
@@ -26,7 +27,7 @@ export const CreateSourceInputSchema = registry.register(
     siteUrl: z.string().url(),
     feedUrl: z.string().url(),
     faviconUrl: z.string().url().optional(),
-    tagIds: z.array(z.string()).max(5).optional(),
+    hashtags: hashtagNames(0, 5).optional(),
     category: PostCategorySchema.nullable().optional(),
     subcategory: z.string().nullable().optional(),
     active: z.boolean().optional(),

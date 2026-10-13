@@ -20,7 +20,6 @@ export async function getUserPosts(req: Request, res: Response): Promise<void> {
     .limit(50)
     .populate([
       { path: "authorId", select: "handle displayName avatarUrl" },
-      { path: "tags", select: "name slug" },
       { path: "circleId", select: "name slug" },
     ]);
   res.json(posts.map((p) => serializePostCard(p)));
@@ -32,14 +31,12 @@ export async function updateMe(req: Request, res: Response): Promise<void> {
 }
 
 export async function setInterests(req: Request, res: Response): Promise<void> {
-  const user = await userService.setInterests(req.user!.userId, req.body.tagIds);
-  await user.populate("interests", "name slug");
+  const user = await userService.setInterests(req.user!.userId, req.body.hashtags);
   res.json(serializeUser(user, { private: true }));
 }
 
 export async function completeOnboarding(req: Request, res: Response): Promise<void> {
   const user = await userService.completeOnboarding(req.user!.userId);
-  await user.populate("interests", "name slug");
   res.json(serializeUser(user, { private: true }));
 }
 

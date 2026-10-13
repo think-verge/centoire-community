@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { env } from "../config/env.js";
 import { CATEGORY_SUBCATEGORIES, POST_CATEGORIES, type PostCategory } from "../config/categoryTaxonomy.js";
-import { Tag } from "../models/Tag.js";
+import * as hashtagService from "./hashtagService.js";
 import { ApiError } from "../utils/api-error.js";
 
 const MODEL = "claude-haiku-4-5";
@@ -9,7 +9,7 @@ const MODEL = "claude-haiku-4-5";
 export interface ResolvedFilters {
   category?: PostCategory;
   subcategory?: string;
-  tagSlug?: string;
+  hashtag?: string;
   country?: string;
   q?: string;
   sort?: "trending" | "new";
@@ -40,9 +40,9 @@ const APPLY_FILTERS_TOOL: Anthropic.Tool = {
         type: ["string", "null"],
         description: "A subcategory of the chosen category (must be one of that category's known subcategories), or null.",
       },
-      tagSlug: {
+      hashtag: {
         type: ["string", "null"],
-        description: "The single best-matching tag slug from the provided tag list, or null if none clearly applies.",
+        description: "The single best-matching hashtag (no #) from the provided hashtag list, or null if none clearly applies.",
       },
       country: {
         type: ["string", "null"],
@@ -58,23 +58,23 @@ const APPLY_FILTERS_TOOL: Anthropic.Tool = {
         description: "'trending' if the request implies popularity/what's hot, 'new' if it implies most recent, otherwise null.",
       },
     },
-    required: ["category", "subcategory", "tagSlug", "country", "q", "sort"],
+    required: ["category", "subcategory", "hashtag", "country", "q", "sort"],
   },
 };
 
-function buildSystemPrompt(tags: { name: string; slug: string }[]): string {
+function buildSystemPrompt(hashtags: string[]): string {
   const categoryLines = POST_CATEGORIES.map(
     (category) => `- ${category}: ${CATEGORY_SUBCATEGORIES[category].join(", ")}`,
   ).join("\n");
-  const tagLines = tags.map((t) => `${t.slug} (${t.name})`).join(", ");
+  const tagLines = hashtags.map((h) => `#${h}`).join(", ");
   return [
     "You turn a user's natural-language content request into structured filters for a fashion/lifestyle news platform.",
-    "Only use categories, subcategories, and tag slugs from the lists below — never invent new ones.",
+    "Only use categories, subcategories, and hashtags from the lists below — never invent new ones.",
     "",
     "Categories and their subcategories:",
     categoryLines,
     "",
-    "Known tag slugs:",
+    "Popular hashtags:",
     tagLines,
     "",
     "Call apply_search_filters exactly once with your best interpretation.",
@@ -83,12 +83,15 @@ function buildSystemPrompt(tags: { name: string; slug: string }[]): string {
 
 export async function interpretQuery(query: string): Promise<ResolvedFilters> {
   const anthropic = getClient();
-  const tags = await Tag.find().select("name slug").lean();
+  // The hashtag set is open-ended, so only offer the most-used ones to the model.
+  const popular = await hashtagService.search({ limit: 20 });
+  const featured = await hashtagService.search({ limit: 20, featured: true });
+  const hashtags = [...new Set([...featured, ...popular].map((h) => h.name))];
 
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 512,
-    system: buildSystemPrompt(tags.map((t) => ({ name: t.name, slug: t.slug }))),
+    system: buildSystemPrompt(hashtags),
     tools: [APPLY_FILTERS_TOOL],
     tool_choice: { type: "tool", name: "apply_search_filters" },
     messages: [{ role: "user", content: query }],
@@ -100,7 +103,7 @@ export async function interpretQuery(query: string): Promise<ResolvedFilters> {
   const input = (toolUse?.input ?? {}) as {
     category?: string | null;
     subcategory?: string | null;
-    tagSlug?: string | null;
+    hashtag?: string | null;
     country?: string | null;
     q?: string | null;
     sort?: "trending" | "new" | null;
@@ -115,13 +118,12 @@ export async function interpretQuery(query: string): Promise<ResolvedFilters> {
       : undefined;
   const country =
     input.country && /^[A-Za-z]{2}$/.test(input.country) ? input.country.toUpperCase() : undefined;
-  const knownSlugs = new Set(tags.map((t) => t.slug));
-  const tagSlug = input.tagSlug && knownSlugs.has(input.tagSlug) ? input.tagSlug : undefined;
+  const [hashtag] = input.hashtag ? await hashtagService.filterExisting([input.hashtag]) : [];
 
   return {
     category,
     subcategory,
-    tagSlug,
+    hashtag,
     country,
     q: input.q ?? undefined,
     sort: input.sort ?? undefined,

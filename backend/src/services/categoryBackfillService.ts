@@ -77,12 +77,11 @@ export interface BackfillResult {
 /** Admin-triggered, one-off pass — not run automatically on ingestion. */
 export async function backfillUncategorizedPosts(limit = 500): Promise<BackfillResult> {
   const posts = await Post.find({ category: { $exists: false } })
-    .limit(limit)
-    .populate("tags", "name");
+    .limit(limit);
 
   let updated = 0;
   for (const post of posts) {
-    const tagNames = (post.tags as unknown as Array<{ name?: string }>).map((t) => t.name ?? "");
+    const tagNames = post.hashtags ?? [];
     const suggestion = suggestCategory([...(post.aiTags ?? []), post.aiCategory ?? "", ...tagNames]);
     if (!suggestion) continue;
     post.category = suggestion.category;

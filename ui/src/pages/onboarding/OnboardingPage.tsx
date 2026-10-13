@@ -9,7 +9,7 @@ import {
   useUnfollowUser,
 } from "../../lib/api/generated/users/users";
 import { useJoinCircle, useLeaveCircle } from "../../lib/api/generated/circles/circles";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { HashtagPicker } from "../../components/HashtagPicker";
 import { useGetOnboardingSuggestions } from "../../lib/api/generated/onboarding/onboarding";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
@@ -63,52 +63,24 @@ export function OnboardingPage() {
 }
 
 function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selected, setSelected] = useState<string[]>([]);
   const setInterests = useSetInterests({
     mutation: {
       onSuccess: onDone,
     },
   });
-  const { data: tags } = useListTags();
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
   return (
     <section className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-9">
         <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-charcoal leading-tight">
-          Tailor your Broadsheet
+          Follow hashtags you care about
         </h1>
         <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14px] leading-[1.6] pr-0 whitespace-nowrap">
-          Select multiple niches below. We configure your daily Centoire feed based on these slow-fashion indices.
+          Pick hashtags to shape your daily Centoire feed. You can search for more and change them any time in Settings.
         </p>
 
-        <div className="mt-10 flex flex-wrap gap-x-2 gap-y-3">
-          {(tags ?? []).map((tag) => {
-            const active = selected.has(tag.id);
-            return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggle(tag.id)}
-                className={`font-ui rounded-full border px-3.5 py-1.5 text-[13px] outline-none focus:ring-0 transition-colors ${active
-                  ? "border-[#E5552D] bg-[#E5552D] text-white"
-                  : "border-[#E5E5E5] bg-white text-[#111111] hover:border-[#D4D4D4]"
-                  }`}
-              >
-                {tag.name}
-              </button>
-            );
-          })}
+        <div className="mt-8">
+          <HashtagPicker selected={selected} onChange={setSelected} />
         </div>
       </div>
 
@@ -127,13 +99,13 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
         </button>
         <div className="flex items-center gap-5">
           <p className="text-[14px] font-ui text-[#9B9B9B]">
-            Pick atleast 3
+            Pick at least 3 ({selected.length} selected)
           </p>
           <button
             type="button"
-            disabled={selected.size < 3 || setInterests.isPending}
-            onClick={() => setInterests.mutate({ data: { tagIds: [...selected] } })}
-            className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${selected.size >= 3
+            disabled={selected.length < 3 || setInterests.isPending}
+            onClick={() => setInterests.mutate({ data: { hashtags: selected } })}
+            className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${selected.length >= 3
               ? "bg-[#111111] text-white hover:bg-black"
               : "bg-[#C9C9C9] text-white cursor-not-allowed"
               }`}

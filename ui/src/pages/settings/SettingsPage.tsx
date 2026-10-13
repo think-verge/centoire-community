@@ -2,7 +2,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { AvatarBubble } from "../../components/AppShell";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { HashtagPicker } from "../../components/HashtagPicker";
 import { useSetInterests, useUpdateMe } from "../../lib/api/generated/users/users";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 import { useAuth } from "../../lib/auth-context";
@@ -123,10 +123,7 @@ function ProfileSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
 
 function InterestsSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
   const { user } = useAuth();
-  const { data: tags } = useListTags();
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(user?.interests.map((t) => t.id) ?? []),
-  );
+  const [selected, setSelected] = useState<string[]>(() => user?.followedHashtags ?? []);
   const [saved, setSaved] = useState(false);
   const setInterests = useSetInterests({
     mutation: {
@@ -140,48 +137,21 @@ function InterestsSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
 
   return (
     <section>
-      <h2 className="kicker mb-1">Interests & feed tuning</h2>
+      <h2 className="kicker mb-1">Followed hashtags & feed tuning</h2>
       <p className="mb-4 text-sm text-ink-soft">
-        These tags drive your For You ranking. Keep at least 3.
+        The hashtags you follow drive your For You ranking. Keep at least 3.
       </p>
-      <div className="flex flex-wrap gap-2">
-        {(tags ?? []).map((tag) => {
-          const active = selected.has(tag.id);
-          return (
-            <button
-              key={tag.id}
-              type="button"
-              aria-pressed={active}
-              onClick={() =>
-                setSelected((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(tag.id)) next.delete(tag.id);
-                  else next.add(tag.id);
-                  return next;
-                })
-              }
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                active
-                  ? "border-crimson bg-crimson text-ink-inverse"
-                  : "border-line bg-paper text-ink-soft hover:border-ink-soft"
-              }`}
-            >
-              {tag.name}
-            </button>
-          );
-        })}
-      </div>
+      <HashtagPicker selected={selected} onChange={setSelected} />
       <div className="mt-4 flex items-center gap-3">
         <Button
-          disabled={selected.size < 3}
+          disabled={selected.length < 3}
           loading={setInterests.isPending}
-          onClick={() => setInterests.mutate({ data: { tagIds: [...selected] } })}
+          onClick={() => setInterests.mutate({ data: { hashtags: selected } })}
         >
-          Save interests
+          Save hashtags
         </Button>
-        {selected.size < 3 && (
-          <span className="text-sm text-ink-faint">Pick at least 3</span>
-        )}
+        {selected.length < 3 && <span className="text-sm text-ink-faint">Pick at least 3</span>}
+        {setInterests.error && <span className="text-sm text-crimson">{setInterests.error.message}</span>}
         {saved && <span className="text-sm text-gold">Saved</span>}
       </div>
     </section>

@@ -138,7 +138,7 @@ export async function resetPassword(token: string, password: string): Promise<IU
 }
 
 export async function getMe(userId: string): Promise<IUser> {
-  const user = await User.findById(userId).populate("interests", "name slug");
+  const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
   return user;
 }

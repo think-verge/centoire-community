@@ -11,7 +11,7 @@ import {
   useListSources,
   useUpdateSource,
 } from "../../lib/api/generated/admin/admin";
-import { useListTags } from "../../lib/api/generated/tags/tags";
+import { HashtagInput } from "../../components/HashtagInput";
 import type { Source } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
 import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, POST_CATEGORIES, type PostCategoryValue } from "../../lib/categoryTaxonomy";
@@ -130,7 +130,7 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
             {source.category ? CATEGORY_LABELS[source.category] : "No category"}
             {source.subcategory && ` · ${source.subcategory}`}
             {" — "}
-            {source.tags.map((t) => t.name).join(", ") || "No tags"}
+            {source.hashtags.map((h) => `#${h}`).join(" ") || "No hashtags"}
             {source.lastFetchedAt &&
               ` · last fetched ${new Date(source.lastFetchedAt).toLocaleString()}`}
           </p>
@@ -174,13 +174,12 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
 function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () => void }) {
   const isEdit = Boolean(source);
   const queryClient = useQueryClient();
-  const { data: tags } = useListTags();
   const [form, setForm] = useState({
     name: source?.name ?? "",
     siteUrl: source?.siteUrl ?? "",
     feedUrl: source?.feedUrl ?? "",
   });
-  const [tagIds, setTagIds] = useState<string[]>(source?.tags.map((t) => t.id) ?? []);
+  const [hashtags, setHashtags] = useState<string[]>(source?.hashtags ?? []);
   const [category, setCategory] = useState<PostCategoryValue | "">(source?.category ?? "");
   const [subcategory, setSubcategory] = useState(source?.subcategory ?? "");
 
@@ -196,7 +195,7 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
     e.preventDefault();
     const data = {
       ...form,
-      tagIds,
+      hashtags,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       category: (category || null) as any,
       subcategory: category && subcategory ? subcategory : null,
@@ -293,32 +292,10 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
             </div>
           </div>
           <div>
-            <p className="mb-1.5 text-sm font-medium">Tags applied to imports</p>
-            <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
-              {(tags ?? []).map((tag) => {
-                const active = tagIds.includes(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    aria-pressed={active}
-                    disabled={!active && tagIds.length >= 5}
-                    onClick={() =>
-                      setTagIds((prev) =>
-                        active ? prev.filter((id) => id !== tag.id) : [...prev, tag.id],
-                      )
-                    }
-                    className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:opacity-40 ${
-                      active
-                        ? "border-crimson bg-crimson text-ink-inverse"
-                        : "border-line bg-white text-ink-soft hover:border-ink-soft"
-                    }`}
-                  >
-                    {tag.name}
-                  </button>
-                );
-              })}
-            </div>
+            <label htmlFor="source-hashtags" className="mb-1.5 block text-sm font-medium">
+              Hashtags applied to imports
+            </label>
+            <HashtagInput id="source-hashtags" value={hashtags} onChange={setHashtags} />
           </div>
           {pending.error && <p className="text-sm text-crimson">{pending.error.message}</p>}
           <div className="flex justify-end gap-2">

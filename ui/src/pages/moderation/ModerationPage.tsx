@@ -34,7 +34,6 @@ import {
   CreatePolicyInputLogic,
 } from "../../lib/api/generated/model";
 import { listSources } from "../../lib/api/generated/admin/admin";
-import { listTags } from "../../lib/api/generated/tags/tags";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 
@@ -68,13 +67,9 @@ const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
     },
   },
   {
-    key: "tag",
-    label: "Tag",
-    type: "multi",
-    loadOptions: async () => {
-      const res = await listTags();
-      return (res ?? []).map((t) => ({ value: t.slug, label: t.name }));
-    },
+    key: "hashtag",
+    label: "Hashtag",
+    type: "text",
   },
   {
     key: "author",
@@ -235,7 +230,7 @@ function QueueTab() {
     status: activeFilters.status?.[0] as "pending_review" | "rejected" | "all" | undefined,
     origin: activeFilters.origin?.[0] as "native" | "aggregated" | undefined,
     source: activeFilters.source?.[0],
-    tag: activeFilters.tag?.[0],
+    hashtag: activeFilters.hashtag?.[0],
     author: activeFilters.author?.[0],
   });
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -534,8 +529,8 @@ function QueueItem({
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
               {post.author && <span>By {post.author.displayName}</span>}
               {post.source && <span>· {post.source.name}</span>}
-              {post.tags.length > 0 && (
-                <span>· {post.tags.map((t) => t.name).join(", ")}</span>
+              {post.hashtags.length > 0 && (
+                <span>· {post.hashtags.map((h) => `#${h}`).join(" ")}</span>
               )}
               <span>· {post.origin}</span>
             </div>

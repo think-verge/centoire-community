@@ -3,6 +3,8 @@ import { env } from "../config/env.js";
 import { Post } from "../models/Post.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
+import * as hashtagService from "../services/hashtagService.js";
+import { MAX_POST_HASHTAGS, diffHashtags } from "../utils/hashtag.js";
 
 export const internalRouter = Router();
 
@@ -70,6 +72,18 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
       await Post.updateOne({ _id: id }, { $set: update });
       res.json({ ok: true });
       return;
+    }
+
+    // Scraped posts: add the AI's suggestions that are already real hashtags (it never creates new
+    // ones). Counts only move if the post is already live; otherwise finalizePublish counts them.
+    const current = await Post.findById(id).select("origin status hashtags");
+    if (current?.origin === "aggregated" && aiTags?.length) {
+      const matches = await hashtagService.filterExisting(aiTags);
+      const merged = [...new Set([...current.hashtags, ...matches])].slice(0, MAX_POST_HASHTAGS);
+      update.hashtags = merged;
+      if (current.status === "published") {
+        await hashtagService.adjustCounts(diffHashtags(current.hashtags, merged));
+      }
     }
 
     await Post.updateOne({ _id: id }, { $set: update });

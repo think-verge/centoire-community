@@ -49,7 +49,6 @@ export async function listBookmarks(req: Request, res: Response): Promise<void> 
   const posts = await Post.find({ _id: { $in: postIds }, status: "published" }).populate([
     { path: "authorId", select: "handle displayName avatarUrl" },
     { path: "sourceId", select: "name siteUrl faviconUrl" },
-    { path: "tags", select: "name slug" },
     { path: "circleId", select: "name slug" },
   ]);
   const byId = new Map(posts.map((p) => [p._id.toString(), p]));

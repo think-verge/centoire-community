@@ -6,8 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface TagRef {
-  id: string;
-  name: string;
-  slug: string;
-}
+export type GetTrendingHashtagsParams = {
+/**
+ * @maxLength 40
+ */
+category?: string;
+/**
+ * @minimum 1
+ * @maximum 30
+ */
+limit?: number;
+};

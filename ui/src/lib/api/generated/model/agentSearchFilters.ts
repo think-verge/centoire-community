@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AgentSearchFiltersCategory } from './agentSearchFiltersCategory';
-import type { AgentSearchFiltersTag } from './agentSearchFiltersTag';
 import type { AgentSearchFiltersSort } from './agentSearchFiltersSort';
 
 export interface AgentSearchFilters {
@@ -15,7 +14,7 @@ export interface AgentSearchFilters {
   /** @nullable */
   subcategory: string | null;
   /** @nullable */
-  tag: AgentSearchFiltersTag;
+  hashtag: string | null;
   /** @nullable */
   country: string | null;
   /** @nullable */

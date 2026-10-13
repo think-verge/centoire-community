@@ -92,7 +92,7 @@ export const ModerationQueueQuerySchema = z.object({
   status: z.enum(["pending_review", "rejected", "all"]).default("pending_review"),
   origin: z.enum(["native", "aggregated"]).optional(),
   source: z.string().optional(),
-  tag: z.string().optional(),
+  hashtag: z.string().optional(),
   author: z.string().optional(),
 });
 

@@ -4,43 +4,11 @@ import { Circle } from "../src/models/Circle.js";
 import { CircleMembership } from "../src/models/CircleMembership.js";
 import { ModerationPolicy } from "../src/models/ModerationPolicy.js";
 import { Source } from "../src/models/Source.js";
-import { Tag } from "../src/models/Tag.js";
+import { Hashtag } from "../src/models/Hashtag.js";
 import { User } from "../src/models/User.js";
+import { SEED_HASHTAGS } from "../src/config/seedHashtags.js";
+import { normalizeHashtag } from "../src/utils/hashtag.js";
 import { slugify } from "../src/utils/slugify.js";
-
-const TAGS: Array<{ name: string; category: "style" | "craft" | "business" | "culture"; description: string }> = [
-  { name: "Streetwear", category: "style", description: "Drops, collabs, and the culture around them" },
-  { name: "Couture", category: "style", description: "Haute couture and made-to-measure craft" },
-  { name: "Menswear", category: "style", description: "Tailoring to casualwear for men" },
-  { name: "Womenswear", category: "style", description: "Ready-to-wear and design for women" },
-  { name: "Techwear", category: "style", description: "Performance fabrics and functional design" },
-  { name: "Vintage", category: "style", description: "Archive fashion, thrifting, and revivals" },
-  { name: "Bridal", category: "style", description: "Wedding and occasion design" },
-  { name: "Accessories", category: "style", description: "Bags, jewelry, eyewear, and more" },
-  { name: "Sneakers", category: "style", description: "Sneaker design, drops, and resale" },
-  { name: "Textiles", category: "craft", description: "Fabric innovation, mills, and materials" },
-  { name: "Knitwear", category: "craft", description: "Knit design, machines, and yarns" },
-  { name: "Denim", category: "craft", description: "Selvedge, washes, and denim heritage" },
-  { name: "Pattern Making", category: "craft", description: "Drafting, draping, and construction" },
-  { name: "Footwear Design", category: "craft", description: "Shoe lasts, soles, and construction" },
-  { name: "Embroidery", category: "craft", description: "Hand and machine embellishment" },
-  { name: "Sustainability", category: "business", description: "Circularity, deadstock, and ethical supply" },
-  { name: "Supply Chain", category: "business", description: "Sourcing, factories, and logistics" },
-  { name: "Retail", category: "business", description: "Stores, e-commerce, and merchandising" },
-  { name: "Fashion Tech", category: "business", description: "Software, AI, and tools for fashion" },
-  { name: "Branding", category: "business", description: "Identity, campaigns, and positioning" },
-  { name: "Runway", category: "culture", description: "Shows, seasons, and collections" },
-  { name: "Street Style", category: "culture", description: "What people actually wear" },
-  { name: "Fashion History", category: "culture", description: "Archives, houses, and movements" },
-  { name: "Editorial", category: "culture", description: "Fashion photography and magazines" },
-  { name: "Art", category: "culture", description: "Contemporary art, exhibitions, and market" },
-  { name: "Design", category: "craft", description: "Graphic, industrial, and interior design" },
-  { name: "Architecture", category: "craft", description: "Buildings, interiors, and spatial design" },
-  { name: "Beauty", category: "style", description: "Skincare, makeup, and beauty trends" },
-  { name: "Luxury", category: "culture", description: "Luxury brands, heritage, and lifestyle" },
-  { name: "Photography", category: "culture", description: "Fashion and art photography" },
-  { name: "Technology", category: "business", description: "Tech trends, startups, and innovation" },
-];
 
 const SOURCES: Array<{ name: string; siteUrl: string; feedUrl: string; tagSlugs: string[]; active?: boolean }> = [
   // ── Already seeded originals ──────────────────────────────────────────────
@@ -134,17 +102,22 @@ const CIRCLES: Array<{ name: string; description: string; tagSlugs: string[]; ru
 async function main(): Promise<void> {
   await connectDb();
 
-  // Tags — upsert by slug
-  for (const t of TAGS) {
-    await Tag.updateOne(
-      { slug: slugify(t.name) },
-      { $setOnInsert: { name: t.name, slug: slugify(t.name), category: t.category, description: t.description } },
+  // Hashtags — upsert by name; featured ones are (re)flagged so the onboarding set stays curated.
+  for (const h of SEED_HASHTAGS) {
+    await Hashtag.updateOne(
+      { name: h.name },
+      {
+        $setOnInsert: { name: h.name, postCount: 0, followerCount: 0, status: "active" },
+        ...(h.featured ? { $set: { featured: true } } : { $setOnInsert: { featured: false } }),
+      },
       { upsert: true },
     );
   }
-  console.log(`[seed] ${TAGS.length} tags ensured`);
+  console.log(`[seed] ${SEED_HASHTAGS.length} hashtags ensured`);
 
-  const tagBySlug = new Map((await Tag.find()).map((t) => [t.slug, t._id]));
+  // Source/circle fixtures list hashtags by their old tag slug ("supply-chain"); normalize them.
+  const toHashtags = (names: string[]) =>
+    [...new Set(names.map((n) => normalizeHashtag(n)).filter((n): n is string => Boolean(n)))];
 
   // Admin user
   const adminEmail = "admin@centoire.app";
@@ -158,7 +131,7 @@ async function main(): Promise<void> {
       role: "admin",
       emailVerified: true,
       onboardingCompletedAt: new Date(),
-      interests: [tagBySlug.get("runway"), tagBySlug.get("streetwear"), tagBySlug.get("textiles")].filter(Boolean),
+      followedHashtags: ["runway", "streetwear", "textiles"],
     });
     console.log("[seed] admin user created (admin@centoire.app / centoire-admin)");
   } else {
@@ -197,7 +170,7 @@ async function main(): Promise<void> {
           siteUrl: s.siteUrl,
           feedUrl: s.feedUrl,
           faviconUrl: `https://www.google.com/s2/favicons?domain=${new URL(s.siteUrl).hostname}&sz=64`,
-          tags: s.tagSlugs.map((slug) => tagBySlug.get(slug)).filter(Boolean),
+          hashtags: toHashtags(s.tagSlugs),
           active: s.active ?? true,
           createdBy: admin._id,
         },
@@ -217,7 +190,7 @@ async function main(): Promise<void> {
       slug,
       description: c.description,
       rules: c.rules,
-      tags: c.tagSlugs.map((s) => tagBySlug.get(s)).filter(Boolean),
+      hashtags: toHashtags(c.tagSlugs),
       createdBy: admin._id,
       memberCount: 1,
     });

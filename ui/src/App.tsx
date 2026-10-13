@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { AdminSourcesPage } from "./pages/admin/AdminSourcesPage";
 import { AdminInvitesPage } from "./pages/admin/AdminInvitesPage";
@@ -26,8 +26,13 @@ import { OnboardingPage } from "./pages/onboarding/OnboardingPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { SearchPage } from "./pages/search/SearchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
-import { TagPage } from "./pages/tags/TagPage";
+import { HashtagPage } from "./pages/hashtags/HashtagPage";
 import { ExclusivePage } from "./pages/exclusive/ExclusivePage";
+
+function LegacyTagRedirect() {
+  const { slug } = useParams();
+  return <Navigate to={`/hashtag/${(slug ?? "").replace(/[^\p{L}\p{N}_]/gu, "").toLowerCase()}`} replace />;
+}
 
 export default function App() {
   return (
@@ -59,7 +64,9 @@ export default function App() {
               <Route path="/compose/:id" element={<ComposePage />} />
               <Route path="/drafts" element={<DraftsPage />} />
               <Route path="/u/:handle" element={<ProfilePage />} />
-              <Route path="/t/:slug" element={<TagPage />} />
+              <Route path="/hashtag/:name" element={<HashtagPage />} />
+              {/* Old tag URLs keep working */}
+              <Route path="/t/:slug" element={<LegacyTagRedirect />} />
               <Route path="/c/:slug" element={<CircleDetailPage />} />
               <Route path="/p/:slug" element={<PostDetailPage />} />
               <Route

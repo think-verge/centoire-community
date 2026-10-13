@@ -11,7 +11,6 @@ import type { PostCardAuthor } from './postCardAuthor';
 import type { PostCardSource } from './postCardSource';
 import type { PostCardCircle } from './postCardCircle';
 import type { PostCardCategory } from './postCardCategory';
-import type { PostCardTagsItem } from './postCardTagsItem';
 import type { ViewerState } from './viewerState';
 
 export interface PostCard {
@@ -35,7 +34,7 @@ export interface PostCard {
   category: PostCardCategory;
   /** @nullable */
   subcategory: string | null;
-  tags: PostCardTagsItem[];
+  hashtags: string[];
   upvoteCount: number;
   commentCount: number;
   bookmarkCount: number;

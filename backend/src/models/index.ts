@@ -1,7 +1,7 @@
 // Central model registry: importing this file registers every Mongoose model,
 // so populate() calls never hit MissingSchemaError regardless of request path.
 import "./User.js";
-import "./Tag.js";
+import "./Hashtag.js";
 import "./Circle.js";
 import "./CircleMembership.js";
 import "./Follow.js";

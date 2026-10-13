@@ -6,13 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TagCategory = typeof TagCategory[keyof typeof TagCategory];
+export type SearchHashtagsFeatured = typeof SearchHashtagsFeatured[keyof typeof SearchHashtagsFeatured];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const TagCategory = {
-  style: 'style',
-  craft: 'craft',
-  business: 'business',
-  culture: 'culture',
+export const SearchHashtagsFeatured = {
+  true: 'true',
+  false: 'false',
 } as const;
