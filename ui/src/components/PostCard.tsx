@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
+import { useFollowUser, useUnfollowUser } from "../lib/api/generated/users/users";
+import { useAuth } from "../lib/auth-context";
 import { PostActions } from "./PostActions";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
+import { customInstance } from "../lib/api/http";
 
 export function PostCard({
   post,
@@ -14,6 +18,11 @@ export function PostCard({
   const navigate = useNavigate();
   const external = post.origin === "aggregated" && post.externalUrl;
   const [imageLoaded, setImageLoaded] = useState(!post.coverImageUrl);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [authorTooltipOpen, setAuthorTooltipOpen] = useState(false);
+  const [provenanceOpen, setProvenanceOpen] = useState(false);
+  const authorCloseTimer = useRef<NodeJS.Timeout | null>(null);
+  const provenanceCloseTimer = useRef<NodeJS.Timeout | null>(null);
 
   function openPost() {
     if (onOpenPost) {
@@ -25,12 +34,226 @@ export function PostCard({
     }
   }
 
+  const [authorPlacement, setAuthorPlacement] = useState<"bottom" | "top">("bottom");
+  const [provenancePlacement, setProvenancePlacement] = useState<"bottom" | "top">("bottom");
+  const [lastOpened, setLastOpened] = useState<"author" | "options" | "provenance" | null>(null);
+  const authorAnchorRef = useRef<HTMLDivElement>(null);
+  const provenanceAnchorRef = useRef<HTMLDivElement>(null);
+
+  function checkAuthorPlacement() {
+    if (authorAnchorRef.current) {
+      const rect = authorAnchorRef.current.getBoundingClientRect();
+      const docHeight = document.documentElement.scrollHeight;
+      const cardBottomInDoc = window.scrollY + rect.bottom;
+      const spaceBelowInDoc = docHeight - cardBottomInDoc;
+      // Only flip to top for cards at the very bottom/last row of the feed where document space is scarce (< 280px)
+      if (spaceBelowInDoc < 280 && rect.top > 200) {
+        setAuthorPlacement("top");
+      } else {
+        setAuthorPlacement("bottom");
+      }
+    }
+  }
+
+  function checkProvenancePlacement() {
+    if (provenanceAnchorRef.current) {
+      const rect = provenanceAnchorRef.current.getBoundingClientRect();
+      const docHeight = document.documentElement.scrollHeight;
+      const cardBottomInDoc = window.scrollY + rect.bottom;
+      const spaceBelowInDoc = docHeight - cardBottomInDoc;
+      if (spaceBelowInDoc < 280 && rect.top > 200) {
+        setProvenancePlacement("top");
+      } else {
+        setProvenancePlacement("bottom");
+      }
+    }
+  }
+
+  function handleAuthorEnter() {
+    if (authorCloseTimer.current) {
+      clearTimeout(authorCloseTimer.current);
+      authorCloseTimer.current = null;
+    }
+    checkAuthorPlacement();
+    setLastOpened("author");
+    setAuthorTooltipOpen(true);
+  }
+
+  function handleAuthorLeave() {
+    authorCloseTimer.current = setTimeout(() => {
+      setAuthorTooltipOpen(false);
+    }, 250);
+  }
+
+  function handleProvenanceEnter() {
+    if (provenanceCloseTimer.current) {
+      clearTimeout(provenanceCloseTimer.current);
+      provenanceCloseTimer.current = null;
+    }
+    checkProvenancePlacement();
+    setLastOpened("provenance");
+    setProvenanceOpen(true);
+  }
+
+  function handleProvenanceLeave() {
+    provenanceCloseTimer.current = setTimeout(() => {
+      setProvenanceOpen(false);
+    }, 250);
+  }
+
   const categoryLabel =
     post.subcategory ??
     (post.category && isPostCategory(post.category) ? CATEGORY_LABELS[post.category] : null);
 
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const initialFollowed = Boolean((post.viewer as unknown as { authorFollowed?: boolean })?.authorFollowed);
+  const [following, setFollowing] = useState(initialFollowed);
+  const initialFollowerCount = (post.author as unknown as { followerCount?: number })?.followerCount ?? 0;
+  const [followerCount, setFollowerCount] = useState(initialFollowerCount);
+
+  const isPostHiddenLocally = (id: string) => {
+    try {
+      const list = JSON.parse(localStorage.getItem("centoire_hidden_posts") || "[]");
+      return Array.isArray(list) && list.includes(id);
+    } catch {
+      return false;
+    }
+  };
+  const [dismissed, setDismissed] = useState(() => isPostHiddenLocally(post.id));
+
+  const handleHidePost = () => {
+    setDismissed(true);
+    try {
+      const list = JSON.parse(localStorage.getItem("centoire_hidden_posts") || "[]");
+      if (Array.isArray(list) && !list.includes(post.id)) {
+        list.push(post.id);
+        localStorage.setItem("centoire_hidden_posts", JSON.stringify(list));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const initialSourceFollowed = Boolean((post.viewer as unknown as { sourceFollowed?: boolean })?.sourceFollowed);
+  const [sourceFollowing, setSourceFollowing] = useState(initialSourceFollowed);
+  const [sourceFollowPending, setSourceFollowPending] = useState(false);
+
+  useEffect(() => {
+    const isSourceFollowed = (post.viewer as unknown as { sourceFollowed?: boolean })?.sourceFollowed;
+    if (typeof isSourceFollowed === "boolean") {
+      setSourceFollowing(isSourceFollowed);
+    }
+  }, [(post.viewer as unknown as { sourceFollowed?: boolean })?.sourceFollowed]);
+
+  const handleSourceFollowClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    const sourceId = post.source?.id;
+    const nextState = !sourceFollowing;
+    setSourceFollowing(nextState);
+    setSourceFollowPending(true);
+
+    try {
+      if (sourceId) {
+        if (nextState) {
+          await customInstance({ url: `/sources/${sourceId}/follow`, method: "POST" });
+        } else {
+          await customInstance({ url: `/sources/${sourceId}/follow`, method: "DELETE" });
+        }
+      } else {
+        if (nextState) {
+          await customInstance({ url: `/posts/${post.id}/follow-source`, method: "POST" });
+        } else {
+          await customInstance({ url: `/posts/${post.id}/follow-source`, method: "DELETE" });
+        }
+      }
+      void queryClient.invalidateQueries();
+    } catch (err) {
+      console.error("Source follow error:", err);
+      setSourceFollowing(!nextState);
+    } finally {
+      setSourceFollowPending(false);
+    }
+  };
+
+  useEffect(() => {
+    const isFollowed = (post.viewer as unknown as { authorFollowed?: boolean })?.authorFollowed;
+    if (typeof isFollowed === "boolean") {
+      setFollowing(isFollowed);
+    }
+  }, [(post.viewer as unknown as { authorFollowed?: boolean })?.authorFollowed]);
+
+  useEffect(() => {
+    const count = (post.author as unknown as { followerCount?: number })?.followerCount;
+    if (typeof count === "number") {
+      setFollowerCount(count);
+    }
+  }, [post.author]);
+
+  const followMutation = useFollowUser({
+    mutation: {
+      onSuccess: () => {
+        setFollowing(true);
+        void queryClient.invalidateQueries();
+      },
+      onError: (err) => {
+        console.error("Follow error:", err);
+        setFollowing(false);
+        setFollowerCount((c) => Math.max(0, c - 1));
+      },
+    },
+  });
+
+  const unfollowMutation = useUnfollowUser({
+    mutation: {
+      onSuccess: () => {
+        setFollowing(false);
+        void queryClient.invalidateQueries();
+      },
+      onError: (err) => {
+        console.error("Unfollow error:", err);
+        setFollowing(true);
+        setFollowerCount((c) => c + 1);
+      },
+    },
+  });
+
+  const isCreatorPost = post.origin === "native" && Boolean(post.author);
+  const isEditorialAuthor =
+    !post.author?.displayName?.trim() ||
+    post.author.displayName.toLowerCase().includes("centoire") ||
+    post.author.handle === "centoire_team1" ||
+    post.author.displayName.toLowerCase().includes("editor");
+
+  const authorInitial = isEditorialAuthor
+    ? "E"
+    : post.author!.displayName.trim().charAt(0).toUpperCase();
+
+  const hasAvatar = Boolean(post.author?.avatarUrl && !avatarFailed);
+
+  const sourceName = post.source?.name || (post.origin === "aggregated" ? "Open Web" : "Centoire");
+  const sourceUrl = post.externalUrl || post.source?.siteUrl;
+  const publishedDateStr = post.publishedAt
+    ? new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "Recently";
+
+  const isProvTop = provenancePlacement === "top";
+  const isAuthorTop = authorPlacement === "top";
+
+  if (dismissed) return null;
+
   return (
-    <article className="group relative break-inside-avoid rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300 hover:z-30" style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}>
+    <article
+      className={`group relative break-inside-avoid rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300 ${
+        authorTooltipOpen || provenanceOpen || lastOpened === "options" ? "z-30" : "hover:z-20"
+      }`}
+      style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}
+    >
       {post.coverImageUrl ? (
         <button type="button" onClick={openPost} className="relative h-[158px] w-full shrink-0 cursor-pointer overflow-hidden rounded-t-[16px]">
           {!imageLoaded && (
@@ -94,82 +317,240 @@ export function PostCard({
           <PostActions
             post={post}
             onOpenModal={onOpenPost ? () => onOpenPost(post) : undefined}
+            onOptionsToggle={(open) => {
+              if (open) setLastOpened("options");
+            }}
+            optionsZIndex={lastOpened === "options" ? 70 : 50}
+            onHide={handleHidePost}
             prependNode={
               <div className="flex items-center">
-                {post.source || post.origin === "aggregated" ? (
-                  <div className="relative group/provenance cursor-pointer">
-                    <div className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#111111]/60 flex items-center justify-center">
+                {!isCreatorPost ? (
+                  <div
+                    ref={provenanceAnchorRef}
+                    className="relative cursor-pointer"
+                    onMouseEnter={handleProvenanceEnter}
+                    onMouseLeave={handleProvenanceLeave}
+                  >
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        checkProvenancePlacement();
+                        setLastOpened("provenance");
+                        setProvenanceOpen((prev) => !prev);
+                      }}
+                      className="size-8 shrink-0 rounded-full bg-[#EAEAEA] text-[#111111]/60 flex items-center justify-center hover:bg-[#E0E0E0] transition-colors"
+                    >
                       <svg className="size-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
                     </div>
                     {/* Provenance Tooltip */}
-                    <div className="absolute top-full left-[-18px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-30 hidden group-hover/provenance:flex flex-col cursor-default after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
+                    <div
+                      onMouseEnter={handleProvenanceEnter}
+                      onMouseLeave={handleProvenanceLeave}
+                      style={{ zIndex: lastOpened === "provenance" ? 70 : 50 }}
+                      className={`absolute ${
+                        isProvTop
+                          ? "bottom-full mb-2 after:-bottom-2 after:h-2"
+                          : "top-full mt-2 after:-top-2 after:h-2"
+                      } left-[-18px] w-[250px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] ${
+                        provenanceOpen ? "flex" : "hidden"
+                      } flex-col cursor-default after:content-[''] after:absolute after:left-0 after:w-full`}
+                    >
                       {/* Tooltip Tail */}
-                      <div className="absolute -top-[12px] left-[22px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      {isProvTop ? (
+                        <div className="absolute -bottom-[8px] left-[24px] size-[16px] bg-white border-b border-r border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      ) : (
+                        <div className="absolute -top-[8px] left-[24px] size-[16px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      )}
                       <div className="relative z-10 bg-white rounded-[16px] p-[12px] flex flex-col">
                         <div className="flex items-center gap-1.5 text-[#E5552D]">
                           <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
                           <span className="font-ui text-[10px] font-bold uppercase tracking-wider">OPEN PROVENANCE</span>
                         </div>
                         <p className="font-editorial text-[13px] font-medium leading-tight mt-2 text-[#111111]">
-                          This post was openly sourced from Knitwear.
+                          This post was openly sourced from {sourceName}.
                         </p>
                         <p className="font-ui text-[11px] text-[#737373] leading-relaxed mt-2">
-                          Scraped on Sep 08, 2024. Indexed by Centoire to help the fashion community discover and explore conversations from across the web.
+                          Scraped on {publishedDateStr}. Indexed by Centoire to help the fashion community discover and explore conversations from across the web.
                         </p>
-                        <div className="font-ui font-semibold mt-3 flex justify-between items-center text-[10px]">
-                          <span className="text-[#111111] flex items-center gap-1 hover:text-[#E5552D] transition-colors cursor-pointer">
-                            View source feed
-                            <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                          </span>
-                          <span className="text-[#E5552D] cursor-pointer hover:underline">Learn more</span>
+                        <div className="border-t border-[#EAEAEA] my-2.5"></div>
+                        <div className="font-ui font-semibold flex justify-between items-center text-[10px]">
+                          {sourceUrl ? (
+                            <a
+                              href={sourceUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[#111111] flex items-center gap-1 hover:text-[#E5552D] transition-colors cursor-pointer"
+                            >
+                              View source feed
+                              <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            </a>
+                          ) : (
+                            <span className="text-[#737373]">Source indexed</span>
+                          )}
+                          <Link
+                            to="/discover"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#E5552D] cursor-pointer hover:underline"
+                          >
+                            Learn more
+                          </Link>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : post.author ? (
-                  <div className="relative group/author cursor-pointer">
-                    <div className="size-8 shrink-0 rounded-full bg-[#3A76C4] text-white flex items-center justify-center font-ui font-bold text-[12px] overflow-hidden">
-                      {post.author.avatarUrl ? (
-                        <img src={post.author.avatarUrl} alt="" className="size-full object-cover" />
-                      ) : (
-                        post.author.displayName.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    {/* Author Tooltip */}
-                    <div className="absolute top-full left-[-18px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-30 hidden group-hover/author:flex flex-col cursor-default after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
-                      {/* Tooltip Tail */}
-                      <div className="absolute -top-[12px] left-[22px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
-                      <div className="relative z-10 bg-white rounded-[16px] p-[12px] flex flex-col">
-                        <div className="flex items-center gap-3">
-                          <div className="size-10 shrink-0 rounded-full bg-[#8B6B60] text-white flex items-center justify-center font-ui font-bold text-[14px] overflow-hidden">
-                            {post.author?.avatarUrl ? <img src={post.author.avatarUrl} alt="" className="size-full object-cover" /> : post.author?.displayName.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="font-editorial text-[14px] font-medium leading-none text-[#111111]">{post.author?.displayName}</span>
-                            <span className="font-ui text-[10px] text-[#E5552D] leading-none mt-1">Senior Fashion Editor - Paris</span>
-                          </div>
-                        </div>
-                        <div className="border-t border-[#EAEAEA] mt-3 pt-3 flex items-center justify-between px-2">
-                          <div className="flex flex-col items-center">
-                            <span className="font-ui text-[12px] font-bold text-[#111111]">1.2k</span>
-                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">FOLLOWERS</span>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <span className="font-ui text-[12px] font-bold text-[#111111]">856</span>
-                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">UPVOTES</span>
-                          </div>
-                          <div className="flex flex-col items-center">
-                            <span className="font-ui text-[12px] font-bold text-[#111111]">34</span>
-                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">POSTS</span>
-                          </div>
-                        </div>
-                        <button type="button" className="bg-[#E5552D] text-white rounded-[8px] py-2 mt-3 w-full font-ui text-[12px] font-bold transition-colors hover:bg-[#D4441C]">
-                          Follow
+                        <button
+                          type="button"
+                          disabled={sourceFollowPending}
+                          onClick={handleSourceFollowClick}
+                          className={`rounded-[10px] py-2 mt-3 w-full font-ui text-[13px] font-semibold transition-colors cursor-pointer flex items-center justify-center ${
+                            sourceFollowing
+                              ? "border border-[#EAEAEA] text-[#737373] hover:border-red-300 hover:text-red-500 bg-white"
+                              : "bg-[#E5552D] text-white hover:bg-[#D4441C]"
+                          }`}
+                        >
+                          {sourceFollowing ? "Following" : "Follow"}
                         </button>
                       </div>
                     </div>
                   </div>
-                ) : null}
+                ) : (
+                  <div
+                    ref={authorAnchorRef}
+                    className="relative cursor-pointer"
+                    onMouseEnter={handleAuthorEnter}
+                    onMouseLeave={handleAuthorLeave}
+                  >
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        checkAuthorPlacement();
+                        setLastOpened("author");
+                        setAuthorTooltipOpen((prev) => !prev);
+                      }}
+                      className={`size-8 shrink-0 rounded-full flex items-center justify-center font-ui font-bold text-[14px] overflow-hidden hover:opacity-90 transition-opacity ${
+                        hasAvatar ? "bg-transparent" : "bg-[#3A76C4] text-white"
+                      }`}
+                    >
+                      {hasAvatar ? (
+                        <img
+                          src={post.author!.avatarUrl!}
+                          alt=""
+                          className="size-full object-contain"
+                          onError={() => setAvatarFailed(true)}
+                        />
+                      ) : (
+                        authorInitial
+                      )}
+                    </div>
+                    {/* Author Tooltip */}
+                    <div
+                      onMouseEnter={handleAuthorEnter}
+                      onMouseLeave={handleAuthorLeave}
+                      style={{ zIndex: lastOpened === "author" ? 70 : 50 }}
+                      className={`absolute ${
+                        isAuthorTop
+                          ? "bottom-full mb-[6px] after:-bottom-[6px] after:h-[6px]"
+                          : "top-full mt-[10px] after:-top-[10px] after:h-[10px]"
+                      } left-[-18px] w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] ${
+                        authorTooltipOpen ? "flex" : "hidden"
+                      } flex-col cursor-default after:content-[''] after:absolute after:left-0 after:w-full`}
+                    >
+                      {/* Tooltip Tail */}
+                      {isAuthorTop ? (
+                        <div className="absolute -bottom-[8px] left-[24px] size-[16px] bg-white border-b border-r border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      ) : (
+                        <div className="absolute -top-[8px] left-[24px] size-[16px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
+                      )}
+                      <div className="relative z-10 bg-white rounded-[16px] p-[12px] flex flex-col">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`size-10 shrink-0 rounded-full flex items-center justify-center font-ui font-bold text-[16px] overflow-hidden ${
+                              hasAvatar ? "bg-transparent" : "bg-[#3A76C4] text-white"
+                            }`}
+                          >
+                            {hasAvatar ? (
+                              <img
+                                src={post.author!.avatarUrl!}
+                                alt=""
+                                className="size-full object-contain"
+                                onError={() => setAvatarFailed(true)}
+                              />
+                            ) : (
+                              authorInitial
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-editorial text-[14px] font-bold leading-none text-[#000000] truncate">
+                              {post.author?.displayName?.trim() || "Editor"}
+                            </span>
+                            <span className="font-ui text-[10px] text-[#E5552D] leading-none mt-1">
+                              {post.authorIsCreator ? "Featured Creator" : (post.circle?.name ?? "Community Member")}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="border-t border-[#EAEAEA] mt-3 pt-3 flex items-center justify-between px-2">
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">
+                              {followerCount >= 1000 ? `${(followerCount / 1000).toFixed(1)}k` : followerCount}
+                            </span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">FOLLOWERS</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">{post.upvoteCount}</span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">UPVOTES</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="font-ui text-[12px] font-bold text-[#111111]">{post.commentCount}</span>
+                            <span className="font-ui text-[9px] font-bold uppercase tracking-wider text-[#737373]">COMMENTS</span>
+                          </div>
+                        </div>
+                        {user?.id === post.author?.id ? (
+                          <div className="bg-[#F0F0F0] text-[#737373] text-center rounded-[8px] py-2 mt-3 w-full font-ui text-[12px] font-bold">
+                            You
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={followMutation.isPending || unfollowMutation.isPending}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (!user) {
+                                navigate("/login");
+                                return;
+                              }
+                              if (!post.author?.id) return;
+                              if (following) {
+                                setFollowing(false);
+                                setFollowerCount((c) => Math.max(0, c - 1));
+                                unfollowMutation.mutate({ id: post.author.id }, {
+                                  onError: () => {
+                                    setFollowing(true);
+                                    setFollowerCount((c) => c + 1);
+                                  },
+                                });
+                              } else {
+                                setFollowing(true);
+                                setFollowerCount((c) => c + 1);
+                                followMutation.mutate({ id: post.author.id }, {
+                                  onError: () => {
+                                    setFollowing(false);
+                                    setFollowerCount((c) => Math.max(0, c - 1));
+                                  },
+                                });
+                              }
+                            }}
+                            className={`rounded-[8px] py-2 mt-3 w-full font-ui text-[12px] font-bold transition-colors cursor-pointer ${
+                              following
+                                ? "border border-[#EAEAEA] text-[#737373] hover:border-red-300 hover:text-red-500 bg-white"
+                                : "bg-[#E5552D] text-white hover:bg-[#D4441C]"
+                            }`}
+                          >
+                            {following ? "Following" : "Follow"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             }
           />
