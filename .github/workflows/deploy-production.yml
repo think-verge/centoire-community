@@ -19,6 +19,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Remove stale sources on VM
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.CENTOIRE_COMMUNITY_SSH_HOST }}
+          username: ${{ secrets.CENTOIRE_COMMUNITY_SSH_USER }}
+          key: ${{ secrets.CENTOIRE_COMMUNITY_SSH_PRIVATE_KEY }}
+          script: |
+            # scp only adds/overwrites, so files deleted in git would linger and break the build.
+            rm -rf /var/www/centoire-community/backend/src \
+                   /var/www/centoire-community/backend/scripts \
+                   /var/www/centoire-community/ui/src
+
       - name: Upload application
         uses: appleboy/scp-action@v0.1.7
         with:
