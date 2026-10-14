@@ -80,6 +80,15 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
     { query: { staleTime: 5 * 60_000 } },
   );
 
+  const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
+
+  // Sync active hashtag with URL (/hashtag/:name) if present, otherwise activeHashtag, otherwise first hashtag (matching Figma default)
+  const hashtagFromUrl = location.pathname.match(/^\/hashtag\/([^/]+)$/)?.[1]?.toLowerCase();
+  const matchedHashtagFromUrl = hashtagFromUrl
+    ? hashtags.find((h) => h.name.toLowerCase() === hashtagFromUrl)?.name
+    : undefined;
+  const currentActiveHashtag = matchedHashtagFromUrl ?? activeHashtag ?? hashtags[0]?.name;
+
   const { data: latestPostsData, isLoading: isLoadingPosts } = useGetFeedDiscover({ sort: "new" });
   const latestPosts = latestPostsData?.items?.slice(0, 3) ?? [];
 
@@ -231,11 +240,12 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
                 />
               ))
             : hashtags.map((tag) => {
-                const isActive = location.pathname === `/hashtag/${tag.name}`;
+                const isActive = currentActiveHashtag?.toLowerCase() === tag.name.toLowerCase();
                 return (
                   <Link
                     key={tag.name}
                     to={`/hashtag/${tag.name}`}
+                    onClick={() => setActiveHashtag(tag.name)}
                     title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
                     className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-colors ${
                       isActive

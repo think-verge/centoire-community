@@ -18,6 +18,8 @@ function getRightSidebarContext(pathname: string): RightSidebarContext | null {
   if (pathname === "/search") return { type: "search" };
   const m = pathname.match(/^\/category\/([^/]+)$/);
   if (m) return { type: "category", category: m[1] };
+  const mHashtag = pathname.match(/^\/hashtag\/([^/]+)$/);
+  if (mHashtag) return { type: "feed" };
   const mTag = pathname.match(/^\/t\/([^/]+)$/);
   if (mTag) return { type: "feed" };
   return null;

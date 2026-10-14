@@ -9,7 +9,7 @@ export const DEFAULT_SUGGEST_LIMIT = 8;
 export const MAX_SUGGEST_LIMIT = 50;
 const SHORT_PREFIX_TTL_MS = 60_000;
 const TRENDING_TTL_MS = 5 * 60_000;
-const TRENDING_WINDOW_DAYS = 7;
+const TRENDING_WINDOW_DAYS = 90;
 
 interface CacheEntry<T> {
   at: number;
@@ -95,8 +95,18 @@ export async function trending(params: { category?: string; limit?: number }): P
       .map((r) => ({ name: r._id, postCount: byName.get(r._id) ?? 0, recentCount: r.recentCount }));
   }
   if (rows.length === 0) {
-    // Quiet week (or fresh install): fall back to all-time most used.
+    // Quiet period (or fresh install): fall back to all-time most used.
     rows = (await search({ limit })).map((s) => ({ ...s, recentCount: 0 }));
+  } else if (rows.length < limit) {
+    // When recent posts don't fill the limit, backfill with all-time most used hashtags
+    const existing = new Set(rows.map((r) => r.name));
+    const backfill = await search({ limit });
+    for (const s of backfill) {
+      if (!existing.has(s.name) && rows.length < limit) {
+        existing.add(s.name);
+        rows.push({ ...s, recentCount: 0 });
+      }
+    }
   }
   return remember(trendingCache, key, rows);
 }
