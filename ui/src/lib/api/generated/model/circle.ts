@@ -24,5 +24,6 @@ export interface Circle {
   postCount: number;
   /** @nullable */
   viewerRole: CircleViewerRole;
+  memberAvatars?: string[];
   createdAt: string;
 }
