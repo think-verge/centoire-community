@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
+import { PostDrawer } from "../../components/PostDrawer";
+import type { PostCard } from "../../lib/api/generated/model";
 import { useGetFeedDiscoverInfinite } from "../../lib/api/generated/feed/feed";
 import {
   getGetHashtagQueryKey,
@@ -12,6 +15,7 @@ import { useAuth } from "../../lib/auth-context";
 import { cleanHashtag, formatCount } from "../../lib/hashtag";
 
 export function HashtagPage() {
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const { name: rawName } = useParams();
   const name = cleanHashtag(rawName ?? "");
   const { user } = useAuth();
@@ -71,6 +75,7 @@ export function HashtagPage() {
           hasNextPage={Boolean(hasNextPage)}
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
+          onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
           emptyState={
             <div className="rounded-xl border border-dashed border-line p-12 text-center">
               <p className="font-display-serif text-2xl font-semibold">No posts yet in #{name}</p>
@@ -84,6 +89,12 @@ export function HashtagPage() {
           }
         />
       </div>
+      {selectedSlug && (
+        <PostDrawer
+          slug={selectedSlug}
+          onClose={() => setSelectedSlug(null)}
+        />
+      )}
     </div>
   );
 }

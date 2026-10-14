@@ -16,4 +16,5 @@ export type PostCardAuthor = {
   displayName: string;
   /** @nullable */
   avatarUrl: string | null;
+  followerCount?: number;
 } | null;

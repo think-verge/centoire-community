@@ -1,11 +1,12 @@
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
 import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
 import { apiClient } from "../../lib/api/http";
 import { formatCount } from "../../lib/hashtag";
-import { AvatarBubble } from "../AppShell";
+
 
 export type RightSidebarContext =
   | { type: "feed" }
@@ -26,6 +27,7 @@ type FeaturedUser = {
   displayName: string;
   handle: string;
   avatarUrl: string | null;
+  bio: string | null;
   role: string;
   followerCount: number;
   isFollowing: boolean;
@@ -39,184 +41,349 @@ function useFeaturedUsers() {
   });
 }
 
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function getCreatorHeadline(creator: FeaturedUser): string {
+  if (creator.bio && creator.bio.trim()) {
+    return creator.bio.trim();
+  }
+  if (creator.role === "creator") return "Fashion Creator";
+  if (creator.role === "editor") return "Fashion Editor";
+  if (creator.role === "admin") return "Editorial Team";
+  return "Style Contributor";
+}
+
+function getInitials(name?: string): string {
+  if (!name || !name.trim()) return "E";
+  return name.trim().charAt(0).toUpperCase();
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export function RightSidebar({ context }: { context: RightSidebarContext }) {
+  const location = useLocation();
+  const queryClient = useQueryClient();
   const isCategory = context.type === "category";
   const category = isCategory ? context.category : undefined;
   const categoryLabel = category ? (CATEGORY_LABELS[category] ?? category) : undefined;
 
   // Hashtags trending this week; on a category page, trending within that category's posts.
-  const { data: hashtags = [] } = useGetTrendingHashtags(
+  const { data: hashtags = [], isLoading: isLoadingHashtags } = useGetTrendingHashtags(
     { limit: 12, ...(category ? { category } : {}) },
     { query: { staleTime: 5 * 60_000 } },
   );
 
-  const { data: latestPostsData } = useGetFeedDiscover({ sort: "trending" });
+  const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
+
+  // Sync active hashtag with URL (/hashtag/:name) if present, otherwise activeHashtag, otherwise first hashtag (matching Figma default)
+  const hashtagFromUrl = location.pathname.match(/^\/hashtag\/([^/]+)$/)?.[1]?.toLowerCase();
+  const matchedHashtagFromUrl = hashtagFromUrl
+    ? hashtags.find((h) => h.name.toLowerCase() === hashtagFromUrl)?.name
+    : undefined;
+  const currentActiveHashtag = matchedHashtagFromUrl ?? activeHashtag ?? hashtags[0]?.name;
+
+  const { data: latestPostsData, isLoading: isLoadingPosts } = useGetFeedDiscover({ sort: "new" });
   const latestPosts = latestPostsData?.items?.slice(0, 3) ?? [];
 
-  const { data: featuredUsers = [], refetch: refetchCreators } = useFeaturedUsers();
+  const { data: featuredUsers = [], isLoading: isLoadingUsers } = useFeaturedUsers();
+
+  const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({});
 
   const followMutation = useFollowUser({
-    mutation: { onSuccess: () => refetchCreators() },
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: ["users", "featured"] });
+      },
+      onError: (_err, variables) => {
+        setFollowingMap((prev) => ({ ...prev, [variables.id]: false }));
+      },
+    },
   });
+
   const unfollowMutation = useUnfollowUser({
-    mutation: { onSuccess: () => refetchCreators() },
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: ["users", "featured"] });
+      },
+      onError: (_err, variables) => {
+        setFollowingMap((prev) => ({ ...prev, [variables.id]: true }));
+      },
+    },
   });
+
+  const handleToggleFollow = (creator: FeaturedUser) => {
+    const currentFollowing = followingMap[creator.id] ?? creator.isFollowing;
+    const nextFollowing = !currentFollowing;
+
+    // Immediate optimistic update
+    setFollowingMap((prev) => ({ ...prev, [creator.id]: nextFollowing }));
+
+    if (nextFollowing) {
+      followMutation.mutate({ id: creator.id });
+    } else {
+      unfollowMutation.mutate({ id: creator.id });
+    }
+  };
+
+
 
   return (
-    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-72 shrink-0 flex-col gap-6 overflow-y-auto border-l border-[var(--color-hairline)] bg-white px-5 py-5 xl:flex">
+    <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-[280px] shrink-0 flex-col gap-4 overflow-y-auto border-l border-[#D4D4D4] bg-white p-5 xl:flex">
 
-      {/* Category context header */}
+      {/* Category context header if in category view */}
       {isCategory && categoryLabel && (
         <>
-          <section>
-            <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-              Browsing
+          <section className="flex flex-col gap-1">
+            <p className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
+              BROWSING
             </p>
-            <h2 className="font-editorial mt-1 text-2xl italic text-[var(--color-charcoal)]">
+            <h2 className="font-editorial text-2xl italic text-[#111111]">
               {categoryLabel}
             </h2>
             <Link
               to={`/category/${category}`}
-              className="mt-1 inline-block font-ui text-xs text-[var(--color-coral)] hover:underline"
+              className="mt-1 inline-block font-ui text-xs text-[#E5552D] hover:underline"
             >
               See all {categoryLabel} →
             </Link>
           </section>
-          <div className="h-px bg-[var(--color-hairline)]" />
+          <div className="h-px w-full bg-[#D4D4D4]" />
         </>
       )}
 
-      {/* Latest Posts — only on feed/discover/following */}
-      {!isCategory && (
-        <>
-          <section>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-                Latest Posts
-              </p>
-              <Link
-                to="/discover"
-                className="font-ui text-[10px] font-semibold text-[var(--color-coral)] hover:underline"
-              >
-                VIEW ALL
-              </Link>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {latestPosts.length > 0
-                ? latestPosts.map((post) => (
-                    <li key={post.id}>
-                      <Link to={post.externalUrl ?? `/p/${post.slug}`} className="group flex gap-2.5">
-                        {post.coverImageUrl ? (
-                          <img
-                            src={post.coverImageUrl}
-                            alt=""
-                            className="h-10 w-12 shrink-0 rounded object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-12 shrink-0 rounded bg-[var(--color-sand)]" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="line-clamp-2 text-sm font-medium leading-snug text-[var(--color-charcoal)] group-hover:text-[var(--color-coral)]">
-                            {post.title}
-                          </p>
-                          <p className="mt-0.5 font-ui text-[11px] text-[var(--color-taupe)]">
-                            {post.author?.displayName} · {post.readTimeMinutes} min
-                          </p>
+      {/* Section 1: LATEST POSTS */}
+      <section className="flex flex-col gap-4">
+        <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
+          LATEST POSTS
+        </h3>
+        <ul className="flex flex-col gap-3.5">
+          {isLoadingPosts
+            ? [0, 1, 2].map((i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="h-[48px] w-[44px] shrink-0 animate-pulse rounded-[8px] bg-[#F5F5F5]" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="h-[34px] w-full animate-pulse rounded bg-[#F5F5F5]" />
+                    <div className="h-2.5 w-2/3 animate-pulse rounded bg-[#F5F5F5]" />
+                  </div>
+                </li>
+              ))
+            : latestPosts.map((post) => {
+                const bylineAuthor = post.author?.displayName || post.source?.name || "Centoire";
+                return (
+                  <li key={post.id}>
+                    <Link
+                      to={post.externalUrl || `/p/${post.slug}`}
+                      target={post.externalUrl ? "_blank" : undefined}
+                      rel={post.externalUrl ? "noopener noreferrer" : undefined}
+                      className="group flex items-start gap-3"
+                    >
+                      {post.coverImageUrl ? (
+                        <img
+                          src={post.coverImageUrl}
+                          alt=""
+                          className="h-[48px] w-[44px] shrink-0 rounded-[8px] object-cover bg-[#F5F5F5]"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-[48px] w-[44px] shrink-0 items-center justify-center rounded-[8px] bg-[#F5F5F5] text-[#A3A3A3]">
+                          <svg
+                            className="size-4 opacity-40"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                            <circle cx="9" cy="9" r="2" />
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                          </svg>
                         </div>
-                      </Link>
-                    </li>
-                  ))
-                : /* skeleton */
-                  [0, 1, 2].map((i) => (
-                    <li key={i} className="flex gap-2.5">
-                      <div className="h-10 w-12 shrink-0 animate-pulse rounded bg-[var(--color-sand)]" />
-                      <div className="flex-1 space-y-1.5">
-                        <div className="h-3 animate-pulse rounded bg-[var(--color-sand)]" />
-                        <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--color-sand)]" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="h-[34px] min-h-[34px] line-clamp-2 font-ui text-[12.5px] font-medium leading-[17px] text-[#111111] transition-colors group-hover:text-[#E5552D]">
+                          {decodeHtmlEntities(post.title)}
+                        </h4>
+                        <p className="mt-1 font-ui text-[11px] leading-none text-[#737373]">
+                          By {bylineAuthor} • {post.readTimeMinutes || 1} min
+                        </p>
                       </div>
-                    </li>
-                  ))}
-            </ul>
-          </section>
-          <div className="h-px bg-[var(--color-hairline)]" />
-        </>
-      )}
-
-      {/* Trending hashtags */}
-      <section>
-        <p className="mb-3 font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-          {isCategory && categoryLabel ? `Trending in ${categoryLabel}` : "Trending hashtags"}
-        </p>
-        {hashtags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {hashtags.map((tag, i) => (
-              <Link
-                key={tag.name}
-                to={`/hashtag/${tag.name}`}
-                title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-ui text-[11px] transition-colors ${
-                  i === 0
-                    ? "border-[var(--color-coral)] bg-[var(--color-coral)] text-white"
-                    : "border-[var(--color-hairline)] text-[var(--color-stone)] hover:border-[var(--color-coral)] hover:text-[var(--color-coral)]"
-                }`}
-              >
-                #{tag.name}
-                <span className={i === 0 ? "text-white/80" : "text-[var(--color-taupe)]"}>{formatCount(tag.postCount)}</span>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <p className="font-ui text-xs text-[var(--color-taupe)]">No hashtags are trending yet.</p>
-        )}
+                    </Link>
+                  </li>
+                );
+              })}
+        </ul>
       </section>
 
-      <div className="h-px bg-[var(--color-hairline)]" />
+      {/* Divider */}
+      <div className="h-px w-full bg-[#D4D4D4]" />
 
-      {/* Top Creators */}
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <p className="font-ui text-[10px] font-semibold uppercase tracking-widest text-[var(--color-taupe)]">
-            {isCategory && categoryLabel ? `Creators in ${categoryLabel}` : "Top Creators"}
-          </p>
+      {/* Section 2: TRENDING TOPICS */}
+      <section className="flex flex-col gap-4">
+        <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
+          {isCategory && categoryLabel ? `TRENDING IN ${categoryLabel.toUpperCase()}` : "TRENDING TOPICS"}
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          {isLoadingHashtags
+            ? [0, 1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="h-6 w-16 animate-pulse rounded-full bg-[#F5F5F5]"
+                />
+              ))
+            : hashtags.map((tag) => {
+                const isActive = currentActiveHashtag?.toLowerCase() === tag.name.toLowerCase();
+                return (
+                  <Link
+                    key={tag.name}
+                    to={`/hashtag/${tag.name}`}
+                    onClick={() => setActiveHashtag(tag.name)}
+                    title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-colors ${
+                      isActive
+                        ? "border border-[#E5552D] bg-[#E5552D] text-white hover:bg-[#d44820]"
+                        : "border border-[#D4D4D4] bg-white text-[#111111] hover:border-[#111111] hover:text-[#111111]"
+                    }`}
+                  >
+                    #{tag.name}
+                    <span className={isActive ? "text-white/80 text-[10px]" : "text-[#737373] text-[10px]"}>
+                      {formatCount(tag.postCount)}
+                    </span>
+                  </Link>
+                );
+              })}
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="h-px w-full bg-[#D4D4D4]" />
+
+      {/* Section 3: TOP VOICES */}
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between leading-none">
+          <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
+            TOP VOICES
+          </h3>
           <Link
-            to="/discover"
-            className="font-ui text-[10px] font-semibold text-[var(--color-coral)] hover:underline"
+            to="/search?type=people"
+            className="font-ui text-[12px] font-medium uppercase tracking-wider text-[#737373] underline decoration-[#999999] underline-offset-[2px] transition-colors hover:text-[#111111] hover:decoration-[#111111]"
           >
             VIEW ALL
           </Link>
         </div>
-        <ul className="flex flex-col gap-3">
-          {featuredUsers.map((creator) => (
-            <li key={creator.id} className="flex items-center gap-2.5">
-              <AvatarBubble name={creator.displayName} url={creator.avatarUrl} size="size-8" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--color-charcoal)]">
-                  {creator.displayName}
-                </p>
-                <p className="font-ui text-[11px] capitalize text-[var(--color-taupe)]">{creator.role}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (creator.isFollowing) {
-                    unfollowMutation.mutate({ id: creator.id });
-                  } else {
-                    followMutation.mutate({ id: creator.id });
-                  }
-                }}
-                className={`shrink-0 rounded-full border px-2.5 py-0.5 font-ui text-[11px] font-semibold transition-colors ${
-                  creator.isFollowing
-                    ? "border-[var(--color-hairline)] text-[var(--color-stone)] hover:border-red-300 hover:text-red-500"
-                    : "border-[var(--color-coral)] text-[var(--color-coral)] hover:bg-[var(--color-coral)] hover:text-white"
-                }`}
-              >
-                {creator.isFollowing ? "Following" : "Follow"}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col">
+          {isLoadingUsers
+            ? [0, 1, 2].map((i) => (
+                <div key={i} className="flex flex-col">
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <div className="size-9 shrink-0 animate-pulse rounded-full bg-[#F5F5F5]" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 w-20 animate-pulse rounded bg-[#F5F5F5]" />
+                        <div className="h-2.5 w-14 animate-pulse rounded bg-[#F5F5F5]" />
+                      </div>
+                    </div>
+                    <div className="h-[26px] w-16 animate-pulse rounded-full bg-[#F5F5F5]" />
+                  </div>
+                  {i < 2 && (
+                    <svg
+                      className="my-4 h-px w-full shrink-0 overflow-visible"
+                      viewBox="0 0 240 1"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <line
+                        x1="0"
+                        y1="0.5"
+                        x2="240"
+                        y2="0.5"
+                        stroke="rgba(17, 17, 17, 0.2)"
+                        strokeWidth="1"
+                        strokeDasharray="6 6"
+                      />
+                    </svg>
+                  )}
+                </div>
+              ))
+            : featuredUsers.map((creator, idx) => {
+                const isFollowing = followingMap[creator.id] ?? creator.isFollowing;
+                return (
+                  <div key={creator.id} className="flex flex-col">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <Link
+                          to={creator.handle ? `/u/${creator.handle}` : "#"}
+                          className="shrink-0"
+                        >
+                          {creator.avatarUrl ? (
+                            <img
+                              src={creator.avatarUrl}
+                              alt={creator.displayName}
+                              className="size-9 shrink-0 rounded-full object-cover bg-[#F5F5F5]"
+                            />
+                          ) : (
+                            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#3A76C4] font-ui text-xs font-semibold text-white">
+                              {getInitials(creator.displayName)}
+                            </div>
+                          )}
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          <Link
+                            to={creator.handle ? `/u/${creator.handle}` : "#"}
+                            className="block truncate font-ui text-[13px] font-semibold leading-tight text-[#111111] hover:underline"
+                          >
+                            {creator.displayName}
+                          </Link>
+                          <p className="mt-0.5 truncate font-ui text-[12px] leading-normal pb-0.5 text-[#737373]">
+                            {getCreatorHeadline(creator)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFollow(creator)}
+                        className={`h-[22px] min-w-[58px] shrink-0 rounded-full px-3 py-0 font-ui text-[11px] font-medium transition-all flex items-center justify-center leading-none ${
+                          isFollowing
+                            ? "border border-[#111111] bg-[#111111] text-white hover:bg-black/85"
+                            : "border border-[#CCCCCC] bg-white text-[#111111] hover:border-[#111111] hover:bg-neutral-50"
+                        }`}
+                      >
+                        {isFollowing ? "Following" : "Follow"}
+                      </button>
+                    </div>
+
+                    {/* Dashed divider between creators matching Figma 6,6 dashed line and 16px spacing */}
+                    {idx < featuredUsers.length - 1 && (
+                      <svg
+                        className="my-4 h-px w-full shrink-0 overflow-visible"
+                        viewBox="0 0 240 1"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <line
+                          x1="0"
+                          y1="0.5"
+                          x2="240"
+                          y2="0.5"
+                          stroke="rgba(17, 17, 17, 0.2)"
+                          strokeWidth="1"
+                          strokeDasharray="6 6"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                );
+              })}
+        </div>
       </section>
     </aside>
   );

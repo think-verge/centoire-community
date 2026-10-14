@@ -231,7 +231,7 @@ export async function getBySlug(
   viewerRole?: UserRole,
 ): Promise<IPost> {
   const post = await Post.findOne({ slug })
-    .populate("authorId", "handle displayName avatarUrl reputation role")
+    .populate("authorId", "handle displayName avatarUrl reputation role followerCount")
     .populate("sourceId", "name siteUrl faviconUrl")
     .populate("circleId", "name slug");
   if (!post || post.status === "removed") throw new ApiError(404, "Post not found");

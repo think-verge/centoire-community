@@ -50,7 +50,7 @@ export function PostDrawer({
   ) : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex">
+    <div className="fixed inset-0 z-[100] flex">
       {/* Backdrop */}
       <button
         type="button"

@@ -24,6 +24,7 @@ export interface IUser extends Document {
   followerCount: number;
   followingCount: number;
   postCount: number;
+  dismissedPosts: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,6 +57,7 @@ const userSchema = new Schema<IUser>(
     followerCount: { type: Number, default: 0 },
     followingCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
+    dismissedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
   },
   { timestamps: true },
 );

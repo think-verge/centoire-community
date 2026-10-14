@@ -10,6 +10,7 @@ import {
 } from "../lib/api/generated/engagement/engagement";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { useAuth } from "../lib/auth-context";
+import { customInstance } from "../lib/api/http";
 
 /**
  * Upvote / comment / bookmark row. Optimistic per-card state: counts flip
@@ -20,10 +21,16 @@ export function PostActions({
   post,
   onOpenModal,
   prependNode,
+  onOptionsToggle,
+  optionsZIndex,
+  onHide,
 }: {
   post: PostCardType;
   onOpenModal?: () => void;
   prependNode?: React.ReactNode;
+  onOptionsToggle?: (isOpen: boolean) => void;
+  optionsZIndex?: number;
+  onHide?: () => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -77,11 +84,15 @@ export function PostActions({
       }
       if (optionsOpen && optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
         setOptionsOpen(false);
+        onOptionsToggle?.(false);
       }
     }
     function onScroll() {
       if (pickerOpen) setPickerOpen(false);
-      if (optionsOpen) setOptionsOpen(false);
+      if (optionsOpen) {
+        setOptionsOpen(false);
+        onOptionsToggle?.(false);
+      }
     }
     if (pickerOpen || optionsOpen) {
       document.addEventListener("mousedown", onOutsideClick);
@@ -91,25 +102,10 @@ export function PostActions({
       document.removeEventListener("mousedown", onOutsideClick);
       document.removeEventListener("scroll", onScroll, { capture: true });
     };
-  }, [pickerOpen, optionsOpen]);
+  }, [pickerOpen, optionsOpen, onOptionsToggle]);
 
   const canEngage = Boolean(user?.emailVerified);
 
-  function toggleUpvote() {
-    if (!canEngage) {
-      navigate("/verify-email");
-      return;
-    }
-    if (voted === 1) {
-      setVoted(null);
-      setUpvotes((n) => n - 1);
-      unvotePost.mutate({ id: post.id });
-    } else {
-      setVoted(1);
-      setUpvotes((n) => n + 1);
-      votePost.mutate({ id: post.id, data: { value: 1 } });
-    }
-  }
 
   function saveTo(folderId: string | null) {
     setPickerOpen(false);
@@ -129,8 +125,134 @@ export function PostActions({
     }
   }
 
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [reported, setReported] = useState(
+    Boolean((post.viewer as unknown as { reported?: boolean })?.reported),
+  );
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  function toggleUpvote() {
+    if (!canEngage) {
+      navigate(user ? "/verify-email" : "/login");
+      return;
+    }
+    if (voted === 1) {
+      // Removing upvote: decrement upvote count by 1
+      setVoted(null);
+      setUpvotes((n) => Math.max(0, n - 1));
+      unvotePost.mutate({ id: post.id });
+    } else {
+      // Casting upvote: always increment upvote count by exactly 1
+      setVoted(1);
+      setUpvotes((n) => n + 1);
+      votePost.mutate({ id: post.id, data: { value: 1 } });
+    }
+  }
+
+  function handleSeeMore() {
+    setOptionsOpen(false);
+    onOptionsToggle?.(false);
+    if (post.author?.handle) {
+      navigate(`/u/${post.author.handle}`);
+    } else if (post.source?.name) {
+      navigate(`/search?q=${encodeURIComponent(post.source.name)}`);
+    } else {
+      navigate("/discover");
+    }
+  }
+
+  function handleNotInterested() {
+    setOptionsOpen(false);
+    onOptionsToggle?.(false);
+    onHide?.();
+    void customInstance({ url: `/posts/${post.id}/not-interested`, method: "POST" });
+    setToastMessage("Post hidden · Centoire will show less like this");
+  }
+
+  function handleDownvote() {
+    setOptionsOpen(false);
+    onOptionsToggle?.(false);
+    if (!canEngage) {
+      navigate(user ? "/verify-email" : "/login");
+      return;
+    }
+    if (voted === -1) {
+      // Removing downvote: user returns to neutral state, upvote count is NOT increased
+      setVoted(null);
+      unvotePost.mutate({ id: post.id });
+      setToastMessage("Downvote removed");
+      return;
+    }
+
+    // A post with 0 votes cannot be downvoted
+    if (upvotes <= 0 && voted !== 1) {
+      setToastMessage("Cannot downvote a post with 0 votes");
+      return;
+    }
+
+    // Casting downvote:
+    // If the user had previously upvoted the post, take back their upvote (-1)
+    if (voted === 1) {
+      setUpvotes((n) => Math.max(0, n - 1));
+    }
+    setVoted(-1);
+    votePost.mutate({ id: post.id, data: { value: -1 } });
+    setToastMessage("Post downvoted");
+  }
+
+  async function handleReport() {
+    setOptionsOpen(false);
+    onOptionsToggle?.(false);
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    if (reported) {
+      setToastMessage("You have already reported this post");
+      return;
+    }
+    try {
+      const res = await customInstance<{ alreadyReported?: boolean }>({
+        url: `/posts/${post.id}/report`,
+        method: "POST",
+      });
+      if (res?.alreadyReported) {
+        setReported(true);
+        setToastMessage("You have already reported this post");
+      } else {
+        setReported(true);
+        setToastMessage("Post reported · Thank you for keeping Centoire safe");
+      }
+    } catch {
+      setToastMessage("Unable to submit report");
+    }
+  }
+
+  async function handleShare() {
+    setOptionsOpen(false);
+    onOptionsToggle?.(false);
+    const shareUrl = `${window.location.origin}/p/${post.slug}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setToastMessage("Link copied to clipboard!");
+    } catch {
+      setToastMessage("Unable to copy link");
+    }
+  }
+
   return (
     <div className="flex items-center justify-between w-full">
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 bg-[#111111] text-white text-[12px] font-ui font-medium rounded-full shadow-2xl flex items-center gap-2 pointer-events-none transition-all">
+          <span>{toastMessage}</span>
+        </div>
+      )}
       <div className="flex items-center gap-2.5">
         {prependNode}
         <button
@@ -158,32 +280,86 @@ export function PostActions({
 
       <div className="relative ml-auto flex items-center gap-2 text-[#111111]/60">
         <div className="relative" ref={optionsRef}>
-          <svg onClick={() => setOptionsOpen(!optionsOpen)} className="size-4 cursor-pointer hover:text-[#111111] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" /></svg>
+          <svg
+            onClick={() => {
+              const next = !optionsOpen;
+              setOptionsOpen(next);
+              onOptionsToggle?.(next);
+            }}
+            className="size-4 cursor-pointer hover:text-[#111111] transition-colors"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+          </svg>
           {optionsOpen && (
-            <div className="absolute top-full right-[-26px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] z-50 after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4">
+            <div
+              style={{ zIndex: optionsZIndex ?? 50 }}
+              className="absolute top-full right-[-26px] mt-4 w-[240px] rounded-[16px] bg-white border border-[#EAEAEA] shadow-[0px_4px_14px_rgba(17,17,17,0.14)] after:content-[''] after:absolute after:-top-4 after:left-0 after:w-full after:h-4"
+            >
               {/* Tooltip Tail */}
               <div className="absolute -top-[12px] right-[21px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
               <div className="flex flex-col w-full bg-white rounded-[16px] overflow-hidden relative z-10 px-3 py-[3px] [&>button]:h-[38px] [&>button]:py-0 [&>button]:px-0">
-                <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
-                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                See more from this person
-              </button>
-              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
-                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                Not interested
-              </button>
-              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
-                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                Downvote
-              </button>
-              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA]" onClick={() => setOptionsOpen(false)}>
-                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
-                Report
-              </button>
-              <button type="button" className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors" onClick={() => setOptionsOpen(false)}>
-                <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                Share
-              </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA] cursor-pointer"
+                  onClick={handleSeeMore}
+                >
+                  <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  See more from this person
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA] cursor-pointer"
+                  onClick={handleNotInterested}
+                >
+                  <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                  Not interested
+                </button>
+                <button
+                  type="button"
+                  className={`flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium transition-colors border-b border-[#EAEAEA] cursor-pointer ${
+                    voted === -1 ? "text-[#E4572E] font-semibold" : "text-[#111111]"
+                  }`}
+                  onClick={handleDownvote}
+                >
+                  <svg className={`size-[18px] ${voted === -1 ? "text-[#E4572E]" : "text-[#737373]"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+                  {voted === -1 ? "Downvoted" : "Downvote"}
+                </button>
+                {reported ? (
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 px-4 py-3 font-ui text-[13px] font-medium text-[#737373] transition-colors border-b border-[#EAEAEA] cursor-default opacity-85"
+                    onClick={() => {
+                      setOptionsOpen(false);
+                      onOptionsToggle?.(false);
+                      setToastMessage("You have already reported this post");
+                    }}
+                  >
+                    <svg className="size-[18px] text-[#00C365]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Reported
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA] cursor-pointer"
+                    onClick={handleReport}
+                  >
+                    <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" /></svg>
+                    Report
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors cursor-pointer"
+                  onClick={handleShare}
+                >
+                  <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                  Share
+                </button>
               </div>
             </div>
           )}

@@ -7,6 +7,9 @@ import { asyncHandler } from "../utils/async-handler.js";
 
 export const sourceRouter = Router();
 
+sourceRouter.post("/:id/follow", requireAuth, asyncHandler(sourceController.follow));
+sourceRouter.delete("/:id/follow", requireAuth, asyncHandler(sourceController.unfollow));
+
 sourceRouter.use(requireAuth, requireAdmin);
 
 sourceRouter.get("/", asyncHandler(sourceController.list));

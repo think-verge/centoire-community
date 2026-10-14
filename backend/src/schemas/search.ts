@@ -5,8 +5,8 @@ import { HashtagSuggestionSchema } from "./hashtags.js";
 import { PostCardSchema } from "./posts.js";
 
 export const SearchQuerySchema = z.object({
-  q: z.string().min(1).max(100),
-  type: z.enum(["all", "posts", "people", "circles", "hashtags"]).optional(),
+  q: z.string().max(100).default("").optional(),
+  type: z.enum(["all", "posts", "people", "circles", "hashtags", "tags"]).optional(),
 });
 
 export const SearchResultsSchema = registry.register(

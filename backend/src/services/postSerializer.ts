@@ -13,6 +13,9 @@ function ref(value: unknown): PopulatedRef | null {
 export interface ViewerState {
   voted: 1 | -1 | null;
   bookmarked: boolean;
+  authorFollowed?: boolean;
+  sourceFollowed?: boolean;
+  reported?: boolean;
 }
 
 /** Card projection used in feeds, drafts, and lists. */
@@ -35,6 +38,7 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
           handle: (author.handle as string) ?? null,
           displayName: (author.displayName as string) ?? "",
           avatarUrl: (author.avatarUrl as string) ?? null,
+          followerCount: typeof author.followerCount === "number" ? author.followerCount : 0,
         }
       : null,
     source: source
@@ -62,7 +66,7 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
     publishedAt: post.publishedAt?.toISOString() ?? null,
     updatedAt: post.updatedAt.toISOString(),
     viewer: viewer ?? { voted: null, bookmarked: false },
-    authorIsCreator: (author?.role as string) === "creator",
+    authorIsCreator: (author?.role as string) === "creator" || (author?.role as string) === "admin",
   };
 }
 

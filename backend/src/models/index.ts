@@ -14,3 +14,5 @@ import "./ReputationEvent.js";
 import "./Invite.js";
 import "./ModerationPolicy.js";
 import "./Notification.js";
+import "./SourceFollow.js";
+import "./PostReport.js";

@@ -14,6 +14,7 @@ export interface ISource extends Document {
   category?: PostCategory;
   subcategory?: string;
   active: boolean;
+  followerCount: number;
   lastFetchedAt?: Date;
   lastStatus?: "ok" | "error";
   lastError?: string;
@@ -32,6 +33,7 @@ const sourceSchema = new Schema<ISource>(
     category: { type: String, enum: POST_CATEGORIES },
     subcategory: { type: String },
     active: { type: Boolean, default: true },
+    followerCount: { type: Number, default: 0 },
     lastFetchedAt: { type: Date },
     lastStatus: { type: String, enum: ["ok", "error"] },
     lastError: { type: String },

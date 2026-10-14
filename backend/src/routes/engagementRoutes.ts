@@ -51,6 +51,26 @@ postEngagementRouter.post(
   validate({ body: CreateCommentInputSchema }),
   asyncHandler(engagementController.createComment),
 );
+postEngagementRouter.post(
+  "/:id/report",
+  optionalAuth,
+  asyncHandler(engagementController.reportPost),
+);
+postEngagementRouter.post(
+  "/:id/not-interested",
+  optionalAuth,
+  asyncHandler(engagementController.notInterested),
+);
+postEngagementRouter.post(
+  "/:id/follow-source",
+  requireAuth,
+  asyncHandler(engagementController.followPostSource),
+);
+postEngagementRouter.delete(
+  "/:id/follow-source",
+  requireAuth,
+  asyncHandler(engagementController.unfollowPostSource),
+);
 
 /** Mounted on /comments. */
 export const commentRouter = Router();
