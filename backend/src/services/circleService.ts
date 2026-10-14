@@ -8,7 +8,11 @@ import { slugify } from "../utils/slugify.js";
 import { MAX_CIRCLE_HASHTAGS, normalizeHashtag } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
 
-export function serializeCircle(circle: ICircle, viewerRole?: CircleRole | null) {
+export function serializeCircle(
+  circle: ICircle,
+  viewerRole?: CircleRole | null,
+  memberAvatars?: string[],
+) {
   return {
     id: circle._id.toString(),
     name: circle.name,
@@ -22,6 +26,7 @@ export function serializeCircle(circle: ICircle, viewerRole?: CircleRole | null)
     memberCount: circle.memberCount,
     postCount: circle.postCount,
     viewerRole: viewerRole ?? null,
+    memberAvatars: memberAvatars ?? [],
     createdAt: circle.createdAt.toISOString(),
   };
 }
@@ -118,10 +123,17 @@ export async function listCircles(
   const limit = query.limit ?? 50;
   let find = Circle.find(filter);
   if (query.q) {
-    filter.$text = { $search: query.q };
-    find = Circle.find(filter)
-      .select({ score: { $meta: "textScore" } })
-      .sort({ score: { $meta: "textScore" }, memberCount: -1 });
+    const trimmed = query.q.trim();
+    if (trimmed) {
+      const regex = new RegExp(escapeRegex(trimmed), "i");
+      filter.$or = [
+        { name: regex },
+        { slug: regex },
+        { description: regex },
+        { hashtags: regex },
+      ];
+    }
+    find = Circle.find(filter).sort({ memberCount: -1, _id: 1 });
   } else {
     find = find.sort({ memberCount: -1, _id: 1 });
   }
@@ -135,7 +147,34 @@ export async function listCircles(
     }).select("circleId role");
     for (const m of memberships) roles.set(m.circleId.toString(), m.role);
   }
-  return circles.map((c) => serializeCircle(c, roles.get(c._id.toString()) ?? null));
+
+  const circleIds = circles.map((c) => c._id);
+  const memberships = await CircleMembership.find({
+    circleId: { $in: circleIds },
+  })
+    .sort({ createdAt: 1 })
+    .populate({ path: "userId", select: "avatarUrl displayName" });
+
+  const avatarsByCircle = new Map<string, string[]>();
+  for (const m of memberships) {
+    const cId = m.circleId.toString();
+    const list = avatarsByCircle.get(cId) ?? [];
+    if (list.length < 5) {
+      const u = m.userId as unknown as { avatarUrl?: string };
+      if (u?.avatarUrl) {
+        list.push(u.avatarUrl);
+      }
+      avatarsByCircle.set(cId, list);
+    }
+  }
+
+  return circles.map((c) =>
+    serializeCircle(
+      c,
+      roles.get(c._id.toString()) ?? null,
+      avatarsByCircle.get(c._id.toString()) ?? [],
+    ),
+  );
 }
 
 const ROLE_RANK: Record<CircleRole, number> = { owner: 0, moderator: 1, member: 2 };
@@ -171,12 +210,8 @@ export async function leaveCircle(circleId: string, userId: string): Promise<voi
   const removed = await CircleMembership.findOneAndDelete({
     circleId,
     userId,
-    role: { $ne: "owner" },
   });
-  if (!removed) {
-    const owner = await CircleMembership.exists({ circleId, userId, role: "owner" });
-    if (owner) throw new ApiError(422, "Owners cannot leave their circle");
-    return;
+  if (removed) {
+    await Circle.updateOne({ _id: circleId, memberCount: { $gt: 0 } }, { $inc: { memberCount: -1 } });
   }
-  await Circle.updateOne({ _id: circleId, memberCount: { $gt: 0 } }, { $inc: { memberCount: -1 } });
 }

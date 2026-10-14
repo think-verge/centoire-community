@@ -90,13 +90,126 @@ const SOURCES: Array<{ name: string; siteUrl: string; feedUrl: string; tagSlugs:
   { name: "L'Officiel India", siteUrl: "https://www.lofficielindia.com", feedUrl: "https://www.lofficielindia.com/feed", tagSlugs: ["couture", "editorial", "luxury"], active: false },
 ];
 
-const CIRCLES: Array<{ name: string; description: string; tagSlugs: string[]; rules: string[] }> = [
-  { name: "Japanese Denim", description: "Selvedge, shuttle looms, and repair culture", tagSlugs: ["denim", "vintage"], rules: ["Credit makers and mills", "No resale listings"] },
-  { name: "Pattern Room", description: "Drafting, draping, and construction help", tagSlugs: ["pattern-making", "couture"], rules: ["Share your process, not just results"] },
-  { name: "Deadstock Design", description: "Designing with deadstock and reclaimed fabric", tagSlugs: ["sustainability", "textiles"], rules: ["Source transparency required"] },
-  { name: "Sneaker Sketches", description: "Footwear concepts, renders, and critique", tagSlugs: ["footwear-design", "sneakers"], rules: ["Constructive critique only"] },
-  { name: "Indie Labels", description: "Running a small label — production, pricing, retail", tagSlugs: ["retail", "branding", "supply-chain"], rules: ["No spam or self-promo without context"] },
-  { name: "Knit Lab", description: "Machine knitting, yarns, and swatch experiments", tagSlugs: ["knitwear", "textiles"], rules: ["Label your machines and gauges"] },
+const CIRCLES: Array<{
+  name: string;
+  description: string;
+  tagSlugs: string[];
+  rules: string[];
+}> = [
+  {
+    name: "Beauty Notes",
+    description: "Share skincare routines, makeup tips, and everyday beauty favorites.",
+    tagSlugs: ["beauty", "lifestyle"],
+    rules: ["Constructive product reviews only", "Disclose sponsored items"],
+  },
+  {
+    name: "Wardrobe Diaries",
+    description: "Document your personal style, favorite pieces, and seasonal edits.",
+    tagSlugs: ["fashion", "wardrobe"],
+    rules: ["Original styling photos preferred", "List brands when known"],
+  },
+  {
+    name: "Evening Wear",
+    description: "Find inspiration for occasion dressing and formal nights out.",
+    tagSlugs: ["couture", "fashion"],
+    rules: ["Celebrate craft and detailing"],
+  },
+  {
+    name: "Workwear Edit",
+    description: "Build polished, modern outfits for the office and beyond.",
+    tagSlugs: ["fashion", "workwear"],
+    rules: ["Keep recommendations practical"],
+  },
+  {
+    name: "Fashion Week",
+    description: "Share runway looks, street style inspiration, and emerging designer news.",
+    tagSlugs: ["fashion", "runway", "editorial"],
+    rules: ["Credit photographers and houses"],
+  },
+  {
+    name: "Accessories Edit",
+    description: "Curate bags, shoes, and jewelry that elevate every outfit.",
+    tagSlugs: ["accessories", "fashion"],
+    rules: ["No counterfeit discussion"],
+  },
+  {
+    name: "Street Style",
+    description: "Spot the best looks from fashion weeks and city streets.",
+    tagSlugs: ["street-style", "fashion"],
+    rules: ["Credit photographers and subjects"],
+  },
+  {
+    name: "Sustainable Style",
+    description: "Explore conscious fashion, second-hand finds, and timeless wardrobe pieces.",
+    tagSlugs: ["sustainability", "fashion"],
+    rules: ["No greenwashing claims without sources"],
+  },
+  {
+    name: "Art & Architecture",
+    description: "Explore contemporary art spaces, architectural wonders, and spatial design.",
+    tagSlugs: ["art", "architecture", "design"],
+    rules: ["Credit designers and architects"],
+  },
+  {
+    name: "Ceramics & Objects",
+    description: "Modern ceramics, sculptural homeware, and craft techniques.",
+    tagSlugs: ["art", "craft", "design"],
+    rules: ["Highlight artisan processes"],
+  },
+  {
+    name: "Textile Innovations",
+    description: "Smart fabrics, biomaterials, and experimental textile crafts.",
+    tagSlugs: ["textiles", "design", "fashion-tech"],
+    rules: ["Cite research papers or material labs"],
+  },
+  {
+    name: "Graphic Forms",
+    description: "Typography, editorial design, printmaking, and visual identity.",
+    tagSlugs: ["design", "art"],
+    rules: ["Celebrate independent typefoundries and studios"],
+  },
+  {
+    name: "Japanese Denim",
+    description: "Selvedge, shuttle looms, and repair culture",
+    tagSlugs: ["denim", "vintage"],
+    rules: ["Credit makers and mills", "No resale listings"],
+  },
+  {
+    name: "Pattern Room",
+    description: "Drafting, draping, and construction help",
+    tagSlugs: ["pattern-making", "couture"],
+    rules: ["Share your process, not just results"],
+  },
+  {
+    name: "Deadstock Design",
+    description: "Designing with deadstock and reclaimed fabric",
+    tagSlugs: ["sustainability", "textiles"],
+    rules: ["Source transparency required"],
+  },
+  {
+    name: "Sneaker Sketches",
+    description: "Footwear concepts, renders, and critique",
+    tagSlugs: ["footwear-design", "sneakers"],
+    rules: ["Constructive critique only"],
+  },
+  {
+    name: "Indie Labels",
+    description: "Running a small label — production, pricing, retail",
+    tagSlugs: ["retail", "branding", "supply-chain"],
+    rules: ["No spam or self-promo without context"],
+  },
+  {
+    name: "Knit Lab",
+    description: "Machine knitting, yarns, and swatch experiments",
+    tagSlugs: ["knitwear", "textiles"],
+    rules: ["Label your machines and gauges"],
+  },
+  {
+    name: "Centoire Community",
+    description: "The place to talk about the Centoire platform: ask questions, share feedback and shape what we build together.",
+    tagSlugs: ["fashion-tech", "branding"],
+    rules: ["Be respectful and kind"],
+  },
 ];
 
 async function main(): Promise<void> {
@@ -183,18 +296,29 @@ async function main(): Promise<void> {
   // Starter circles owned by admin
   for (const c of CIRCLES) {
     const slug = slugify(c.name);
-    const existing = await Circle.findOne({ slug });
-    if (existing) continue;
-    const circle = await Circle.create({
-      name: c.name,
-      slug,
-      description: c.description,
-      rules: c.rules,
-      hashtags: toHashtags(c.tagSlugs),
-      createdBy: admin._id,
-      memberCount: 1,
-    });
-    await CircleMembership.create({ circleId: circle._id, userId: admin._id, role: "owner" });
+    let circle = await Circle.findOne({ slug });
+    if (!circle) {
+      circle = await Circle.create({
+        name: c.name,
+        slug,
+        description: c.description,
+        rules: c.rules,
+        hashtags: toHashtags(c.tagSlugs),
+        createdBy: admin._id,
+        memberCount: 1,
+      });
+      await CircleMembership.create({ circleId: circle._id, userId: admin._id, role: "owner" });
+    } else {
+      const realCount = await CircleMembership.countDocuments({ circleId: circle._id });
+      await Circle.updateOne(
+        { _id: circle._id },
+        {
+          $set: {
+            memberCount: Math.max(1, realCount),
+          },
+        },
+      );
+    }
   }
   console.log(`[seed] ${CIRCLES.length} circles ensured`);
 

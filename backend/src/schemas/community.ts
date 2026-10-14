@@ -19,6 +19,7 @@ export const CircleSchema = registry.register(
     memberCount: z.number(),
     postCount: z.number(),
     viewerRole: z.enum(["owner", "moderator", "member"]).nullable(),
+    memberAvatars: z.array(z.string()).optional(),
     createdAt: z.string(),
   }),
 );
