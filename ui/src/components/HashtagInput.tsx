@@ -12,6 +12,12 @@ interface HashtagInputProps {
   disabled?: boolean;
   /** Id for the text field so an external <label htmlFor> can point at it. */
   id?: string;
+  className?: string;
+  roundedClassName?: string;
+  tagClassName?: string;
+  showHashPrefix?: boolean;
+  showCount?: boolean;
+  removeIconType?: "circled" | "default";
 }
 
 const DEBOUNCE_MS = 120;
@@ -21,7 +27,20 @@ const SUGGESTION_LIMIT = 8;
  * Instagram-style hashtag field: type to see matching hashtags with their usage counts, pick one
  * with the mouse or keyboard, or create a new one. Space, comma, Enter and paste all commit a tag.
  */
-export function HashtagInput({ value, onChange, max = MAX_POST_HASHTAGS, placeholder, disabled, id }: HashtagInputProps) {
+export function HashtagInput({
+  value,
+  onChange,
+  max = MAX_POST_HASHTAGS,
+  placeholder,
+  disabled,
+  id,
+  className,
+  roundedClassName = "rounded-[10px]",
+  tagClassName,
+  showHashPrefix = true,
+  showCount = true,
+  removeIconType = "default",
+}: HashtagInputProps) {
   const reactId = useId();
   const listId = `${reactId}-list`;
   const inputRef = useRef<HTMLInputElement>(null);
@@ -114,25 +133,38 @@ export function HashtagInput({ value, onChange, max = MAX_POST_HASHTAGS, placeho
   return (
     <div className="relative">
       <div
-        className="flex min-h-[48px] w-full flex-wrap items-center gap-2 rounded-[10px] border border-[#D0D0D0] bg-white px-3 py-2 focus-within:border-[#999999]"
+        className={`flex min-h-[44px] w-full flex-wrap items-center gap-2 border border-[#D0D0D0] bg-white px-3 py-2 focus-within:border-[#111111] transition-colors ${roundedClassName} ${className ?? ""}`}
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((name) => (
-          <span key={name} className="inline-flex items-center gap-1 rounded-full bg-[#FFF1EE] px-3 py-1 font-ui text-[13px] font-semibold text-[#E5552D]">
-            #{name}
+          <span
+            key={name}
+            className={
+              tagClassName ??
+              "inline-flex items-center gap-1 rounded-full bg-[#FFF1EE] px-3 py-1 font-ui text-[13px] font-semibold text-[#E5552D]"
+            }
+          >
+            {showHashPrefix ? `#${name}` : name}
             <button
               type="button"
-              aria-label={`Remove #${name}`}
+              aria-label={`Remove ${name}`}
               disabled={disabled}
               onClick={(e) => {
                 e.stopPropagation();
                 remove(name);
               }}
-              className="-mr-1 flex size-4 items-center justify-center rounded-full text-[#E5552D]/70 hover:bg-[#E5552D]/10 hover:text-[#E5552D]"
+              className="flex items-center justify-center cursor-pointer transition-opacity"
             >
-              <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              {removeIconType === "circled" ? (
+                <svg className="size-[10px] text-[rgba(17,17,17,0.6)] hover:text-[#111111]" viewBox="0 0 10 10" fill="none" stroke="currentColor">
+                  <circle cx="5" cy="5" r="4.3" strokeWidth="1.2" />
+                  <path d="M3.3 3.3l3.4 3.4M6.7 3.3l-3.4 3.4" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              )}
             </button>
           </span>
         ))}
@@ -150,7 +182,7 @@ export function HashtagInput({ value, onChange, max = MAX_POST_HASHTAGS, placeho
           spellCheck={false}
           disabled={disabled}
           value={text}
-          placeholder={full ? `Maximum of ${max} hashtags` : (placeholder ?? (value.length ? "Add another…" : "Type a hashtag, e.g. #streetwear"))}
+          placeholder={full ? `Maximum of ${max} topics` : (placeholder ?? (value.length ? "Add another…" : "Type a topic..."))}
           onChange={(e) => {
             setText(e.target.value.replace(/^#+/, ""));
             setActive(0);
@@ -162,18 +194,22 @@ export function HashtagInput({ value, onChange, max = MAX_POST_HASHTAGS, placeho
             setFocused(false);
             if (toHashtag(text)) add([text]); // don't silently drop a tag the user typed but didn't confirm
           }}
-          className="min-w-[160px] flex-1 bg-transparent font-ui text-[14px] text-[#111111] placeholder:text-[#A3A3A3] focus:outline-none disabled:cursor-not-allowed"
+          className="min-w-[140px] flex-1 bg-transparent font-ui text-[14px] text-[#111111] placeholder:text-[#A3A3A3] focus:outline-none disabled:cursor-not-allowed"
         />
-        <span className="ml-auto font-ui text-[11px] text-[#8A8A8A]" aria-live="polite">
-          {value.length}/{max}
-        </span>
+        {showCount && (
+          <span className="ml-auto font-ui text-[11px] text-[#8A8A8A]" aria-live="polite">
+            {value.length}/{max}
+          </span>
+        )}
       </div>
 
       {open && rows.length > 0 && (
         <ul
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 z-20 mt-1.5 max-h-72 overflow-auto rounded-[12px] border border-[#EAEAEA] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+          className={`absolute left-0 right-0 z-20 mt-1.5 max-h-72 overflow-auto border border-[#EAEAEA] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)] ${
+            roundedClassName.includes("rounded-none") ? "rounded-none" : "rounded-[12px]"
+          }`}
         >
           {rows.map((row, i) => (
             <li
