@@ -55,6 +55,7 @@
     0% {
       stroke-dashoffset: 24;
     }
+
     100% {
       stroke-dashoffset: 0;
     }
@@ -66,6 +67,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -77,6 +79,7 @@
     opacity: 0;
     transform: translateY(-16px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -87,6 +90,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -111,6 +115,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+
     *,
     *::before,
     *::after {
@@ -147,6 +152,7 @@
 }
 
 @layer components {
+
   /* Rendered rich text (post bodies + editor) */
   .prose-editorial h2 {
     font-family: var(--font-display);
@@ -154,15 +160,18 @@
     font-weight: 600;
     margin: 1.6em 0 0.5em;
   }
+
   .prose-editorial h3 {
     font-family: var(--font-display);
     font-size: 1.3rem;
     font-weight: 600;
     margin: 1.4em 0 0.4em;
   }
+
   .prose-editorial p {
     margin: 0.9em 0;
   }
+
   .prose-editorial blockquote {
     border-left: 3px solid var(--color-crimson);
     padding-left: 1rem;
@@ -170,34 +179,42 @@
     color: var(--color-ink-soft);
     margin: 1.2em 0;
   }
+
   .prose-editorial ul,
   .prose-editorial ol {
     padding-left: 1.4rem;
     margin: 0.9em 0;
   }
+
   .prose-editorial ul {
     list-style: disc;
   }
+
   .prose-editorial ol {
     list-style: decimal;
   }
+
   .prose-editorial li {
     margin: 0.3em 0;
   }
+
   .prose-editorial img {
     border-radius: 0.75rem;
     border: 1px solid var(--color-line);
     margin: 1.4em 0;
     max-width: 100%;
   }
+
   .prose-editorial a {
     color: var(--color-crimson);
     text-decoration: underline;
     text-underline-offset: 2px;
   }
+
   .prose-editorial strong {
     font-weight: 650;
   }
+
   /* TipTap placeholder */
   .prose-editorial p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
@@ -212,7 +229,10 @@
 ::-webkit-scrollbar {
   display: none;
 }
+
 * {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
