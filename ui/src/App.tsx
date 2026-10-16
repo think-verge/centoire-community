@@ -28,6 +28,7 @@ import { SearchPage } from "./pages/search/SearchPage";
 import { SettingsPage } from "./pages/settings/SettingsPage";
 import { HashtagPage } from "./pages/hashtags/HashtagPage";
 import { ExclusivePage } from "./pages/exclusive/ExclusivePage";
+import { CircleInvitePage } from "./pages/invite/CircleInvitePage";
 
 function LegacyTagRedirect() {
   const { slug } = useParams();
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/invite/:token" element={<CircleInvitePage />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<OnboardingGate />}>
             <Route path="/onboarding" element={<OnboardingPage />} />

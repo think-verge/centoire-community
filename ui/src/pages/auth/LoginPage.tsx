@@ -1,25 +1,82 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthLayout } from "../../components/AuthLayout";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { GoogleButton } from "../../components/GoogleButton";
 import { useLogin } from "../../lib/api/generated/auth/auth";
 import { useAuth } from "../../lib/auth-context";
+import {
+  getPendingCircleInvite,
+  clearPendingCircleInvite,
+  savePendingCircleInvite,
+  normalizeCircleSlug,
+} from "../../lib/circleInviteStorage";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get("invite") ?? "";
+  const slugParam = normalizeCircleSlug(searchParams.get("slug"));
   const { user, refresh } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
 
+  // Save invite to storage so post-login flow can accept it
   useEffect(() => {
-    if (user) navigate("/feed", { replace: true });
-  }, [user, navigate]);
+    if (inviteToken && slugParam) {
+      savePendingCircleInvite(inviteToken, slugParam);
+    }
+  }, [inviteToken, slugParam]);
+
+  useEffect(() => {
+    if (user) {
+      if (!user.onboardingCompleted) {
+        navigate(
+          inviteToken && slugParam
+            ? `/onboarding?invite=${inviteToken}&slug=${slugParam}`
+            : "/onboarding",
+          { replace: true },
+        );
+        return;
+      }
+      const pending = getPendingCircleInvite();
+      const targetSlug = normalizeCircleSlug(pending?.slug || slugParam);
+      if (targetSlug) {
+        clearPendingCircleInvite();
+        navigate(`/c/${targetSlug}`, { replace: true });
+        return;
+      }
+      navigate("/feed", { replace: true });
+    }
+  }, [user, navigate, inviteToken, slugParam]);
+
   const login = useLogin({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/feed");
+        const pending = getPendingCircleInvite();
+        const effectiveToken = pending?.token || inviteToken;
+        const effectiveSlug = normalizeCircleSlug(pending?.slug || slugParam);
+
+        // If user still needs onboarding, leave pending invite in storage and navigate to onboarding
+        if (user && !user.onboardingCompleted) {
+          navigate(
+            effectiveToken && effectiveSlug
+              ? `/onboarding?invite=${effectiveToken}&slug=${effectiveSlug}`
+              : "/onboarding",
+            { replace: true },
+          );
+          return;
+        }
+
+        if (effectiveSlug) {
+          const destination = effectiveToken
+            ? `/c/${effectiveSlug}?invite=${effectiveToken}`
+            : `/c/${effectiveSlug}`;
+          navigate(destination, { replace: true });
+          return;
+        }
+        navigate("/feed", { replace: true });
       },
     },
   });
@@ -58,7 +115,10 @@ export function LoginPage() {
         <Link to="/forgot-password" className="text-ink-soft hover:text-ink">
           Forgot password?
         </Link>
-        <Link to="/signup" className="font-semibold text-crimson hover:text-crimson-deep">
+        <Link
+          to={inviteToken && slugParam ? `/signup?invite=${inviteToken}&slug=${slugParam}` : "/signup"}
+          className="font-semibold text-crimson hover:text-crimson-deep"
+        >
           Create account
         </Link>
       </div>

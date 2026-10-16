@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "../../lib/auth-context";
 import { CircleRulesModal } from "../../components/CircleRulesModal";
 import { customInstance } from "../../lib/api/http";
+import { savePendingCircleInvite, normalizeCircleSlug } from "../../lib/circleInviteStorage";
 import {
+  getGetCircleQueryKey,
   useGetCircle,
   useJoinCircle,
   useLeaveCircle,
@@ -11,6 +14,7 @@ import {
   useListCirclePostsInfinite,
   useListCircles,
 } from "../../lib/api/generated/circles/circles";
+import type { Circle } from "../../lib/api/generated/model";
 
 /* --- Exact Figma SVG Icons for Meatball Hover Menus --- */
 function ShareIcon({ className = "size-4" }: { className?: string }) {
@@ -837,6 +841,208 @@ function CircleFeedCard({
   );
 }
 
+function CircleInviteModal({
+  slug,
+  circleName,
+  isOpen,
+  onClose,
+  onToast,
+}: {
+  slug: string;
+  circleName: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onToast: (msg: string) => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sentResult, setSentResult] = useState<{
+    channel: "notification" | "email";
+    target: string;
+    recipientName?: string;
+  } | null>(null);
+
+  if (!isOpen) return null;
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setIsSending(true);
+    setError(null);
+    try {
+      const res = await customInstance<{
+        link: string;
+        token: string;
+        channel?: "notification" | "email";
+        recipientName?: string;
+      }>({
+        url: `/circles/${slug}/invites`,
+        method: "POST",
+        data: { email: email.trim() },
+      });
+      setGeneratedLink(res.link);
+      const channel = res.channel || "email";
+      setSentResult({
+        channel,
+        target: email.trim(),
+        recipientName: res.recipientName,
+      });
+      if (channel === "notification") {
+        onToast(`Invite sent directly to @${res.recipientName || "member"}'s notification bell`);
+      } else {
+        onToast(`Invitation email sent to ${email.trim()}`);
+      }
+      setEmail("");
+    } catch (err: unknown) {
+      const errorMsg =
+        (err as { response?: { data?: { detail?: string; message?: string } }; message?: string })?.response?.data
+          ?.detail ||
+        (err as { response?: { data?: { detail?: string; message?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as { message?: string })?.message ||
+        "Failed to send invitation";
+      setError(errorMsg);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!generatedLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
+      onToast("Invite link copied to clipboard");
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // ignore
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+      <div className="w-full max-w-[480px] bg-white border border-[#EAEAEA] shadow-[0_16px_36px_rgba(0,0,0,0.14)] p-6 sm:p-7 flex flex-col gap-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="font-ui text-[12px] font-semibold uppercase tracking-wider text-[#E4572E]">
+              Private Circle
+            </p>
+            <h2 className="font-editorial text-[24px] text-[#111111] font-bold mt-0.5">
+              Invite to {circleName}
+            </h2>
+            <p className="font-ui text-[13px] text-[rgba(17,17,17,0.6)] mt-1">
+              Invite someone via their email. Registered members receive an in-app notification, while new members receive an email.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-[rgba(17,17,17,0.5)] hover:text-[#111111] p-1 -mr-1 -mt-1 transition-colors cursor-pointer"
+          >
+            <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {sentResult && (
+          <div className="bg-[#F0FDF4] border border-[#86EFAC] p-3 text-xs text-[#166534] flex items-start gap-2.5">
+            <span className="text-[16px] leading-none shrink-0 mt-0.5">
+              {sentResult.channel === "notification" ? "🔔" : "✉️"}
+            </span>
+            <div className="flex-1">
+              {sentResult.channel === "notification" ? (
+                <>
+                  <p className="font-semibold text-[#15803D]">
+                    Centoire Member Found {sentResult.recipientName ? `(@${sentResult.recipientName})` : ""}!
+                  </p>
+                  <p className="text-[11px] text-[#166534]/80 mt-0.5">
+                    Because this user is already registered on Centoire, we've sent the invitation directly to their in-app notification bell.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-semibold text-[#15803D]">
+                    Invitation Email Sent!
+                  </p>
+                  <p className="text-[11px] text-[#166534]/80 mt-0.5">
+                    We sent an invitation email to <span className="underline font-medium">{sentResult.target}</span> with a link to sign up and join this circle.
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSend} className="flex flex-col gap-4">
+          <div>
+            <label className="block font-ui text-[12px] font-semibold uppercase text-[#111111] mb-1.5">
+              Recipient Email Address
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="colleague@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-[rgba(17,17,17,0.2)] px-3.5 py-2.5 font-ui text-[14px] text-[#111111] placeholder:text-[rgba(17,17,17,0.4)] focus:outline-none focus:border-[#111111]"
+            />
+          </div>
+
+          {error && (
+            <p className="font-ui text-[12px] text-[#E4572E] bg-[#FFF5F2] p-2 border border-[#E4572E]/20">
+              {error}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-[#D0D0D0] px-4 py-2 font-ui text-[13px] font-medium text-[#111111] hover:bg-[#F5F5F5] cursor-pointer"
+            >
+              Done
+            </button>
+            <button
+              type="submit"
+              disabled={isSending || !email.trim()}
+              className="rounded-full bg-[#E4572E] hover:bg-[#CC4824] px-5 py-2 font-ui text-[13px] font-medium text-white transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isSending ? "Sending..." : "Send Invite"}
+            </button>
+          </div>
+        </form>
+
+        {generatedLink && sentResult?.channel === "email" && (
+          <div className="mt-2 pt-4 border-t border-[rgba(17,17,17,0.1)] flex flex-col gap-2">
+            <p className="font-ui text-[12px] font-semibold uppercase text-[#111111]">
+              Or share invite link directly
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={generatedLink}
+                className="w-full bg-[#F7F7F7] border border-[rgba(17,17,17,0.15)] px-3 py-2 font-ui text-[12px] text-[rgba(17,17,17,0.8)] select-all focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="shrink-0 rounded-full bg-[#111111] hover:bg-black px-4 py-2 font-ui text-[12px] font-medium text-white transition-colors cursor-pointer"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const FALLBACK_RELATED_CIRCLES = [
   { id: "fallback-beauty-notes", name: "Beauty Notes", slug: "beauty-notes" },
   { id: "fallback-design-jobs", name: "Design Jobs", slug: "design-jobs" },
@@ -846,6 +1052,47 @@ const FALLBACK_RELATED_CIRCLES = [
 export function CircleDetailPage() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [hasLeftPrivateCircle, setHasLeftPrivateCircle] = useState(false);
+  const [pendingJoinToast, setPendingJoinToast] = useState(() => {
+    const stateJoined = (location.state as { joinedToast?: boolean } | null)?.joinedToast;
+    const storedJoined = sessionStorage.getItem("centoire_just_joined_circle");
+    if (stateJoined || storedJoined) {
+      sessionStorage.removeItem("centoire_just_joined_circle");
+      if (location.state && "joinedToast" in (location.state as object)) {
+        window.history.replaceState({}, document.title);
+      }
+      return true;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    setHasLeftPrivateCircle(false);
+  }, [slug]);
+
+  useEffect(() => {
+    if (slug) {
+      const cleanSlug = normalizeCircleSlug(slug);
+      if (cleanSlug && cleanSlug !== slug) {
+        navigate(`/c/${cleanSlug}${window.location.search}`, { replace: true });
+      }
+    }
+  }, [slug, navigate]);
+  const inviteToken = searchParams.get("invite");
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [invitePreview, setInvitePreview] = useState<{
+    valid: boolean;
+    circleName: string;
+    circleSlug: string;
+    inviterName: string;
+    email?: string;
+  } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [acceptingInvite, setAcceptingInvite] = useState(false);
+
   const [rulesOpen, setRulesOpen] = useState(false);
   const [circleMenuOpen, setCircleMenuOpen] = useState(false);
   const circleMenuTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -886,7 +1133,11 @@ export function CircleDetailPage() {
 
   const handleCircleShare = async () => {
     setCircleMenuOpen(false);
-    const circleSlug = circle?.slug || circle?.name || slug || "";
+    if (circle?.isPrivate) {
+      showToast("Direct sharing is disabled for private circles. Use the Invite button to invite members.");
+      return;
+    }
+    const circleSlug = circle?.slug || normalizeCircleSlug(circle?.name || slug);
     const shareUrl = `${window.location.origin}/c/${circleSlug}`;
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -916,7 +1167,47 @@ export function CircleDetailPage() {
     showToast("Reporting circles coming soon (not yet supported by backend)");
   };
 
-  const { data: circle, isLoading, refetch } = useGetCircle(slug ?? "");
+  const { data: circle, isLoading, isError, refetch } = useGetCircle(slug ?? "");
+
+  useEffect(() => {
+    if (pendingJoinToast && circle) {
+      setPendingJoinToast(false);
+      showToast(
+        circle.isPrivate
+          ? "You've joined this private circle!"
+          : `You have joined ${circle.name}!`
+      );
+    }
+  }, [pendingJoinToast, circle]);
+
+  // Store invite token so signup/onboarding can carry it seamlessly
+  useEffect(() => {
+    if (inviteToken && (circle?.slug || slug)) {
+      savePendingCircleInvite(inviteToken, circle?.slug || slug || "");
+    }
+  }, [inviteToken, circle?.slug, slug]);
+
+
+
+  // If circle not found but inviteToken is present, fetch preview
+  useEffect(() => {
+    if (!circle && inviteToken) {
+      setPreviewLoading(true);
+      customInstance<{
+        valid: boolean;
+        circleName: string;
+        circleSlug: string;
+        inviterName: string;
+        email?: string;
+      }>({
+        url: `/circles/invites/${inviteToken}/preview`,
+        method: "GET",
+      })
+        .then((res) => setInvitePreview(res))
+        .catch(() => setInvitePreview(null))
+        .finally(() => setPreviewLoading(false));
+    }
+  }, [circle, inviteToken]);
   const {
     data: postPages,
     isLoading: postsLoading,
@@ -943,8 +1234,100 @@ export function CircleDetailPage() {
     { query: { enabled: Boolean(firstHashtag) } },
   );
 
-  const join = useJoinCircle({ mutation: { onSuccess: () => refetch() } });
-  const leave = useLeaveCircle({ mutation: { onSuccess: () => refetch() } });
+  const join = useJoinCircle({
+    mutation: {
+      onSuccess: () => {
+        const msg = circle?.isPrivate
+          ? "You've joined this private circle!"
+          : `You have joined ${circle?.name || "this circle"}!`;
+        showToast(msg);
+        sessionStorage.removeItem("centoire_pending_circle_invite");
+        if (inviteToken) {
+          const next = new URLSearchParams(searchParams);
+          next.delete("invite");
+          setSearchParams(next, { replace: true });
+        }
+        if (slug) {
+          queryClient.setQueryData<Circle>(getGetCircleQueryKey(slug), (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              viewerRole: "member",
+              memberCount: old.memberCount + 1,
+            };
+          });
+        }
+        void queryClient.invalidateQueries({
+          predicate: (q) =>
+            typeof q.queryKey[0] === "string" && q.queryKey[0].includes("/circles"),
+        });
+        void refetch();
+      },
+      onError: (err: unknown) => {
+        const errorMsg =
+          (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+            ?.detail ||
+          (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+            ?.message ||
+          "Failed to join circle";
+        showToast(errorMsg);
+      },
+    },
+  });
+
+  const leave = useLeaveCircle({
+    mutation: {
+      onSuccess: () => {
+        const circleName = circle?.name || "this circle";
+        const wasPrivate = Boolean(circle?.isPrivate);
+
+        showToast(`You have left ${circleName}.`);
+
+        if (wasPrivate) {
+          setHasLeftPrivateCircle(true);
+          sessionStorage.removeItem("centoire_pending_circle_invite");
+          const next = new URLSearchParams(searchParams);
+          if (next.has("invite")) {
+            next.delete("invite");
+            setSearchParams(next, { replace: true });
+          }
+          if (slug) {
+            queryClient.setQueryData(getGetCircleQueryKey(slug), null);
+            queryClient.removeQueries({ queryKey: getGetCircleQueryKey(slug) });
+          }
+        } else {
+          if (slug) {
+            queryClient.setQueryData<Circle>(getGetCircleQueryKey(slug), (old) => {
+              if (!old) return old;
+              return {
+                ...old,
+                viewerRole: null,
+                memberCount: Math.max(0, old.memberCount - 1),
+              };
+            });
+          }
+        }
+
+        void queryClient.invalidateQueries({
+          predicate: (q) =>
+            typeof q.queryKey[0] === "string" && q.queryKey[0].includes("/circles"),
+        });
+
+        if (!wasPrivate) {
+          void refetch();
+        }
+      },
+      onError: (err: unknown) => {
+        const errorMsg =
+          (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+            ?.detail ||
+          (err as { response?: { data?: { detail?: string; message?: string } } })?.response?.data
+            ?.message ||
+          "Failed to leave circle";
+        showToast(errorMsg);
+      },
+    },
+  });
 
   const highlightsRef = useRef<HTMLDivElement>(null);
   const snapTimeoutRef = useRef<number | null>(null);
@@ -1023,17 +1406,136 @@ export function CircleDetailPage() {
     }
   };
 
-  if (isLoading) return <div className="p-10 text-ink-faint font-ui">Loading...</div>;
-  if (!circle) {
+  if (isLoading || previewLoading) {
     return (
-      <div className="p-10 text-center">
-        <p className="kicker mb-2">Not found</p>
-        <p className="text-ink-soft font-ui">This circle does not exist.</p>
+      <div className="min-h-[calc(100vh-64px)] bg-[#F5F5F5] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center justify-center gap-3">
+          <div className="size-8 rounded-full border-2 border-[#111111]/20 border-t-[#111111] animate-spin" />
+          <span className="font-ui text-[14px] font-medium text-[rgba(17,17,17,0.6)]">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!circle || isError || hasLeftPrivateCircle) {
+    if (inviteToken && invitePreview?.valid) {
+      return (
+        <div className="min-h-[calc(100vh-64px)] bg-[#F5F5F5] flex items-center justify-center p-4">
+          <div className="w-full max-w-[480px] bg-white border border-[#EAEAEA] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-center flex flex-col items-center gap-4">
+            <div className="size-16 rounded-full bg-[#111111] text-white flex items-center justify-center font-editorial text-2xl font-bold">
+              {invitePreview.circleName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="font-ui text-[12px] font-semibold uppercase tracking-wider text-[#E4572E]">
+                Private Circle Invitation
+              </p>
+              <h1 className="font-editorial text-[28px] font-bold text-[#111111] mt-1">
+                c/{invitePreview.circleName}
+              </h1>
+              <p className="font-ui text-[14px] text-[rgba(17,17,17,0.6)] mt-2">
+                {invitePreview.inviterName
+                  ? `${invitePreview.inviterName} has invited you to join this private circle.`
+                  : "You've been invited to join this private circle."}
+              </p>
+            </div>
+            {user ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  setAcceptingInvite(true);
+                  try {
+                    await customInstance({
+                      url: `/circles/invites/${inviteToken}/accept`,
+                      method: "POST",
+                    });
+                    sessionStorage.removeItem("centoire_pending_circle_invite");
+                    showToast("You've joined this private circle!");
+                    const next = new URLSearchParams(searchParams);
+                    next.delete("invite");
+                    setSearchParams(next, { replace: true });
+                    void queryClient.invalidateQueries({
+                      predicate: (q) =>
+                        typeof q.queryKey[0] === "string" && q.queryKey[0].includes("/circles"),
+                    });
+                    void refetch();
+                  } catch {
+                    showToast("Failed to accept invitation");
+                  } finally {
+                    setAcceptingInvite(false);
+                  }
+                }}
+                disabled={acceptingInvite}
+                className="rounded-full bg-[#E4572E] hover:bg-[#CC4824] px-6 py-2.5 font-ui text-[14px] font-medium text-white transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {acceptingInvite ? "Joining..." : "Accept Invitation & Enter"}
+              </button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3 w-full justify-center mt-3">
+                <Link
+                  to={`/signup?invite=${inviteToken}&slug=${normalizeCircleSlug(slug)}&redirect=/c/${normalizeCircleSlug(slug)}`}
+                  className="rounded-full bg-[#E4572E] hover:bg-[#CC4824] px-6 py-2.5 font-ui text-[14px] font-medium text-white transition-colors text-center shadow-sm"
+                >
+                  Create Account to Join
+                </Link>
+                <Link
+                  to={`/login?redirect=/c/${normalizeCircleSlug(slug)}?invite=${inviteToken}`}
+                  className="rounded-full border border-[#111111] hover:bg-neutral-100 px-6 py-2.5 font-ui text-[14px] font-medium text-[#111111] transition-colors text-center"
+                >
+                  Log In
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Toast Notification Banner */}
+          {toastMessage && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 bg-[#111111] text-white text-[13px] font-ui font-medium rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.3)] flex items-center gap-2 pointer-events-none transition-all">
+              <span>{toastMessage}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-[#F5F5F5] flex items-center justify-center p-4">
+        <div className="w-full max-w-[480px] bg-white border border-[#EAEAEA] p-8 shadow-[0_8px_30px_rgba(0,0,0,0.06)] text-center flex flex-col items-center gap-4">
+          <div className="size-12 rounded-full bg-[#111111]/5 flex items-center justify-center text-[#111111]">
+            <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+            </svg>
+          </div>
+          <div>
+            <p className="font-ui text-[12px] font-semibold uppercase tracking-wider text-[rgba(17,17,17,0.5)]">
+              Circle Unavailable
+            </p>
+            <h1 className="font-editorial text-[26px] font-bold text-[#111111] mt-1">
+              Private or Not Found
+            </h1>
+            <p className="font-ui text-[14px] text-[rgba(17,17,17,0.6)] mt-2">
+              This circle is private and can only be accessed through an invitation, or does not exist.
+            </p>
+          </div>
+          <Link
+            to="/circles"
+            className="rounded-full bg-[#111111] hover:bg-black px-6 py-2.5 font-ui text-[13px] font-medium text-white transition-colors mt-2"
+          >
+            Explore Public Circles
+          </Link>
+        </div>
+
+        {/* Toast Notification Banner */}
+        {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 bg-[#111111] text-white text-[13px] font-ui font-medium rounded-full shadow-[0_8px_24px_rgba(0,0,0,0.3)] flex items-center gap-2 pointer-events-none transition-all">
+            <span>{toastMessage}</span>
+          </div>
+        )}
       </div>
     );
   }
 
   const joined = Boolean(circle.viewerRole);
+  const isLocked = Boolean(circle.isPrivate && !joined);
 
   // Dynamic moderators: owner/moderator members, or fallback to the earliest circle member
   const explicitMods = (members ?? []).filter((m) => m.role === "owner" || m.role === "moderator");
@@ -1052,6 +1554,7 @@ export function CircleDetailPage() {
     circle.postCount === 0 ? 0 : posts.reduce((sum, p) => sum + (p.upvoteCount ?? 0), 0);
 
   const visibleLivePosts = posts.filter((p) => !dismissedPostIds.includes(p.id));
+  const displayPosts = isLocked ? visibleLivePosts.slice(0, 3) : visibleLivePosts;
 
   function handleJoinClick() {
     if (!circle) return;
@@ -1066,12 +1569,12 @@ export function CircleDetailPage() {
   }
 
   return (
-    <div className="w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#F5F5F5]">
+    <div className={`w-full h-[calc(100vh-3.5rem)] overflow-hidden bg-[#F5F5F5] ${isLocked ? "-mb-20 md:mb-0" : ""}`}>
       {/* Primary Content Container: 940px width, fills full height without outer border or shadow */}
       <div className="max-w-[940px] w-full mx-auto h-full flex flex-col bg-[#F5F5F5] overflow-hidden">
 
         {/* Header Section (Frame 2147226087): 940px Fill */}
-        <div className="w-full shrink-0">
+        <div className="w-full shrink-0 relative z-40">
           {/* Cover Banner — 120px height with distinct warm luxury tone when no image */}
           <div className="h-[120px] w-full bg-[#BA9E86] overflow-hidden relative z-0">
             {circle.coverImageUrl ? (
@@ -1085,7 +1588,7 @@ export function CircleDetailPage() {
           </div>
 
           {/* Avatar + Actions + Title + Divider (892px Fill within px-6) */}
-          <div className="px-6 pb-0 pt-0 relative z-10 bg-[#F5F5F5]">
+          <div className="px-6 pb-0 pt-0 relative z-20 bg-[#F5F5F5]">
             {/* Top row with overlapping Avatar and Actions */}
             <div className="flex items-start justify-between mb-3">
               {/* Circular Avatar — 96px size, 2px border #F0F0F0, drop shadow from Figma */}
@@ -1101,6 +1604,18 @@ export function CircleDetailPage() {
 
               {/* Action Buttons — with margin top below banner */}
               <div className="flex items-center gap-2.5 mt-4 sm:mt-5">
+                {Boolean(circle.isPrivate) && (circle.viewerRole === "owner" || circle.viewerRole === "moderator") && (
+                  <button
+                    type="button"
+                    onClick={() => setInviteModalOpen(true)}
+                    className="rounded-full bg-[#E4572E] hover:bg-[#CC4824] px-4 py-[9px] font-ui text-[13px] font-medium text-white transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.765Z" />
+                    </svg>
+                    <span>Invite</span>
+                  </button>
+                )}
                 {joined && (
                   <Link
                     to={`/compose?circle=${circle.id}`}
@@ -1120,7 +1635,7 @@ export function CircleDetailPage() {
                   {joined ? (circle.viewerRole === "owner" ? "Owner" : "Joined") : "Join circle"}
                 </button>
                 <div
-                  className="relative"
+                  className="relative z-50"
                   onMouseEnter={handleCircleMenuEnter}
                   onMouseLeave={handleCircleMenuLeave}
                 >
@@ -1150,10 +1665,27 @@ export function CircleDetailPage() {
                       <button
                         type="button"
                         onClick={handleCircleShare}
-                        className="flex items-center gap-3 w-full py-2.5 px-1.5 text-left font-ui text-[13px] font-normal text-[rgba(17,17,17,1)] hover:bg-[#F7F7F7] rounded-[8px] transition-colors cursor-pointer border-b border-[rgba(17,17,17,0.06)]"
+                        disabled={Boolean(circle.isPrivate)}
+                        title={
+                          circle.isPrivate
+                            ? "Direct sharing is disabled for private circles. Use the Invite button instead."
+                            : undefined
+                        }
+                        className={`flex items-center gap-3 w-full py-2.5 px-1.5 text-left font-ui text-[13px] font-normal rounded-[8px] transition-colors border-b border-[rgba(17,17,17,0.06)] ${
+                          circle.isPrivate
+                            ? "opacity-40 cursor-not-allowed text-[rgba(17,17,17,0.5)] select-none"
+                            : "text-[rgba(17,17,17,1)] hover:bg-[#F7F7F7] cursor-pointer"
+                        }`}
                       >
                         <span className="text-[rgba(17,17,17,0.8)] shrink-0"><ShareIcon /></span>
-                        <span className="leading-none">Share</span>
+                        <span className="leading-none flex items-center justify-between flex-1">
+                          <span>Share</span>
+                          {circle.isPrivate && (
+                            <span className="text-[10px] uppercase font-semibold text-[rgba(17,17,17,0.4)] tracking-wide">
+                              Invite Only
+                            </span>
+                          )}
+                        </span>
                       </button>
                       <button
                         type="button"
@@ -1194,10 +1726,18 @@ export function CircleDetailPage() {
             </div>
 
             {/* Circle Title (title-block in Figma: 892px Fill, Hug 43px, gap 8px) */}
-            <div className="w-full mb-6">
+            <div className="w-full mb-6 flex items-center gap-3">
               <h1 className="font-editorial text-[32px] font-semibold text-[rgba(17,17,17,1)] leading-none">
                 c/{circle.name}
               </h1>
+              {circle.isPrivate && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#111111]/10 text-[#111111] font-ui text-[12px] font-medium tracking-normal select-none">
+                  <svg className="size-3.5 text-[#111111]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                  </svg>
+                  <span>Private</span>
+                </span>
+              )}
             </div>
 
             {/* Divider Line (Figma: 892px Fill, 1px Fixed, rgba(17,17,17,0.2)) */}
@@ -1205,11 +1745,50 @@ export function CircleDetailPage() {
           </div>
         </div>
 
-        {/* 2-Column Body Layout: 660px Feed + 280px Sidebar — each scrolls independently */}
-        <div className="flex flex-col lg:flex-row w-full flex-1 min-h-0 overflow-hidden bg-[#F5F5F5]">
+        {/* 2-Column Body Layout */}
+        <div className="relative flex flex-col lg:flex-row w-full flex-1 min-h-0 overflow-hidden bg-[#F5F5F5]">
+          {/* Transparent Frosted Lock Overlay when private and not joined */}
+          {isLocked && (
+            <div
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              className="absolute inset-0 z-30 flex flex-col items-center justify-start pt-12 sm:pt-16 md:pt-20 bg-[#F5F5F5]/65 backdrop-blur-md select-none p-6 overflow-hidden pointer-events-auto overscroll-none"
+            >
+              {/* Lock icon with completely transparent background — no white box, no white circle */}
+              <div className="text-[#111111] mb-3 bg-transparent">
+                <svg className="size-12 stroke-[1.8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+              </div>
+
+              <p className="font-ui text-[12px] font-semibold uppercase tracking-wider text-[#E4572E] mb-1.5">
+                Private Circle
+              </p>
+
+              <h2 className="font-editorial text-[28px] sm:text-[32px] font-bold text-[#111111] leading-tight mb-2 text-center">
+                Join {circle.name} to explore
+              </h2>
+
+              <p className="font-ui text-[14px] text-[rgba(17,17,17,0.7)] leading-relaxed max-w-[380px] mb-6 text-center">
+                This circle is private. Join to view its member discussions, exclusive posts, and shared curations.
+              </p>
+
+              <button
+                type="button"
+                onClick={handleJoinClick}
+                disabled={join.isPending}
+                className="rounded-full bg-[#111111] hover:bg-black px-7 py-3 font-ui text-[14px] font-medium text-white transition-all shadow-[0_4px_14px_rgba(0,0,0,0.18)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.28)] cursor-pointer disabled:opacity-50"
+              >
+                {join.isPending ? "Joining..." : "Join circle"}
+              </button>
+            </div>
+          )}
 
           {/* Left: Feed Column (Width: 660px Fill) — Highlights + Feed scroll together */}
-          <div className="w-full lg:w-[660px] flex-1 flex flex-col min-w-0 h-full overflow-y-auto bg-[#F5F5F5]">
+          <div
+            {...(isLocked ? { tabIndex: -1, "aria-hidden": true } : {})}
+            className={`w-full lg:w-[660px] flex-1 flex flex-col min-w-0 h-full bg-[#F5F5F5] ${isLocked ? "overflow-hidden select-none pointer-events-none max-h-full" : "overflow-y-auto"}`}
+          >
 
             {/* Circle Highlights */}
             <div className="p-6 pb-2 shrink-0">
@@ -1223,7 +1802,7 @@ export function CircleDetailPage() {
                     View all
                   </button>
                 </div>
-                {highlights.length > 0 && (
+                {highlights.length > 0 && !isLocked && (
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1263,8 +1842,8 @@ export function CircleDetailPage() {
                 /* Highlights cards rail (Figma Frame: highlight-cards, 612 Fill x 176 Hug, gap 16px) */
                 <div
                   ref={highlightsRef}
-                  onScroll={updateHighlightsScroll}
-                  className="flex items-stretch gap-4 overflow-x-auto snap-x scroll-pl-2 px-2 -mx-2 pt-3 -mt-3 pb-5 -mb-5"
+                  onScroll={isLocked ? undefined : updateHighlightsScroll}
+                  className={`flex items-stretch gap-4 ${isLocked ? "overflow-hidden pointer-events-none select-none" : "overflow-x-auto snap-x"} scroll-pl-2 px-2 -mx-2 pt-3 -mt-3 pb-5 -mb-5`}
                   style={{ scrollbarWidth: "none" }}
                 >
                   {highlights.map((item) => (
@@ -1327,8 +1906,8 @@ export function CircleDetailPage() {
 
               {/* Feed posts */}
               <div className="space-y-4">
-                {visibleLivePosts.length > 0 ? (
-                  visibleLivePosts.map((post) => (
+                {displayPosts.length > 0 ? (
+                  displayPosts.map((post) => (
                     <CircleFeedCard
                       key={post.id}
                       post={{
@@ -1374,7 +1953,7 @@ export function CircleDetailPage() {
                 {postsError && (
                   <p className="font-ui text-[14px] text-crimson">Couldn't load posts.</p>
                 )}
-                {hasNextPage && (
+                {hasNextPage && !isLocked && (
                   <button
                     onClick={() => void fetchNextPage()}
                     disabled={isFetchingNextPage}
@@ -1389,7 +1968,10 @@ export function CircleDetailPage() {
           </div>
 
           {/* Right: Sidebar Column (Figma: circle-sidebar, 280px Fixed x 738px Hug, border-l 1px) */}
-          <div className="w-full lg:w-[280px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(17,17,17,0.1)] p-5 flex flex-col gap-4 lg:self-start lg:h-fit max-h-full overflow-y-auto bg-[#F5F5F5]">
+          <div
+            {...(isLocked ? { tabIndex: -1, "aria-hidden": true } : {})}
+            className={`w-full lg:w-[280px] shrink-0 border-t lg:border-t-0 lg:border-l border-[rgba(17,17,17,0.1)] p-5 flex flex-col gap-4 lg:self-start lg:h-fit max-h-full bg-[#F5F5F5] ${isLocked ? "overflow-hidden select-none pointer-events-none" : "overflow-y-auto"}`}
+          >
 
             {/* Circle Title & Description */}
             <div>
@@ -1461,16 +2043,22 @@ export function CircleDetailPage() {
                 MEMBERSHIP
               </h3>
               <p className="font-ui text-[13px] text-[rgba(17,17,17,0.6)] leading-[20px] mb-3">
-                Open to members who want to read, share, and discuss with a thoughtful community.
+                {circle.isPrivate
+                  ? "Private space accessible only to invited and approved members."
+                  : "Open to members who want to read, share, and discuss with a thoughtful community."}
               </p>
               <div className="space-y-2 font-ui text-[13px]">
                 <div className="flex items-center justify-between">
                   <span className="text-[rgba(17,17,17,0.6)]">Type</span>
-                  <span className="font-medium text-[#111111]">Public</span>
+                  <span className="font-medium text-[#111111]">
+                    {circle.isPrivate ? "Private" : "Public"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[rgba(17,17,17,0.6)]">Approval</span>
-                  <span className="font-medium text-[#111111]">Instant</span>
+                  <span className="font-medium text-[#111111]">
+                    {circle.isPrivate ? "Invite Only" : "Instant"}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[rgba(17,17,17,0.6)]">Moderators</span>
@@ -1561,6 +2149,14 @@ export function CircleDetailPage() {
           loading={join.isPending}
         />
       )}
+
+      <CircleInviteModal
+        slug={circle.slug}
+        circleName={circle.name}
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        onToast={showToast}
+      />
 
       {/* Toast Notification Banner */}
       {toastMessage && (

@@ -14,7 +14,7 @@ import type { Notification } from "../lib/api/generated/model";
 
 const POLL_INTERVAL_MS = 30_000;
 
-const TYPE_LABEL: Record<Notification["type"], string> = {
+const TYPE_LABEL: Record<string, string> = {
   "user.followed": "followed you",
   "post.upvoted": "upvoted your post",
   "comment.upvoted": "upvoted your comment",
@@ -23,6 +23,7 @@ const TYPE_LABEL: Record<Notification["type"], string> = {
   "comment.mentioned": "mentioned you in a comment",
   "post.approved": "Your post was approved",
   "post.rejected": "Your post was rejected",
+  "circle.invite": "invited you to join a circle",
 };
 
 interface NotificationBellProps {
@@ -130,8 +131,22 @@ function NotificationRow({
   onMarkRead: () => void;
 }) {
   const unread = !notification.readAt;
-  const label = TYPE_LABEL[notification.type];
-  const linkTo = notification.targetPost ? `/p/${notification.targetPost.slug}` : "#";
+  const label = TYPE_LABEL[notification.type] || "sent you a notification";
+  
+  // Custom link for circle invite vs post
+  const rawNotif = notification as unknown as {
+    targetCircle?: { slug: string; name: string };
+    targetInviteToken?: string | null;
+  };
+
+  let linkTo = "#";
+  if (notification.type === ("circle.invite" as unknown) && rawNotif.targetCircle) {
+    linkTo = rawNotif.targetInviteToken
+      ? `/c/${rawNotif.targetCircle.slug}?invite=${rawNotif.targetInviteToken}`
+      : `/c/${rawNotif.targetCircle.slug}`;
+  } else if (notification.targetPost) {
+    linkTo = `/p/${notification.targetPost.slug}`;
+  }
 
   function handleClick() {
     if (unread) onMarkRead();
@@ -161,6 +176,9 @@ function NotificationRow({
           {label}
           {notification.targetPost && (
             <span className="text-ink-soft"> — “{notification.targetPost.title}”</span>
+          )}
+          {rawNotif.targetCircle && (
+            <span className="text-ink-soft"> — “{rawNotif.targetCircle.name}”</span>
           )}
         </p>
         <p className="mt-0.5 text-xs text-ink-faint">

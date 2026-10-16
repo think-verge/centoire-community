@@ -99,6 +99,7 @@ export function CreateCirclePage() {
         hashtags,
         avatarUrl: avatarUrl || undefined,
         coverImageUrl: coverImageUrl || undefined,
+        isPrivate,
       },
     });
   }
@@ -326,48 +327,77 @@ export function CreateCirclePage() {
                     </div>
                   </div>
 
-                  {/* Topics input nested inside Open Circle option */}
-                  <div className="mt-3 sm:ml-5.5">
-                    <HashtagInput
-                      id="circle-topics"
-                      value={hashtags}
-                      onChange={(next) => {
-                        setHashtags(next);
-                        setTopicError(null);
-                      }}
-                      max={3}
-                      placeholder="Add up to 3 topics..."
-                      className="min-h-[48px] border-[rgba(17,17,17,0.2)] px-[14px]"
-                      roundedClassName="rounded-none"
-                      tagClassName="inline-flex items-center gap-1.5 rounded-full bg-[#F5F5F5] px-2.5 py-1 font-ui text-[12px] font-normal text-[#111111]"
-                      showHashPrefix={false}
-                      showCount={false}
-                      removeIconType="circled"
-                    />
-                    {topicError && (
-                      <p className="mt-1.5 font-ui text-[12px] text-[#E4572E]">{topicError}</p>
-                    )}
-                  </div>
+                  {/* Topics input nested inside Open Circle option when active */}
+                  {!isPrivate && (
+                    <div className="mt-3 sm:ml-5.5">
+                      <HashtagInput
+                        id="circle-topics"
+                        value={hashtags}
+                        onChange={(next) => {
+                          setHashtags(next);
+                          setTopicError(null);
+                        }}
+                        max={3}
+                        placeholder="Add up to 3 topics..."
+                        className="min-h-[48px] border-[rgba(17,17,17,0.2)] px-[14px]"
+                        roundedClassName="rounded-none"
+                        tagClassName="inline-flex items-center gap-1.5 rounded-full bg-[#F5F5F5] px-2.5 py-1 font-ui text-[12px] font-normal text-[#111111]"
+                        showHashPrefix={false}
+                        showCount={false}
+                        removeIconType="circled"
+                      />
+                      {topicError && (
+                        <p className="mt-1.5 font-ui text-[12px] text-[#E4572E]">{topicError}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Option 2: Private Circle */}
-                <div
-                  className="flex items-start gap-2.5 cursor-pointer select-none"
-                  onClick={() => setIsPrivate(true)}
-                >
-                  {isPrivate ? (
-                    <div className="size-3 rounded-full bg-[#E4572E] shrink-0 mt-[0.5px]" />
-                  ) : (
-                    <div className="size-3 rounded-full border border-[#111111] shrink-0 mt-[0.5px]" />
-                  )}
-                  <div>
-                    <p className={`font-ui text-[14px] leading-none mb-1 ${isPrivate ? "font-semibold text-[#111111]" : "font-semibold text-[rgba(17,17,17,0.6)]"}`}>
-                      Private Circle
-                    </p>
-                    <p className="font-ui text-[12px] text-[rgba(17,17,17,0.6)] leading-normal">
-                      Only people you invite or approve can join.
-                    </p>
+                <div>
+                  <div
+                    className="flex items-start gap-2.5 cursor-pointer select-none"
+                    onClick={() => setIsPrivate(true)}
+                  >
+                    {isPrivate ? (
+                      <div className="size-3 rounded-full bg-[#E4572E] shrink-0 mt-[0.5px]" />
+                    ) : (
+                      <div className="size-3 rounded-full border border-[#111111] shrink-0 mt-[0.5px]" />
+                    )}
+                    <div>
+                      <p className={`font-ui text-[14px] leading-none mb-1 ${isPrivate ? "font-semibold text-[#111111]" : "font-semibold text-[rgba(17,17,17,0.6)]"}`}>
+                        Private Circle
+                      </p>
+                      <p className="font-ui text-[12px] text-[rgba(17,17,17,0.6)] leading-normal">
+                        Only people you invite or approve can join.
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Topics input nested inside Private Circle option when active */}
+                  {isPrivate && (
+                    <div className="mt-3 sm:ml-5.5">
+                      <HashtagInput
+                        id="circle-topics-private"
+                        value={hashtags}
+                        onChange={(next) => {
+                          setHashtags(next);
+                          setTopicError(null);
+                        }}
+                        max={3}
+                        placeholder="Add up to 3 topics..."
+                        className="min-h-[48px] border-[rgba(17,17,17,0.2)] px-[14px]"
+                        roundedClassName="rounded-none"
+                        tagClassName="inline-flex items-center gap-1.5 rounded-full bg-[#F5F5F5] px-2.5 py-1 font-ui text-[12px] font-normal text-[#111111]"
+                        showHashPrefix={false}
+                        showCount={false}
+                        removeIconType="circled"
+                      />
+                      {topicError && (
+                        <p className="mt-1.5 font-ui text-[12px] text-[#E4572E]">{topicError}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

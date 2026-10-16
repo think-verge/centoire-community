@@ -6,6 +6,12 @@ import { Field } from "../../components/Field";
 import { GoogleButton } from "../../components/GoogleButton";
 import { useGetInvitePreview, useSignup } from "../../lib/api/generated/auth/auth";
 import { useAuth } from "../../lib/auth-context";
+import { customInstance } from "../../lib/api/http";
+import {
+  getPendingCircleInvite,
+  savePendingCircleInvite,
+  normalizeCircleSlug,
+} from "../../lib/circleInviteStorage";
 
 const ROLE_LABELS: Record<string, string> = {
   creator: "Creator",
@@ -17,30 +23,83 @@ export function SignupPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get("invite") ?? "";
+  const slugParam = normalizeCircleSlug(searchParams.get("slug"));
 
   const { user, refresh } = useAuth();
   const [form, setForm] = useState({ displayName: "", email: "", password: "" });
 
+  // Only run the admin invite preview when there's no slug param.
+  // If slugParam is present, it's a circle invite token — a different system.
   const { data: invitePreview } = useGetInvitePreview(inviteToken, {
-    query: { enabled: Boolean(inviteToken) },
+    query: { enabled: Boolean(inviteToken) && !slugParam },
   });
 
-  // Prefill email from a valid invite
+  // If token and slug are in query params, save immediately
+  useEffect(() => {
+    if (inviteToken && slugParam) {
+      savePendingCircleInvite(inviteToken, slugParam);
+    }
+  }, [inviteToken, slugParam]);
+
+  // Prefill email from a valid invite or circle invite
   useEffect(() => {
     if (invitePreview?.valid && invitePreview.email) {
       setForm((prev) => ({ ...prev, email: invitePreview.email }));
+    } else {
+      const activeToken = inviteToken || getPendingCircleInvite()?.token;
+      if (activeToken) {
+        customInstance<{ email?: string; valid?: boolean; circleSlug?: string }>({
+          url: `/circles/invites/${activeToken}/preview`,
+          method: "GET",
+        })
+          .then((res) => {
+            if (res?.email) {
+              setForm((prev) => ({ ...prev, email: res.email || prev.email }));
+            }
+            const cleanSlug = normalizeCircleSlug(res?.circleSlug);
+            if (cleanSlug) {
+              savePendingCircleInvite(activeToken, cleanSlug);
+            }
+          })
+          .catch(() => {
+            // ignore
+          });
+      }
     }
-  }, [invitePreview]);
+  }, [invitePreview, inviteToken]);
 
   useEffect(() => {
-    if (user) navigate("/feed", { replace: true });
-  }, [user, navigate]);
+    if (user) {
+      if (!user.onboardingCompleted) {
+        navigate(
+          inviteToken && slugParam
+            ? `/onboarding?invite=${inviteToken}&slug=${slugParam}`
+            : "/onboarding",
+          { replace: true },
+        );
+        return;
+      }
+      const pending = getPendingCircleInvite();
+      const targetSlug = normalizeCircleSlug(pending?.slug || slugParam);
+      if (targetSlug) {
+        navigate(`/c/${targetSlug}`, { replace: true });
+        return;
+      }
+      navigate("/feed", { replace: true });
+    }
+  }, [user, navigate, inviteToken, slugParam]);
 
   const signup = useSignup({
     mutation: {
       onSuccess: async () => {
         await refresh();
-        navigate("/feed");
+        // User must complete onboarding first. We leave centoire_pending_circle_invite
+        // in storage and pass in URL so OnboardingPage can accept the invite and redirect.
+        navigate(
+          inviteToken && slugParam
+            ? `/onboarding?invite=${inviteToken}&slug=${slugParam}`
+            : "/onboarding",
+        );
       },
     },
   });
@@ -117,7 +176,10 @@ export function SignupPage() {
       <GoogleButton />
       <p className="mt-6 text-center text-sm text-ink-soft">
         Already a member?{" "}
-        <Link to="/login" className="font-semibold text-crimson hover:text-crimson-deep">
+        <Link
+          to={inviteToken && slugParam ? `/login?invite=${inviteToken}&slug=${slugParam}` : "/login"}
+          className="font-semibold text-crimson hover:text-crimson-deep"
+        >
           Log in
         </Link>
       </p>

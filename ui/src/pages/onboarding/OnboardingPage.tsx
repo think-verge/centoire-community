@@ -14,9 +14,14 @@ import { useGetOnboardingSuggestions } from "../../lib/api/generated/onboarding/
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 
 import { useAuth } from "../../lib/auth-context";
+import { customInstance } from "../../lib/api/http";
+import {
+  getPendingCircleInvite,
+  clearPendingCircleInvite,
+  savePendingCircleInvite,
+  normalizeCircleSlug,
+} from "../../lib/circleInviteStorage";
 import logoDark from "../../assets/landing/logo-dark.svg";
-
-
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -27,8 +32,18 @@ export function OnboardingPage() {
   // 0-indexed step for array indexing
   const step = currentStep - 1;
 
+  useEffect(() => {
+    const inviteParam = searchParams.get("invite");
+    const slugParam = searchParams.get("slug");
+    if (inviteParam && slugParam) {
+      savePendingCircleInvite(inviteParam, slugParam);
+    }
+  }, [searchParams]);
+
   function setStep(newStepIndex: number) {
-    setSearchParams({ step: (newStepIndex + 1).toString() });
+    const next = new URLSearchParams(searchParams);
+    next.set("step", (newStepIndex + 1).toString());
+    setSearchParams(next);
   }
 
   return (
@@ -373,18 +388,80 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
 function ProfileStep({ onBack }: { onBack: () => void }) {
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [handle, setHandle] = useState(user?.handle ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>("editor");
   const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isCheckingHandle, setIsCheckingHandle] = useState(false);
+  const [handleStatus, setHandleStatus] = useState<{ available: boolean; message: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const updateMe = useUpdateMe();
+
+  useEffect(() => {
+    const trimmed = handle.trim().toLowerCase();
+    if (!trimmed) {
+      setHandleStatus(null);
+      setIsCheckingHandle(false);
+      return;
+    }
+
+    if (!/^[a-z0-9_]{3,24}$/.test(trimmed)) {
+      setHandleStatus(null);
+      setIsCheckingHandle(false);
+      return;
+    }
+
+    if (user?.handle && trimmed === user.handle.toLowerCase()) {
+      setHandleStatus({ available: true, message: "Handle is available" });
+      setIsCheckingHandle(false);
+      return;
+    }
+
+    setIsCheckingHandle(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await customInstance<{ available: boolean; message: string }>({
+          url: `/users/check-handle?handle=${encodeURIComponent(trimmed)}`,
+          method: "GET",
+        });
+        setHandleStatus(res);
+      } catch {
+        // network error fallback
+      } finally {
+        setIsCheckingHandle(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [handle, user?.handle]);
+
   const complete = useCompleteOnboarding({
     mutation: {
       onSuccess: async () => {
+        const pending = getPendingCircleInvite();
+        const inviteParam = searchParams.get("invite");
+        const slugParam = searchParams.get("slug");
+        const effectiveToken = pending?.token || inviteParam || "";
+        const targetCircleSlug: string | null = normalizeCircleSlug(pending?.slug || slugParam) || null;
+
+        // Preserve pending invite token so the user lands on the circle with their invitation active
+        if (targetCircleSlug && effectiveToken) {
+          savePendingCircleInvite(effectiveToken, targetCircleSlug);
+        }
+
         await refresh();
+
+        if (targetCircleSlug) {
+          const destination = effectiveToken
+            ? `/c/${targetCircleSlug}?invite=${effectiveToken}`
+            : `/c/${targetCircleSlug}`;
+          navigate(destination, { replace: true });
+          return;
+        }
+        clearPendingCircleInvite();
         navigate("/feed", { replace: true });
       },
     },
@@ -453,7 +530,8 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
 
   const handleError = updateMe.error;
   const isValidHandle = /^[a-z0-9_]{3,24}$/.test(handle);
-  const canSubmit = isValidHandle && !updateMe.isPending && !complete.isPending && selectedRole;
+  const isHandleAvailable = handleStatus?.available === true && !isCheckingHandle;
+  const canSubmit = isValidHandle && isHandleAvailable && !updateMe.isPending && !complete.isPending && selectedRole;
 
   if (isSettingUp) {
     return (
@@ -583,20 +661,29 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                   CURATOR HANDLE
                 </label>
                 {handleError ? (
-                  <span className="font-ui text-[12px] font-medium text-[#E15A3A]">{handleError.message}</span>
-                ) : (
-                  handle.length >= 3 && (
-                    <span className="font-ui text-[12px] font-medium text-[#10B981]">Handle is available</span>
-                  )
-                )}
+                  <span className="font-ui text-[12px] font-medium text-[#E15A3A]">Handle is not available</span>
+                ) : handleStatus ? (
+                  <span
+                    className={`font-ui text-[12px] font-medium ${
+                      handleStatus.available ? "text-[#10B981]" : "text-[#E15A3A]"
+                    }`}
+                  >
+                    {handleStatus.available ? "Handle is available" : "Handle is not available"}
+                  </span>
+                ) : null}
               </div>
               <input
                 type="text"
                 placeholder="Enter your username"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value.toLowerCase())}
-                className={`w-full border rounded-none px-4 py-2.5 text-[14px] outline-none bg-white transition-colors ${handleError ? "border-[#F6D9D0] text-[#E15A3A]" : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4]"
-                  }`}
+                className={`w-full border rounded-none px-4 py-2.5 text-[14px] outline-none bg-white transition-colors ${
+                  handleError || (handleStatus && !handleStatus.available)
+                    ? "border-[#F6D9D0] text-[#E15A3A]"
+                    : handleStatus?.available
+                    ? "border-[#10B981]/50 text-[#111111] focus:border-[#10B981]"
+                    : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4]"
+                }`}
               />
             </div>
           </div>

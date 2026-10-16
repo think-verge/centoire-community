@@ -812,10 +812,17 @@ export function CircleCard({ circle }: { circle: Circle }) {
 
       {/* Content area */}
       <div className="px-4 mt-3 flex-1 flex flex-col">
-        <Link to={`/c/${circle.slug}`}>
+        <Link to={`/c/${circle.slug}`} className="flex items-center gap-1.5 min-w-0">
           <h3 className="font-editorial text-[18px] font-semibold leading-none text-[#111111] hover:text-[#E4572E] transition-colors truncate">
             c/{circle.name}
           </h3>
+          {circle.isPrivate && (
+            <span className="shrink-0 p-0.5 rounded-full bg-[#111111]/5 text-[#111111]" title="Private Circle">
+              <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+            </span>
+          )}
         </Link>
         <p className="font-ui text-[14px] text-[#111111]/60 mt-2 line-clamp-3 leading-[20px] min-h-[60px] mb-2">
           {circle.description}

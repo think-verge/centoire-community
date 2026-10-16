@@ -7,6 +7,30 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
+apiClient.interceptors.request.use((config) => {
+  try {
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      token = params.get("invite");
+      if (!token) {
+        const stored = sessionStorage.getItem("centoire_pending_circle_invite");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          token = parsed?.token || null;
+        }
+      }
+    }
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers["X-Invite-Token"] = token;
+    }
+  } catch {
+    // ignore
+  }
+  return config;
+});
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {

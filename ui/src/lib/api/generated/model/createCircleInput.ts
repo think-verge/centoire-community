@@ -28,4 +28,5 @@ export interface CreateCircleInput {
   hashtags: string[];
   avatarUrl?: string;
   coverImageUrl?: string;
+  isPrivate?: boolean;
 }

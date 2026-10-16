@@ -22,6 +22,7 @@ export interface Circle {
   hashtags: string[];
   memberCount: number;
   postCount: number;
+  isPrivate?: boolean;
   /** @nullable */
   viewerRole: CircleViewerRole;
   memberAvatars?: string[];

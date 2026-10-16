@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AvatarBubble } from "../../components/AppShell";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
@@ -6,6 +7,9 @@ import { HashtagPicker } from "../../components/HashtagPicker";
 import { useSetInterests, useUpdateMe } from "../../lib/api/generated/users/users";
 import { uploadImage } from "../../lib/api/generated/uploads/uploads";
 import { useAuth } from "../../lib/auth-context";
+import { customInstance } from "../../lib/api/http";
+import { clearPendingCircleInvite } from "../../lib/circleInviteStorage";
+import { getGetAuthMeQueryKey } from "../../lib/api/generated/auth/auth";
 
 export function SettingsPage() {
   const { user, refresh } = useAuth();
@@ -20,6 +24,7 @@ export function SettingsPage() {
         <ProfileSection key={user.id} onSaved={refresh} />
         <InterestsSection onSaved={refresh} />
         <AccountSection />
+        <DangerZoneSection />
       </div>
     </div>
   );
@@ -180,6 +185,84 @@ function AccountSection() {
           .
         </p>
       </div>
+    </section>
+  );
+}
+
+function DangerZoneSection() {
+  const queryClient = useQueryClient();
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await customInstance({
+        url: "/users/me",
+        method: "DELETE",
+      });
+      clearPendingCircleInvite();
+      queryClient.setQueryData(getGetAuthMeQueryKey(), null);
+      queryClient.clear();
+      window.location.replace("/");
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : "Failed to delete account. Please try again.";
+      setError(message);
+      setIsDeleting(false);
+      setIsConfirming(false);
+    }
+  }
+
+  return (
+    <section className="pt-6 border-t border-line">
+      <h2 className="kicker mb-1 text-crimson">Danger Zone</h2>
+      <p className="mb-4 text-sm text-ink-soft">
+        Permanently delete your account and all associated data. This action cannot be undone.
+      </p>
+
+      {error && <p className="mb-3 text-sm text-crimson">{error}</p>}
+
+      {!isConfirming ? (
+        <button
+          type="button"
+          onClick={() => setIsConfirming(true)}
+          className="rounded-lg border border-crimson/50 px-4 py-2 text-sm font-semibold text-crimson hover:bg-crimson hover:text-white transition-colors cursor-pointer"
+        >
+          Delete Account
+        </button>
+      ) : (
+        <div className="rounded-xl border border-crimson/30 bg-crimson/5 p-4">
+          <p className="text-sm font-semibold text-ink mb-1">
+            Are you absolutely sure?
+          </p>
+          <p className="text-xs text-ink-soft mb-4">
+            This will permanently remove your profile, follows, circle memberships, and data from the database.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="rounded-lg bg-crimson px-4 py-2 text-sm font-semibold text-white hover:bg-crimson-deep transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {isDeleting ? "Deleting..." : "Yes, Delete My Account"}
+            </button>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => setIsConfirming(false)}
+              className="rounded-lg border border-line bg-white px-4 py-2 text-sm font-medium text-ink-soft hover:text-ink transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
