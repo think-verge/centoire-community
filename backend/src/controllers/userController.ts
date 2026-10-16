@@ -1,9 +1,16 @@
 import type { Request, Response } from "express";
+import { env } from "../config/env.js";
 import { Post } from "../models/Post.js";
 import { User } from "../models/User.js";
 import { serializePostCard } from "../services/postSerializer.js";
 import * as userService from "../services/userService.js";
 import { serializeUser } from "../services/userSerializer.js";
+
+export async function checkHandle(req: Request, res: Response): Promise<void> {
+  const handle = (req.query.handle as string) || "";
+  const result = await userService.checkHandleAvailability(handle, req.user?.userId);
+  res.json(result);
+}
 
 export async function getByHandle(req: Request, res: Response): Promise<void> {
   const user = await userService.getByHandle(req.params.handle as string);
@@ -28,6 +35,17 @@ export async function getUserPosts(req: Request, res: Response): Promise<void> {
 export async function updateMe(req: Request, res: Response): Promise<void> {
   const user = await userService.updateMe(req.user!.userId, req.body);
   res.json(serializeUser(user, { private: true }));
+}
+
+export async function deleteMe(req: Request, res: Response): Promise<void> {
+  await userService.deleteAccount(req.user!.userId);
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: env.COOKIE_SECURE,
+    sameSite: "lax",
+  });
+  res.clearCookie("token");
+  res.status(204).end();
 }
 
 export async function setInterests(req: Request, res: Response): Promise<void> {

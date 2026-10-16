@@ -13,6 +13,7 @@ export interface ICircle extends Document {
   createdBy: Types.ObjectId;
   memberCount: number;
   postCount: number;
+  isPrivate: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,6 +31,7 @@ const circleSchema = new Schema<ICircle>(
     createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     memberCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
+    isPrivate: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

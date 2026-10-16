@@ -18,6 +18,7 @@ export const CircleSchema = registry.register(
     hashtags: z.array(z.string()),
     memberCount: z.number(),
     postCount: z.number(),
+    isPrivate: z.boolean().default(false),
     viewerRole: z.enum(["owner", "moderator", "member"]).nullable(),
     memberAvatars: z.array(z.string()).optional(),
     createdAt: z.string(),
@@ -58,6 +59,7 @@ export const CreateCircleInputSchema = registry.register(
     hashtags: hashtagNames(1, 5),
     avatarUrl: z.string().url().optional(),
     coverImageUrl: z.string().url().optional(),
+    isPrivate: z.boolean().optional(),
   }),
 );
 
@@ -80,6 +82,45 @@ export const CircleListQuerySchema = z.object({
 export const CircleSlugParamsSchema = z.object({ slug: z.string().min(1).max(80) });
 
 export const CirclePostsQuerySchema = z.object({ cursor: z.string().optional() });
+
+export const CreateCircleInviteInputSchema = registry.register(
+  "CreateCircleInviteInput",
+  z.object({
+    email: z.string().email(),
+  }),
+);
+
+export const CreateCircleInviteResponseSchema = registry.register(
+  "CreateCircleInviteResponse",
+  z.object({
+    link: z.string(),
+    token: z.string(),
+    channel: z.enum(["notification", "email"]).optional(),
+    recipientName: z.string().optional(),
+  }),
+);
+
+export const CircleInvitePreviewSchema = registry.register(
+  "CircleInvitePreview",
+  z.object({
+    valid: z.boolean(),
+    status: z.string(),
+    email: z.string(),
+    circleName: z.string(),
+    circleSlug: z.string(),
+    avatarUrl: z.string().nullable().optional(),
+    coverImageUrl: z.string().nullable().optional(),
+    description: z.string().optional(),
+    inviterName: z.string(),
+  }),
+);
+
+export const AcceptCircleInviteResponseSchema = registry.register(
+  "AcceptCircleInviteResponse",
+  z.object({
+    slug: z.string(),
+  }),
+);
 
 export function registerCommunityPaths(): void {
   registry.registerPath({
@@ -249,6 +290,47 @@ export function registerCircleContentPaths(): void {
           }),
         ),
       ),
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/circles/{slug}/invites",
+    tags: ["circles"],
+    operationId: "createCircleInvite",
+    request: { params: CircleSlugParamsSchema, body: jsonBody(CreateCircleInviteInputSchema) },
+    responses: {
+      201: jsonResponse("Invitation created and emailed", CreateCircleInviteResponseSchema),
+      401: errorResponse("Not signed in"),
+      403: errorResponse("Only owners and moderators can invite"),
+      404: errorResponse("Circle not found"),
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: "/circles/invites/{token}/preview",
+    tags: ["circles"],
+    operationId: "previewCircleInvite",
+    request: { params: z.object({ token: z.string() }) },
+    responses: {
+      200: jsonResponse("Circle invitation preview", CircleInvitePreviewSchema),
+      404: errorResponse("Invitation not found"),
+    },
+  });
+
+  registry.registerPath({
+    method: "post",
+    path: "/circles/invites/{token}/accept",
+    tags: ["circles"],
+    operationId: "acceptCircleInvite",
+    request: { params: z.object({ token: z.string() }) },
+    responses: {
+      200: jsonResponse("Circle joined via invitation", AcceptCircleInviteResponseSchema),
+      401: errorResponse("Not signed in"),
+      404: errorResponse("Invitation not found"),
+      409: errorResponse("Invitation already used"),
+      410: errorResponse("Invitation expired"),
     },
   });
 }

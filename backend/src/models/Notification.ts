@@ -8,7 +8,8 @@ export type NotificationType =
   | "comment.replied"
   | "comment.mentioned"
   | "post.approved"
-  | "post.rejected";
+  | "post.rejected"
+  | "circle.invite";
 
 export interface INotification extends Document {
   _id: Types.ObjectId;
@@ -18,6 +19,8 @@ export interface INotification extends Document {
   targetPostId?: Types.ObjectId;
   targetCommentId?: Types.ObjectId;
   targetUserId?: Types.ObjectId;
+  targetCircleId?: Types.ObjectId;
+  targetInviteToken?: string;
   readAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -38,12 +41,15 @@ const notificationSchema = new Schema<INotification>(
         "comment.mentioned",
         "post.approved",
         "post.rejected",
+        "circle.invite",
       ],
       required: true,
     },
     targetPostId: { type: Schema.Types.ObjectId, ref: "Post" },
     targetCommentId: { type: Schema.Types.ObjectId, ref: "Comment" },
     targetUserId: { type: Schema.Types.ObjectId, ref: "User" },
+    targetCircleId: { type: Schema.Types.ObjectId, ref: "Circle" },
+    targetInviteToken: { type: String },
     readAt: { type: Date },
   },
   { timestamps: true },

@@ -13,6 +13,8 @@ interface NotifyInput {
   targetPostId?: string;
   targetCommentId?: string;
   targetUserId?: string;
+  targetCircleId?: string;
+  targetInviteToken?: string;
 }
 
 async function notify(input: NotifyInput): Promise<void> {
@@ -21,7 +23,7 @@ async function notify(input: NotifyInput): Promise<void> {
 }
 
 // This module is the sole subscriber of these domain events — emitters
-// (voteService, engagementService, userService, postService, moderationService)
+// (voteService, engagementService, userService, postService, moderationService, circleService)
 // only ever call emitDomainEvent(), never notify() directly. That seam is what
 // lets notification-service become its own process later without touching them.
 onDomainEvent("user.followed", ({ followerId, followeeId }) => {
@@ -48,10 +50,20 @@ onDomainEvent("post.approved", ({ postId, recipientId }) => {
 onDomainEvent("post.rejected", ({ postId, recipientId }) => {
   void notify({ recipientId, type: "post.rejected", targetPostId: postId });
 });
+onDomainEvent("circle.invite", ({ actorId, recipientId, circleId, inviteToken }) => {
+  void notify({
+    recipientId,
+    actorId,
+    type: "circle.invite",
+    targetCircleId: circleId,
+    targetInviteToken: inviteToken,
+  });
+});
 
 const LIST_POPULATE = [
   { path: "actorId", select: "handle displayName avatarUrl" },
   { path: "targetPostId", select: "slug title" },
+  { path: "targetCircleId", select: "name slug avatarUrl" },
 ];
 
 interface KeysetCursor extends Record<string, unknown> {

@@ -39,7 +39,7 @@ export async function search(q: string, type: SearchType) {
           .limit(limit)
       : [],
     wantCircles
-      ? Circle.find(textQuery, hasText ? score : {})
+      ? Circle.find({ ...textQuery, isPrivate: { $ne: true } }, hasText ? score : {})
           .sort(hasText ? (score as any) : { memberCount: -1 })
           .limit(limit)
       : [],

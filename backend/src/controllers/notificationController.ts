@@ -15,6 +15,7 @@ function ref(value: unknown): PopulatedRef | null {
 function serialize(notification: INotification) {
   const actor = ref(notification.actorId);
   const targetPost = ref(notification.targetPostId);
+  const targetCircle = ref(notification.targetCircleId);
   return {
     id: notification._id.toString(),
     type: notification.type,
@@ -33,6 +34,15 @@ function serialize(notification: INotification) {
           title: (targetPost.title as string) ?? "",
         }
       : null,
+    targetCircle: targetCircle
+      ? {
+          id: String(targetCircle._id),
+          slug: (targetCircle.slug as string) ?? "",
+          name: (targetCircle.name as string) ?? "",
+          avatarUrl: (targetCircle.avatarUrl as string) ?? null,
+        }
+      : null,
+    targetInviteToken: notification.targetInviteToken ?? null,
     readAt: notification.readAt?.toISOString() ?? null,
     createdAt: notification.createdAt.toISOString(),
   };

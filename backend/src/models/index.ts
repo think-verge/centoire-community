@@ -12,6 +12,7 @@ import "./Vote.js";
 import "./Bookmark.js";
 import "./ReputationEvent.js";
 import "./Invite.js";
+import "./CircleInvite.js";
 import "./ModerationPolicy.js";
 import "./Notification.js";
 import "./SourceFollow.js";

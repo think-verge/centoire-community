@@ -38,12 +38,18 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
     creators = [...creators, ...fallback];
   }
 
-  const matchingCircles = await Circle.find({ hashtags: { $in: interests } })
+  const matchingCircles = await Circle.find({
+    hashtags: { $in: interests },
+    isPrivate: { $ne: true },
+  })
     .sort({ memberCount: -1 })
     .limit(12);
   let circles = matchingCircles;
   if (circles.length < 6) {
-    const fallback = await Circle.find({ _id: { $nin: circles.map((c) => c._id) } })
+    const fallback = await Circle.find({
+      _id: { $nin: circles.map((c) => c._id) },
+      isPrivate: { $ne: true },
+    })
       .sort({ memberCount: -1 })
       .limit(12 - circles.length);
     circles = [...circles, ...fallback];

@@ -1,9 +1,14 @@
 import { Types } from "mongoose";
+import { Circle } from "../models/Circle.js";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Follow } from "../models/Follow.js";
 import { Source } from "../models/Source.js";
 import { SourceFollow } from "../models/SourceFollow.js";
 import { Hashtag } from "../models/Hashtag.js";
+import { Bookmark, BookmarkFolder } from "../models/Bookmark.js";
+import { Vote } from "../models/Vote.js";
+import { Notification } from "../models/Notification.js";
+import { CircleInvite } from "../models/CircleInvite.js";
 import { diffHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
@@ -14,6 +19,28 @@ const RESERVED_HANDLES = new Set([
   "admin", "centoire", "settings", "feed", "discover", "circles", "search",
   "onboarding", "login", "signup", "api", "me", "studio", "help", "about",
 ]);
+
+export async function checkHandleAvailability(
+  handle: string,
+  excludeUserId?: string,
+): Promise<{ available: boolean; message: string }> {
+  const normalized = handle.trim().toLowerCase();
+  if (!/^[a-z0-9_]{3,24}$/.test(normalized)) {
+    return { available: false, message: "Handle is not available" };
+  }
+  if (RESERVED_HANDLES.has(normalized)) {
+    return { available: false, message: "Handle is not available" };
+  }
+  const query: Record<string, any> = { handle: normalized };
+  if (excludeUserId) {
+    query._id = { $ne: excludeUserId };
+  }
+  const taken = await User.findOne(query);
+  if (taken) {
+    return { available: false, message: "Handle is not available" };
+  }
+  return { available: true, message: "Handle is available" };
+}
 
 export async function getByHandle(handle: string): Promise<IUser> {
   const user = await User.findOne({ handle: handle.toLowerCase() });
@@ -153,4 +180,48 @@ export async function promoteUser(actorId: string, targetUserId: string, newRole
   user.role = newRole;
   await user.save();
   return user;
+}
+
+export async function deleteAccount(userId: string): Promise<void> {
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, "User not found");
+
+  // Clean up circle memberships and decrement counts
+  const memberships = await CircleMembership.find({ userId });
+  for (const m of memberships) {
+    await Circle.updateOne({ _id: m.circleId }, { $inc: { memberCount: -1 } });
+  }
+  await CircleMembership.deleteMany({ userId });
+
+  // Clean up follows (and update target follower/following counts)
+  const following = await Follow.find({ followerId: userId });
+  for (const f of following) {
+    await User.updateOne({ _id: f.followeeId }, { $inc: { followerCount: -1 } });
+  }
+  const followers = await Follow.find({ followeeId: userId });
+  for (const f of followers) {
+    await User.updateOne({ _id: f.followerId }, { $inc: { followingCount: -1 } });
+  }
+  await Follow.deleteMany({ $or: [{ followerId: userId }, { followeeId: userId }] });
+
+  // Clean up source follows and update source follower counts
+  const sourceFollows = await SourceFollow.find({ followerId: userId });
+  for (const sf of sourceFollows) {
+    await Source.updateOne({ _id: sf.sourceId }, { $inc: { followerCount: -1 } });
+  }
+  await SourceFollow.deleteMany({ followerId: userId });
+
+  // Clean up bookmarks, bookmark folders, votes, notifications
+  await Bookmark.deleteMany({ userId });
+  await BookmarkFolder.deleteMany({ userId });
+  await Vote.deleteMany({ userId });
+  await Notification.deleteMany({
+    $or: [{ recipientId: userId }, { actorId: userId }, { targetUserId: userId }],
+  });
+
+  // Delete circle invites sent to or created by this user
+  await CircleInvite.deleteMany({ $or: [{ email: user.email }, { invitedBy: userId }] });
+
+  // Finally delete the user document from the DB
+  await User.findByIdAndDelete(userId);
 }

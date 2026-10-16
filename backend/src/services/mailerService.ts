@@ -4,6 +4,7 @@ interface Mailer {
   sendVerification(to: string, link: string): Promise<void>;
   sendPasswordReset(to: string, link: string): Promise<void>;
   sendInvite(to: string, link: string, role: string): Promise<void>;
+  sendCircleInvite(to: string, link: string, circleName: string, inviterName: string): Promise<void>;
 }
 
 // ─── HTML shell ───────────────────────────────────────────────────────────────
@@ -145,6 +146,31 @@ function inviteBody(link: string, role: string): string {
     </p>`;
 }
 
+function circleInviteBody(link: string, circleName: string, inviterName: string): string {
+  return `
+    <h1 style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:700;color:#1A1A1A;letter-spacing:-0.3px;">You're invited to join ${circleName}</h1>
+    <p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;color:#555555;line-height:1.6;">
+      <strong>${inviterName}</strong> has invited you to join <strong>${circleName}</strong> on Centoire — an exclusive private circle for curated fashion and culture conversations.
+    </p>
+
+    <!-- Circle info callout box -->
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+      <tr>
+        <td style="background-color:#FFF8F0;border:1px solid #E8D4C0;border-radius:10px;padding:20px 24px;">
+          <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#1A1A1A;">Private Circle Membership:</p>
+          <p style="margin:0;font-family:Arial,sans-serif;font-size:14px;color:#555555;line-height:1.5;">
+            This is an invite-only community. Once you accept, you will be able to access the circle feed, participate in discussions, and connect with members.
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    ${ctaButton("Accept Invitation & Join Circle", link)}
+    <p style="margin:20px 0 0;font-family:Arial,sans-serif;font-size:13px;color:#aaaaaa;line-height:1.5;">
+      This invitation was sent directly to your email address and expires in <strong>14 days</strong>.
+    </p>`;
+}
+
 // ─── Console fallback (dev / no API key) ─────────────────────────────────────
 
 const consoleMailer: Mailer = {
@@ -156,6 +182,9 @@ const consoleMailer: Mailer = {
   },
   async sendInvite(to, link, role) {
     console.log(`[mail] invite (${role}) ${to}: ${link}`);
+  },
+  async sendCircleInvite(to, link, circleName, inviterName) {
+    console.log(`[mail] circle invite to ${to} for "${circleName}" by ${inviterName}: ${link}`);
   },
 };
 
@@ -209,6 +238,18 @@ const resendMailer: Mailer = {
         "You're invited to Centoire",
         "You've been selected as a Creator on Centoire. Accept your invite to get started.",
         inviteBody(link, role),
+      ),
+    );
+  },
+
+  async sendCircleInvite(to, link, circleName, inviterName) {
+    await sendViaResend(
+      to,
+      `You're invited to join ${circleName} on Centoire`,
+      emailShell(
+        `Join ${circleName} on Centoire`,
+        `${inviterName} invited you to join the private circle "${circleName}" on Centoire.`,
+        circleInviteBody(link, circleName, inviterName),
       ),
     );
   },

@@ -9,6 +9,7 @@ const NotificationTypeEnum = z.enum([
   "comment.mentioned",
   "post.approved",
   "post.rejected",
+  "circle.invite",
 ]);
 
 const NotificationActorSchema = z.object({
@@ -24,6 +25,13 @@ const NotificationTargetPostSchema = z.object({
   title: z.string(),
 });
 
+const NotificationTargetCircleSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  avatarUrl: z.string().nullable(),
+});
+
 export const NotificationSchema = registry.register(
   "Notification",
   z.object({
@@ -31,6 +39,8 @@ export const NotificationSchema = registry.register(
     type: NotificationTypeEnum,
     actor: NotificationActorSchema.nullable(),
     targetPost: NotificationTargetPostSchema.nullable(),
+    targetCircle: NotificationTargetCircleSchema.nullable().optional(),
+    targetInviteToken: z.string().nullable().optional(),
     readAt: z.string().nullable(),
     createdAt: z.string(),
   }),

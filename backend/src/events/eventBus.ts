@@ -13,7 +13,8 @@ export type DomainEvent =
   | "comment.replied"
   | "comment.mentioned"
   | "post.approved"
-  | "post.rejected";
+  | "post.rejected"
+  | "circle.invite";
 
 export interface DomainEventPayloads {
   "user.followed": { followerId: string; followeeId: string };
@@ -24,6 +25,12 @@ export interface DomainEventPayloads {
   "comment.mentioned": { actorId: string; recipientId: string; postId: string; commentId: string };
   "post.approved": { postId: string; recipientId: string };
   "post.rejected": { postId: string; recipientId: string };
+  "circle.invite": {
+    actorId: string;
+    recipientId: string;
+    circleId: string;
+    inviteToken: string;
+  };
 }
 
 export function emitDomainEvent<T extends DomainEvent>(event: T, payload: DomainEventPayloads[T]): void {
