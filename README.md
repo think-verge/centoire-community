@@ -68,7 +68,7 @@ With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 ## Production deployment
 
 Production deploys to the shared VM without modifying the existing CAG, Centoire,
-or Opho Digital services. Nginx serves the UI on port `5175` and proxies same-origin
+or Opho Digital services. Nginx serves the UI on port `5175` and proxies same-origins
 API requests to the backend on `127.0.0.1:8002`.
 
 Pushes to `main` run `.github/workflows/deploy-production.yml`. The repository needs
