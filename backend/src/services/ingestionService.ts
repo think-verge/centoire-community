@@ -10,6 +10,7 @@ import { evaluate as evaluatePolicy } from "./policyService.js";
 import { finalizePublish } from "./postService.js";
 import { fireAiProcessing } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
+import { scrapeArticleWithYaml } from "../scrapers/yamlScraper.js";
 
 const parser = new Parser({
   timeout: 15_000,
@@ -116,8 +117,39 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
       if (!link || !title) continue;
 
       const hash = canonicalUrlHash(link);
-      const exists = await Post.exists({ canonicalUrlHash: hash });
-      if (exists) {
+      const existingPost = await Post.findOne({ canonicalUrlHash: hash });
+      if (existingPost) {
+        // If post already has full body text (>500 chars), has inline images, and isn't cut off, skip
+        const isCutOff =
+          !existingPost.contentText ||
+          existingPost.contentText.length < 500 ||
+          existingPost.contentText.includes("Read the full story") ||
+          !existingPost.contentHtml?.includes("<figure");
+
+        if (!isCutOff) {
+          stats.skippedDuplicates += 1;
+          continue;
+        }
+
+        // It was cut off by Cloudflare/paywall earlier: re-scrape with YAML scraper now!
+        const scraped = await scrapeArticleWithYaml(link, existingPost.coverImageUrl);
+        if (scraped && scraped.contentHtml && scraped.contentText.length > 400) {
+          await Post.updateOne(
+            { _id: existingPost._id },
+            {
+              $set: {
+                contentHtml: scraped.contentHtml,
+                contentText: scraped.contentText,
+                excerpt: scraped.excerpt || existingPost.excerpt,
+                readTimeMinutes: readTimeMinutes(scraped.contentText),
+                ...(scraped.coverImageUrl && !existingPost.coverImageUrl ? { coverImageUrl: scraped.coverImageUrl } : {}),
+              },
+            }
+          ).catch(() => {});
+          console.log(
+            `[ingestion] Updated full body for existing post: ${title} (${scraped.contentText.length} chars)`
+          );
+        }
         stats.skippedDuplicates += 1;
         continue;
       }
@@ -161,21 +193,36 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           expiresAt: new Date(Date.now() + POST_TTL_MS),
         });
 
-        // Priority 2: fire-and-forget URL extraction when RSS body was insufficient
-        if (!hasRssBody) {
-          void extractArticleHtml(link).then((contentHtml) => {
-            if (contentHtml) {
-              console.log(`[ingestion] extracted ${contentHtml.length}c from ${link}`);
-              const text = stripHtml(contentHtml);
-              Post.updateOne(
+        // Priority 2: Use YAML-driven scraping for clean body, full text, and duplicate-image removal
+        void scrapeArticleWithYaml(link, coverImageUrl).then(async (scraped) => {
+          if (scraped && scraped.contentHtml) {
+            console.log(
+              `[ingestion] YAML scraped ${scraped.contentText.length}c from ${link} (paywalled: ${scraped.isPaywalled})`
+            );
+            await Post.updateOne(
+              { _id: post._id },
+              {
+                $set: {
+                  contentHtml: scraped.contentHtml,
+                  contentText: scraped.contentText,
+                  excerpt: scraped.excerpt || excerpt,
+                  readTimeMinutes: readTimeMinutes(scraped.contentText),
+                  ...(scraped.coverImageUrl && !post.coverImageUrl ? { coverImageUrl: scraped.coverImageUrl } : {}),
+                },
+              }
+            ).catch(() => {});
+          } else if (!hasRssBody) {
+            // Fallback to generic extractor only if RSS body wasn't already sufficient
+            const fallbackHtml = await extractArticleHtml(link);
+            if (fallbackHtml) {
+              const text = stripHtml(fallbackHtml);
+              await Post.updateOne(
                 { _id: post._id },
-                { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
+                { $set: { contentHtml: fallbackHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } }
               ).catch(() => {});
-            } else {
-              console.warn(`[ingestion] extraction null for ${link}`);
             }
-          });
-        }
+          }
+        });
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
         void fireAiProcessing(post._id.toString(), { origin: "aggregated", url: link });
