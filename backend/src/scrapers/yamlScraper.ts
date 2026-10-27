@@ -42,12 +42,13 @@ export interface ScrapedArticleResult {
 const configCache = new Map<string, ScraperConfig>();
 
 export function loadConfigForUrl(url: string): ScraperConfig {
-  let hostname = "";
-  try {
-    hostname = new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    hostname = "";
-  }
+  const hostname = (() => {
+    try {
+      return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  })();
 
   if (hostname.includes("businessoffashion.com")) {
     const cached = configCache.get("bof");
@@ -238,7 +239,7 @@ export async function scrapeArticleWithYaml(
     $(".paywall, [class*='paywall']").length > 0;
 
   // Extract Body Container using configured selectors
-  let $body: cheerio.Cheerio<any> | null = null;
+  let $body: ReturnType<typeof $> | null = null;
   const bodySelectors = config.selectors.body.split(",");
   for (const sel of bodySelectors) {
     const found = $(sel.trim());
