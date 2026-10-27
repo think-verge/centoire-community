@@ -1,0 +1,20 @@
+name: "Default Scraper Config"
+domain: "*"
+is_paid: false
+
+selectors:
+  title: "h1, meta[property='og:title']"
+  author: "span[class*='author'], div[class*='byline'], a[rel='author']"
+  lead_image: "figure img, meta[property='og:image']"
+  body: "article, main, div[class*='article-body'], div[class*='post-content']"
+  remove:
+    - "header"
+    - "footer"
+    - "nav"
+    - "aside"
+    - "figure[class*='lead']"
+    - "div[class*='ad-container']"
+    - "div[class*='advertisement']"
+    - "div[class*='social']"
+    - "div[class*='related']"
+    - "div[class*='newsletter']"

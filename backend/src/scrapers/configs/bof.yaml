@@ -1,0 +1,28 @@
+name: "Business of Fashion"
+domain: "businessoffashion.com"
+is_paid: true
+
+auth:
+  type: "cookie"
+  env_cookie_key: "BOF_COOKIE"
+  env_user_key: "BOF_EMAIL"
+  env_pass_key: "BOF_PASSWORD"
+  login_url: "https://www.businessoffashion.com/login"
+
+selectors:
+  title: "h1, .article-headline"
+  author: "span[class*='author'], div[class*='byline'], a[class*='author']"
+  lead_image: "figure img, div[class*='hero'] img, .lead-image img"
+  body: "div[class*='article-body'], div[class*='content-body'], div[class*='paywalled-content'], article"
+  remove:
+    - "figure[class*='lead']"
+    - "div[class*='lead-image']"
+    - "div[class*='paywall']"
+    - "div[class*='newsletter']"
+    - "div[class*='ad-container']"
+    - "div[class*='advertisement']"
+    - "div[class*='social-share']"
+    - "div[class*='related']"
+    - "div[class*='recirc']"
+    - ".share-tools"
+    - ".article-tags"
