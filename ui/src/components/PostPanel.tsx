@@ -2,14 +2,16 @@ import { generateHTML } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import StarterKit from "@tiptap/starter-kit";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { AvatarBubble } from "./AppShell";
 import { CommentThread } from "./CommentThread";
 import { PostActions } from "./PostActions";
-import { ReadFullStoryModal } from "./ReadFullStoryModal";
 import { useGetPost } from "../lib/api/generated/posts/posts";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
+import { readPostUrl } from "../lib/readPost";
+import { READER_INSTALL_URL, canInstallReader, useReadPost } from "../lib/readerExtension";
+import { ReaderOverlay } from "./ReaderOverlay";
 
 const EXTENSIONS = [StarterKit, Image, Link];
 
@@ -17,12 +19,18 @@ interface PostPanelProps {
   slug: string;
   /** Compact mode: hides the byline row (PostSidebar shows author instead) */
   compact?: boolean;
+  /**
+   * "Read post" click handler owned by a parent (the drawer, which renders the reader overlay itself).
+   * When omitted, this panel runs its own reader and renders the overlay full-screen.
+   */
+  onRead?: (e: React.MouseEvent) => void;
 }
 
-export function PostPanel({ slug, compact = false }: PostPanelProps) {
+export function PostPanel({ slug, compact = false, onRead }: PostPanelProps) {
   const { data: post, isLoading, error } = useGetPost(slug);
+  const ownReader = useReadPost(post);
+  const reader = onRead ? null : ownReader;
   const commentsRef = useRef<HTMLDivElement>(null);
-  const [readFullStoryOpen, setReadFullStoryOpen] = useState(false);
 
   const html = useMemo(() => {
     if (!post?.content) return null;
@@ -94,9 +102,9 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
             )}
             {post.source && (
               <a
-                href={post.externalUrl ?? post.source.siteUrl}
+                href={post.origin === "aggregated" && post.externalUrl ? readPostUrl(post.id) : post.source.siteUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 font-medium text-ink hover:underline"
               >
                 {post.source.faviconUrl && (
@@ -129,30 +137,48 @@ export function PostPanel({ slug, compact = false }: PostPanelProps) {
         />
       )}
 
-      {(html ?? post.contentHtml) ? (
+      {post.origin === "aggregated" ? (
+        // External article: our own summary page. The article itself lives on the publisher's site.
+        <div className="mt-6 rounded-xl border border-line bg-paper p-6">
+          <p className="text-lg leading-relaxed text-ink-soft">{post.aiSummary || post.excerpt}</p>
+          {post.externalUrl && (
+            <a
+              href={readPostUrl(post.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onRead ?? ownReader.read}
+              className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-crimson px-4 py-2 text-sm font-semibold text-ink-inverse hover:bg-crimson-deep"
+            >
+              Read post <span aria-hidden>↗</span>
+            </a>
+          )}
+          {post.externalUrl && ownReader.extension.status === "unavailable" && READER_INSTALL_URL && canInstallReader() && (
+            <p className="mt-3 text-xs text-ink-faint">
+              Want to read articles without leaving Centoire?{" "}
+              <a href={READER_INSTALL_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-crimson hover:underline">
+                Get the Centoire Reader
+              </a>
+            </p>
+          )}
+        </div>
+      ) : html ? (
         <div
           className="prose-editorial mt-6 text-[17px] leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: (html ?? post.contentHtml)! }}
+          dangerouslySetInnerHTML={{ __html: html }}
         />
-      ) : post.externalUrl ? (
-        <div className="mt-6 rounded-xl border border-line bg-paper p-6">
-          <p className="text-lg leading-relaxed text-ink-soft">{post.excerpt}</p>
-          <button
-            type="button"
-            onClick={() => setReadFullStoryOpen(true)}
-            className="mt-4 inline-block rounded-lg bg-crimson px-4 py-2 text-sm font-semibold text-ink-inverse hover:bg-crimson-deep"
-          >
-            Read the full story
-          </button>
-        </div>
+      ) : post.contentHtml ? (
+        <div
+          className="prose-editorial mt-6 text-[17px] leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+        />
       ) : null}
 
-      {readFullStoryOpen && post.externalUrl && (
-        <ReadFullStoryModal
-          slug={slug}
-          title={post.title}
-          externalUrl={post.externalUrl}
-          onClose={() => setReadFullStoryOpen(false)}
+      {reader?.open && reader.extension.extensionId && post.externalUrl && (
+        <ReaderOverlay
+          post={{ id: post.id, title: post.title, externalUrl: post.externalUrl }}
+          extensionId={reader.extension.extensionId}
+          onClose={reader.close}
+          className="fixed inset-0 z-[100]"
         />
       )}
 
