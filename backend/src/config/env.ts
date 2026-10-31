@@ -31,6 +31,13 @@ export const env = {
   AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
   AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
+  // Platform (gateway + NATS). Unset NATS_URL = standalone monolith, as before.
+  NATS_URL: process.env.NATS_URL ?? "",
+  // Shared by platform services calling core's /internal/sync feed (distinct from AI_INTERNAL_SECRET).
+  INTERNAL_SECRET: process.env.INTERNAL_SECRET ?? "dev-internal-secret",
+  ANNOUNCE_ADDRESS: process.env.ANNOUNCE_ADDRESS ?? "",
+  // true = the notifications service owns /notifications and the event listeners.
+  NOTIFICATIONS_EXTERNAL: process.env.NOTIFICATIONS_EXTERNAL === "true",
 };
 
 export const isProduction = env.NODE_ENV === "production";

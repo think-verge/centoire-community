@@ -5,6 +5,7 @@ import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtag
 import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
 import { useFollowUser, useUnfollowUser } from "../../lib/api/generated/users/users";
 import { apiClient } from "../../lib/api/http";
+import { readPostUrl } from "../../lib/readPost";
 import { formatCount } from "../../lib/hashtag";
 
 
@@ -179,7 +180,7 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
                 return (
                   <li key={post.id}>
                     <Link
-                      to={post.externalUrl || `/p/${post.slug}`}
+                      to={post.externalUrl ? readPostUrl(post.id) : `/p/${post.slug}`}
                       target={post.externalUrl ? "_blank" : undefined}
                       rel={post.externalUrl ? "noopener noreferrer" : undefined}
                       className="group flex items-start gap-3"

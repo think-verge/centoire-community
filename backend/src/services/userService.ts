@@ -14,6 +14,7 @@ import * as hashtagService from "./hashtagService.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 import { emitDomainEvent } from "../events/eventBus.js";
+import { env } from "../config/env.js";
 
 const RESERVED_HANDLES = new Set([
   "admin", "centoire", "settings", "feed", "discover", "circles", "search",
@@ -215,13 +216,17 @@ export async function deleteAccount(userId: string): Promise<void> {
   await Bookmark.deleteMany({ userId });
   await BookmarkFolder.deleteMany({ userId });
   await Vote.deleteMany({ userId });
-  await Notification.deleteMany({
-    $or: [{ recipientId: userId }, { actorId: userId }, { targetUserId: userId }],
-  });
+  if (!env.NOTIFICATIONS_EXTERNAL) {
+    await Notification.deleteMany({
+      $or: [{ recipientId: userId }, { actorId: userId }, { targetUserId: userId }],
+    });
+  }
 
   // Delete circle invites sent to or created by this user
   await CircleInvite.deleteMany({ $or: [{ email: user.email }, { invitedBy: userId }] });
 
   // Finally delete the user document from the DB
   await User.findByIdAndDelete(userId);
+  // Other services own their own data about this user and clean it up on this event.
+  emitDomainEvent("user.deleted", { userId });
 }

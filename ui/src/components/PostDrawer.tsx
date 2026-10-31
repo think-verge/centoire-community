@@ -1,13 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useGetPost } from "../lib/api/generated/posts/posts";
 import { PostPanel } from "./PostPanel";
 import { PostSidebar } from "./PostSidebar";
-import { ReadFullStoryModal } from "./ReadFullStoryModal";
+import { readPostUrl } from "../lib/readPost";
+import { useReadPost } from "../lib/readerExtension";
+import { ReaderOverlay } from "./ReaderOverlay";
 
 interface PostDrawerProps {
   slug: string;
   onClose: () => void;
-  /** Custom header action buttons. When omitted the default "Full article ↗" button is shown for external posts. */
+  /** Custom header action buttons. When omitted the default "Read post ↗" link is shown for external posts. */
   headerActions?: ReactNode;
 }
 
@@ -17,7 +19,7 @@ export function PostDrawer({
   headerActions,
 }: PostDrawerProps) {
   const { data: post } = useGetPost(slug);
-  const [readFullStoryOpen, setReadFullStoryOpen] = useState(false);
+  const reader = useReadPost(post);
 
   // Keyboard dismiss
   useEffect(() => {
@@ -36,18 +38,18 @@ export function PostDrawer({
     };
   }, []);
 
-  const externalUrl = post?.externalUrl;
-  const needsFullStory = !!externalUrl && !post?.contentHtml;
-
-  const defaultHeaderActions = needsFullStory ? (
-    <button
-      type="button"
-      onClick={() => setReadFullStoryOpen(true)}
-      className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
-    >
-      Full article ↗
-    </button>
-  ) : null;
+  const defaultHeaderActions =
+    post?.origin === "aggregated" && post.externalUrl ? (
+      <a
+        href={readPostUrl(post.id)}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={reader.read}
+        className="rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-ink-soft hover:border-ink-soft hover:text-ink"
+      >
+        Read post ↗
+      </a>
+    ) : null;
 
   return (
     <div className="fixed inset-0 z-[100] flex">
@@ -89,7 +91,7 @@ export function PostDrawer({
         {/* Body — two-column on desktop */}
         <div className="flex flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-8 sm:px-10">
-            <PostPanel slug={slug} compact />
+            <PostPanel slug={slug} compact onRead={reader.read} />
           </div>
 
           {post && (
@@ -98,16 +100,16 @@ export function PostDrawer({
             </div>
           )}
         </div>
+
+        {reader.open && reader.extension.extensionId && post?.externalUrl && (
+          <ReaderOverlay
+            post={{ id: post.id, title: post.title, externalUrl: post.externalUrl }}
+            extensionId={reader.extension.extensionId}
+            onClose={reader.close}
+          />
+        )}
       </div>
 
-      {readFullStoryOpen && post && externalUrl && (
-        <ReadFullStoryModal
-          slug={slug}
-          title={post.title}
-          externalUrl={externalUrl}
-          onClose={() => setReadFullStoryOpen(false)}
-        />
-      )}
     </div>
   );
 }

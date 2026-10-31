@@ -12,7 +12,6 @@ import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
-import { extractArticleHtml, stripHtml } from "./ingestionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 import { MAX_POST_HASHTAGS, diffHashtags, normalizeHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
@@ -247,6 +246,10 @@ export async function getBySlug(
   return post;
 }
 
+/**
+ * Deprecated: external posts are no longer rendered in-app (they link out via GET /r/:id),
+ * so this never fetches or serves a scraped article. Kept so the generated client still resolves.
+ */
 export async function getFullContent(
   slug: string,
   viewerId?: string,
@@ -254,23 +257,7 @@ export async function getFullContent(
 ): Promise<{ contentHtml: string | null; source: string }> {
   const post = await getBySlug(slug, viewerId, viewerRole);
   const hostname = post.externalUrl ? new URL(post.externalUrl).hostname.replace(/^www\./, "") : "";
-
-  if (post.contentHtml) {
-    return { contentHtml: post.contentHtml, source: hostname };
-  }
-  if (!post.externalUrl) {
-    return { contentHtml: null, source: hostname };
-  }
-
-  const contentHtml = await extractArticleHtml(post.externalUrl);
-  if (contentHtml) {
-    const contentText = stripHtml(contentHtml);
-    await Post.updateOne(
-      { _id: post._id },
-      { $set: { contentHtml, contentText, readTimeMinutes: readTimeMinutes(contentText) } },
-    );
-  }
-  return { contentHtml, source: hostname };
+  return { contentHtml: post.origin === "aggregated" ? null : (post.contentHtml ?? null), source: hostname };
 }
 
 export async function incrementViews(postId: Types.ObjectId): Promise<void> {
