@@ -1,6 +1,5 @@
 import * as cheerio from "cheerio";
 import Parser from "rss-parser";
-import { extract } from "@extractus/article-extractor";
 import { Post } from "../models/Post.js";
 import { Source, type ISource } from "../models/Source.js";
 import { canonicalUrlHash } from "../utils/url-hash.js";
@@ -14,9 +13,6 @@ import { inferCountry } from "./regionService.js";
 const parser = new Parser({
   timeout: 15_000,
   headers: { "User-Agent": "CentoireBot/0.1 (+https://centoire.app)" },
-  customFields: {
-    item: [["content:encoded", "content:encoded"]],
-  },
 });
 
 // Many real-world RSS feeds contain bare & instead of &amp; which breaks the XML parser.
@@ -41,24 +37,7 @@ async function fetchFeedXml(url: string): Promise<string> {
 const OG_IMAGE_TIMEOUT_MS = 3_000;
 const MAX_ITEMS_PER_FETCH = 25;
 
-const ARTICLE_EXTRACT_TIMEOUT_MS = 10_000;
 const POST_TTL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
-
-export async function extractArticleHtml(url: string): Promise<string | null> {
-  try {
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), ARTICLE_EXTRACT_TIMEOUT_MS);
-    try {
-      const fetcher = (u: string) => fetch(u, { signal: ac.signal });
-      const article = await extract(url, {}, fetcher);
-      return (article as { content?: string } | null)?.content ?? null;
-    } finally {
-      clearTimeout(timer);
-    }
-  } catch {
-    return null;
-  }
-}
 
 export interface FetchStats {
   sourceId: string;
@@ -122,12 +101,8 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
         continue;
       }
 
-      // Priority 1: use RSS body (content:encoded or content) if substantial (>500 chars)
-      // Many paywalled sites still publish full text in their RSS feed.
-      const rssBodyRaw = ((item as unknown as Record<string, unknown>)["content:encoded"] as string | undefined) ?? item.content ?? "";
-      const rssBodyStripped = stripHtml(String(rssBodyRaw));
-      const hasRssBody = rssBodyStripped.length > 500;
-
+      // Metadata only: we never store the article body. Readers follow "Read post" to the
+      // publisher's site (GET /r/:id); the AI agent fetches the page itself just to summarise it.
       const rawSummary = item.contentSnippet ?? item.content ?? item.summary ?? "";
       const excerpt = stripHtml(String(rawSummary)).slice(0, 300);
       const enclosureUrl = item.enclosure?.url;
@@ -146,9 +121,7 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           title: title.slice(0, 200),
           slug: slugifyWithId(title),
           excerpt,
-          // Use RSS body immediately if available; URL extraction fills in later otherwise
-          contentHtml: hasRssBody ? rssBodyRaw : undefined,
-          contentText: hasRssBody ? rssBodyStripped : excerpt,
+          contentText: excerpt,
           coverImageUrl,
           externalUrl: link,
           canonicalUrlHash: hash,
@@ -157,25 +130,9 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           subcategory: source.subcategory,
           country: country ?? undefined,
           publishedAt,
-          readTimeMinutes: readTimeMinutes(hasRssBody ? rssBodyStripped : excerpt),
+          readTimeMinutes: readTimeMinutes(excerpt),
           expiresAt: new Date(Date.now() + POST_TTL_MS),
         });
-
-        // Priority 2: fire-and-forget URL extraction when RSS body was insufficient
-        if (!hasRssBody) {
-          void extractArticleHtml(link).then((contentHtml) => {
-            if (contentHtml) {
-              console.log(`[ingestion] extracted ${contentHtml.length}c from ${link}`);
-              const text = stripHtml(contentHtml);
-              Post.updateOne(
-                { _id: post._id },
-                { $set: { contentHtml, contentText: text, readTimeMinutes: readTimeMinutes(text) } },
-              ).catch(() => {});
-            } else {
-              console.warn(`[ingestion] extraction null for ${link}`);
-            }
-          });
-        }
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
         void fireAiProcessing(post._id.toString(), { origin: "aggregated", url: link });

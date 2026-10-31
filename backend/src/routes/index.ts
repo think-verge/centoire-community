@@ -17,6 +17,7 @@ import { moderationRouter } from "./moderationRoutes.js";
 import { notificationRouter } from "./notificationRoutes.js";
 import { onboardingRouter } from "./onboardingRoutes.js";
 import { postRouter } from "./postRoutes.js";
+import { redirectRouter } from "./redirectRoutes.js";
 import { searchRouter } from "./searchRoutes.js";
 import { sourceRouter } from "./sourceRoutes.js";
 import { adminHashtagRouter, hashtagRouter } from "./hashtagRoutes.js";
@@ -49,6 +50,7 @@ if (!env.NOTIFICATIONS_EXTERNAL) {
   apiRouter.use("/notifications", notificationRouter);
   registerNotificationListeners();
 }
+apiRouter.use("/r", redirectRouter);
 apiRouter.use("/search", searchRouter);
 apiRouter.use("/agent", agentRouter);
 apiRouter.use("/internal/sync", platformSyncRouter);
