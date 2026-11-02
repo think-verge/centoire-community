@@ -78,7 +78,7 @@ jobs:
           cache-dependency-path: ${{ matrix.project == 'platform' && 'package-lock.json' || format('{0}/package-lock.json', matrix.project) }}
 
       - name: Set up Python
-        if: matrix.project == 'ai-agent'
+        if: matrix.project == 'ai-agent' || matrix.project == 'platform'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -121,6 +121,13 @@ jobs:
           cd ai-agent
           python -m compileall -q app
           python -c "import app.main"
+
+      - name: Recsys syntax / import check
+        if: matrix.project == 'platform'
+        run: |
+          pip install -r services/recsys/requirements.txt
+          python -m compileall -q services/recsys/app
+          python -c "import sys; sys.path.insert(0, 'services/recsys'); import app.main"
 
       - name: Build
         if: matrix.project == 'backend' || matrix.project == 'ui'

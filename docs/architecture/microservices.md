@@ -7,8 +7,8 @@ the gateway is the central piece.
 ```
 UI ──► gateway :8100 (public)  ──► core :8000        (monolith, fallback for /api/v1/* and /uploads)
         gateway :8101 (internal)├─► notifications :8111   /api/v1/notifications   db: centoire_notifications
-        ▲ routes learned from   └─► search :8112          /api/v1/search          db: centoire_search
-        │ NATS `gateway.services`
+        ▲ routes learned from   ├─► search :8112          /api/v1/search          db: centoire_search
+        │ NATS `gateway.services`└─► recsys :8004          /api/v1/feed/for-you,   db: centoire_recsys
 NATS+JetStream :4222  ◄── domain events (stream CENTOIRE_EVENTS, subjects events.<name>)
 ```
 
@@ -20,10 +20,11 @@ NATS+JetStream :4222  ◄── domain events (stream CENTOIRE_EVENTS, subjects 
 | `services/gateway` | Route table from announcements; public + internal listeners; longest-prefix wins; reserved prefixes fail closed (503) |
 | `services/notifications` | Owns notifications; consumes events durably; stores actor/post/circle snapshots (no cross-DB populate) |
 | `services/search` | Read model of posts/people/circles/hashtags, fed by core's `/internal/sync/*` change feed (updatedAt keyset) + id reconciliation for deletes |
+| `services/recsys` | Python FastAPI recommendation engine (`/api/v1/feed/for-you`, `/api/v1/suggestions`); see [ADR 003](adr-003-recommendation-engine.md) |
 | `backend/` | The monolith, now a registered service (`core`). Standalone when `NATS_URL` is unset |
 
 ## Run
-`make platform-install` once, then `./centmux` (or `make nats gateway core notifications search ui-platform`).
+`make platform-install` once, then `./centmux` (or `make nats gateway core notifications search recsys ui-platform`).
 `make backend` / `make ui` still run the monolith standalone (notifications served in-process).
 
 ## Rules of the road

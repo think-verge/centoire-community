@@ -7,7 +7,7 @@ const cfg = loadServiceConfig("gateway", { port: 8100 });
 const privatePort = Number(readEnv("gateway", "PRIVATE_PORT", "8101"));
 
 // Prefixes owned by extracted services; they 503 when their owner is down rather than falling back to core.
-const reserved = (readEnv("gateway", "RESERVED", "/api/v1/notifications,/api/v1/search")!)
+const reserved = (readEnv("gateway", "RESERVED", "/api/v1/notifications,/api/v1/search,/api/v1/feed/for-you,/api/v1/suggestions")!)
   .split(",")
   .map((p) => p.trim())
   .filter(Boolean);

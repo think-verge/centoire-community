@@ -27,6 +27,8 @@ windows:
           - make notifications
         - search:
           - make search
+        - recsys:
+          - make recsys
 
   - ui:
       panes:

@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 AGENT_VENV := ai-agent/.venv
 
-.PHONY: ui ui-platform backend core agent agent-install install platform-install nats gateway notifications search openapi seed help
+.PHONY: ui ui-platform backend core agent agent-install install platform-install nats gateway notifications search recsys openapi seed help
 
 ## Start the React dev server (port 5173)
 ui:
@@ -12,7 +12,7 @@ backend:
 	cd backend && npm run dev
 
 # ---- Platform mode (gateway + NATS + extracted services) --------------------------------
-# Ports: gateway 8100 (public) / 8101 (internal), core 8000, notifications 8111, search 8112, NATS 4222.
+# Ports: gateway 8100 (public) / 8101 (internal), core 8000, notifications 8111, search 8112, recsys 8004, NATS 4222.
 export NATS_URL ?= nats://127.0.0.1:4222
 
 ## Install + build workspace packages (@centoire/*) and service deps
@@ -36,6 +36,8 @@ notifications:
 	cd services/notifications && npm run dev
 search:
 	cd services/search && npm run dev
+recsys:
+	python -m uvicorn app.main:app --port 8004 --reload --app-dir services/recsys
 
 ## React dev server proxied through the gateway instead of straight to the monolith
 ui-platform:
@@ -48,30 +50,31 @@ agent-install:
 
 ## Start the FastAPI AI agent with hot-reload (port 8001)
 agent: agent-install
-	cd ai-agent && . .venv/bin/activate && uvicorn app.main:app --reload --port 8001
+	$(AGENT_VENV)/bin/uvicorn app.main:app --port 8001 --reload --app-dir ai-agent
 
-## Install all dependencies (Node + Python)
-install: agent-install
-	cd backend && npm install
-	cd ui && npm install
+## Run all linters and tests (Node packages + services)
+test:
+	npm test
+	npm run typecheck
 
-## Regenerate OpenAPI spec + frontend client (run after backend schema changes)
+## Regenerate OpenAPI spec and typed API client
 openapi:
 	cd backend && npm run openapi
 	cd ui && npm run api:refresh
 
-## Seed the database with initial data
+## Seed local database (monolith mode)
 seed:
 	cd backend && npm run seed
 
+## Help
 help:
-	@echo ""
-	@echo "  make ui       — React dev server     (localhost:5173)"
-	@echo "  make backend  — Express API server   (localhost:8000)"
-	@echo "  make agent    — FastAPI AI agent     (localhost:8001)"
-	@echo "  make install  — Install all deps"
-	@echo "  -- platform mode: make nats gateway core notifications search ui-platform --"
-	@echo "  make platform-install — Install workspace packages + services"
-	@echo "  make openapi  — Regenerate API client"
-	@echo "  make seed     — Seed the database"
-	@echo ""
+	@echo "Centoire Community make targets:"
+	@echo "  make platform-install  Install & build monorepo packages"
+	@echo "  make nats              Start NATS server on port 4222"
+	@echo "  make gateway           Start API gateway on port 8100"
+	@echo "  make core              Start core backend on port 8000"
+	@echo "  make notifications     Start notifications service on port 8111"
+	@echo "  make search            Start search service on port 8112"
+	@echo "  make recsys            Start recommendation service on port 8004"
+	@echo "  make ui-platform       Start UI dev server proxied via gateway"
+	@echo "  make agent             Start FastAPI AI agent on port 8001"
