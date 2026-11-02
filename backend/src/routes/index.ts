@@ -11,16 +11,20 @@ import {
 } from "./engagementRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
 import { internalRouter } from "./internalRoutes.js";
+import { platformSyncRouter } from "./platformSyncRoutes.js";
 import { inviteRouter } from "./inviteRoutes.js";
 import { moderationRouter } from "./moderationRoutes.js";
 import { notificationRouter } from "./notificationRoutes.js";
 import { onboardingRouter } from "./onboardingRoutes.js";
 import { postRouter } from "./postRoutes.js";
+import { redirectRouter } from "./redirectRoutes.js";
 import { searchRouter } from "./searchRoutes.js";
 import { sourceRouter } from "./sourceRoutes.js";
 import { adminHashtagRouter, hashtagRouter } from "./hashtagRoutes.js";
 import { uploadRouter } from "./uploadRoutes.js";
 import { userRouter } from "./userRoutes.js";
+import { env } from "../config/env.js";
+import { registerNotificationListeners } from "../services/notificationService.js";
 
 export const apiRouter = Router();
 
@@ -42,9 +46,14 @@ apiRouter.use("/admin/posts", adminPostRouter);
 apiRouter.use("/admin/invites", inviteRouter);
 apiRouter.use("/admin/hashtags", adminHashtagRouter);
 apiRouter.use("/moderation", moderationRouter);
-apiRouter.use("/notifications", notificationRouter);
+if (!env.NOTIFICATIONS_EXTERNAL) {
+  apiRouter.use("/notifications", notificationRouter);
+  registerNotificationListeners();
+}
+apiRouter.use("/r", redirectRouter);
 apiRouter.use("/search", searchRouter);
 apiRouter.use("/agent", agentRouter);
+apiRouter.use("/internal/sync", platformSyncRouter);
 apiRouter.use("/internal", internalRouter);
 
 apiRouter.get("/health", (_req, res) => {

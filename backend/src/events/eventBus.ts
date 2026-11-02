@@ -1,40 +1,32 @@
 import { EventEmitter } from "node:events";
+import { createBus, type Bus } from "@centoire/bahamut";
+import type { DomainEvent, DomainEventPayloads } from "@centoire/contracts";
+import { enrichEvent } from "./enrich.js";
 
-// In-process today; swapping this for a real broker (Redis pub/sub, RabbitMQ,
-// NATS) when notification-service becomes its own process is the only change
-// needed — emitters/subscribers keep the same emit/on calls and payload shapes.
+export type { DomainEvent, DomainEventPayloads };
+
+// Emitters/subscribers keep the same emit/on calls and payload shapes. Events always
+// go to in-process listeners; when NATS is configured they are also published
+// (enriched with snapshots) to the shared JetStream stream for other services.
 export const eventBus = new EventEmitter();
 
-export type DomainEvent =
-  | "user.followed"
-  | "post.upvoted"
-  | "comment.upvoted"
-  | "comment.created"
-  | "comment.replied"
-  | "comment.mentioned"
-  | "post.approved"
-  | "post.rejected"
-  | "circle.invite";
+let remote: Bus<DomainEventPayloads> | undefined;
 
-export interface DomainEventPayloads {
-  "user.followed": { followerId: string; followeeId: string };
-  "post.upvoted": { actorId: string; recipientId: string; postId: string };
-  "comment.upvoted": { actorId: string; recipientId: string; commentId: string; postId: string };
-  "comment.created": { actorId: string; recipientId: string; postId: string; commentId: string };
-  "comment.replied": { actorId: string; recipientId: string; postId: string; commentId: string };
-  "comment.mentioned": { actorId: string; recipientId: string; postId: string; commentId: string };
-  "post.approved": { postId: string; recipientId: string };
-  "post.rejected": { postId: string; recipientId: string };
-  "circle.invite": {
-    actorId: string;
-    recipientId: string;
-    circleId: string;
-    inviteToken: string;
-  };
+export async function initEventBus(service: string, natsUrl?: string): Promise<Bus<DomainEventPayloads> | undefined> {
+  if (!natsUrl) return undefined;
+  remote = await createBus<DomainEventPayloads>({ service, url: natsUrl });
+  return remote;
 }
 
 export function emitDomainEvent<T extends DomainEvent>(event: T, payload: DomainEventPayloads[T]): void {
   eventBus.emit(event, payload);
+  const bus = remote;
+  if (!bus) return;
+  enrichEvent(event, payload)
+    .then((enriched) => bus.emit(event, enriched))
+    .catch((err) => {
+      console.error(`[events] failed to publish ${event}`, err);
+    });
 }
 
 export function onDomainEvent<T extends DomainEvent>(

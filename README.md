@@ -52,6 +52,85 @@ backend console (`[mail] …`) — click them from there in development.
 With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 `backend/uploads/` and are served at `/uploads` (dev fallback).
 
+## Platform mode (gateway + services)
+
+Besides the single-process monolith above, the backend can run as an Acuvity-style set of
+services behind a gateway. See [`docs/architecture/microservices.md`](docs/architecture/microservices.md)
+for the design. Everything below is in addition to `cd backend && npm run dev`, which still works on its own.
+
+| Process | Dir | Port | Needs |
+|---|---|---|---|
+| NATS (JetStream) | — | 4222 | `nats-server` binary |
+| gateway | `services/gateway` | 8100 public / 8101 internal | NATS |
+| core (the monolith) | `backend` | 8000 | NATS, `MONGODB_URI`, `NOTIFICATIONS_EXTERNAL=true` |
+| notifications | `services/notifications` | 8111 | NATS, `MONGODB_URI` |
+| search | `services/search` | 8112 | NATS, `MONGODB_URI` |
+| UI | `ui` | 5173 | `API_PROXY_TARGET=http://localhost:8100` |
+| ai-agent (optional) | `ai-agent` | 8001 | Python 3.12 |
+
+First time: `npm install` at the repo root (installs and builds the shared `@centoire/*` packages),
+plus `npm install` in `backend/` and `ui/`. Services read `MONGODB_URI` / `JWT_SECRET` from `backend/.env`
+if they have no `.env` of their own.
+
+### Starting everything
+
+**macOS / Linux with tmux + tmuxinator (what `centmux` uses today)**
+
+```bash
+make platform-install     # once
+./centmux                 # one tmux window per process (iTerm: control mode); ./centmux kill to stop
+```
+
+`make nats gateway core notifications search ui-platform` start the same processes one at a time
+(`make` is not available on stock Windows).
+
+**Without tmux/iTerm, or on Windows (works today, one terminal per row)**
+
+Start them in this order. Replace the env syntax for your shell
+(bash/zsh: `NATS_URL=… cmd`, PowerShell: `$env:NATS_URL="…"; cmd`, cmd.exe: `set NATS_URL=…&& cmd`).
+
+```text
+1. nats-server -js                                   # install: brew install nats-server | scoop install nats-server | choco install nats-server
+2. cd services/gateway        && npm run dev         # NATS_URL=nats://127.0.0.1:4222
+3. cd backend                 && npm run dev         # NATS_URL=nats://127.0.0.1:4222  NOTIFICATIONS_EXTERNAL=true
+4. cd services/notifications  && npm run dev         # NATS_URL=nats://127.0.0.1:4222
+5. cd services/search         && npm run dev         # NATS_URL=nats://127.0.0.1:4222
+6. cd ui                      && npm run dev         # API_PROXY_TARGET=http://localhost:8100
+```
+
+Open http://localhost:5173. On Windows, WSL2 also works: install tmux + tmuxinator inside WSL and use `./centmux`.
+
+### Plan: cross-platform runner (not implemented yet)
+
+Goal: one command that works on Windows, macOS and Linux with only Node installed, no tmux, iTerm, `make` or bash.
+
+Why `centmux` doesn't port: it is a bash script around tmux + tmuxinator, the `Makefile` needs GNU make, inline
+`KEY=value cmd` env syntax is POSIX-only, and the AI agent's venv activation differs on Windows.
+
+1. **`scripts/dev.mjs` (Node, no shell assumptions).** A service table (name, cwd, command, env, ready-check)
+   is the single source of truth. It spawns each process with `child_process` using the `env` option (no inline
+   `KEY=value`), prefixes and colours each line of output by service name, waits for a TCP/HTTP ready-check before
+   starting dependents (NATS, then gateway, then the rest), restarts nothing silently, and on Ctrl+C kills whole
+   process trees (`taskkill /T /F` on Windows, process groups elsewhere).
+2. **Root npm scripts** that call it: `npm run dev:platform` (everything), `npm run dev:standalone`
+   (monolith + UI only), and flags `--only gateway,core` / `--skip agent` for partial stacks.
+3. **Make `centmux` and `make` thin wrappers** over the same service table so tmux users keep their layout and
+   there is no second place to edit ports or env.
+4. **NATS without a manual install.** `scripts/ensure-nats.mjs` uses `nats-server` from `PATH` if present,
+   otherwise downloads a pinned release for the current OS/arch into `.data/bin/` and verifies its checksum.
+   A `docker-compose.yml` with just NATS is offered as the alternative.
+5. **Optional AI agent.** A small helper creates `ai-agent/.venv` and picks `Scripts\python.exe` vs `bin/python`;
+   if Python is missing the runner skips the agent with a warning instead of failing.
+6. **`npm run doctor` preflight.** Checks Node >= 22, that ports 4222/5173/8000/8100/8101/8111/8112 are free,
+   that `backend/.env` has `MONGODB_URI`, and that `npm install` has been run, with a fix hint per failure.
+7. **Housekeeping.** `.gitattributes` forcing LF for shell scripts, quoting for paths with spaces, and
+   `scripts/` kept dependency-free so it runs before `npm install` finishes.
+8. **CI smoke test** on `windows-latest` and `ubuntu-latest`: start the platform with a `--smoke` flag, wait for the
+   gateway health check and one proxied request, then exit non-zero on any failure.
+
+Done when a fresh Windows machine with Node, a `MONGODB_URI`, and no tmux/make/bash can run
+`npm install && npm run dev:platform` and open the app on http://localhost:5173.
+
 ## Scripts
 
 | Where | Command | What |

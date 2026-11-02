@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth-context";
 import { PostActions } from "./PostActions";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 import { customInstance } from "../lib/api/http";
+import { readPostUrl } from "../lib/readPost";
 
 export function PostCard({
   post,
@@ -28,7 +29,7 @@ export function PostCard({
     if (onOpenPost) {
       onOpenPost(post);
     } else if (external) {
-      window.open(post.externalUrl!, "_blank", "noopener");
+      window.open(readPostUrl(post.id), "_blank", "noopener");
     } else {
       navigate(`/p/${post.slug}`);
     }
@@ -237,7 +238,7 @@ export function PostCard({
   const hasAvatar = Boolean(post.author?.avatarUrl && !avatarFailed);
 
   const sourceName = post.source?.name || (post.origin === "aggregated" ? "Open Web" : "Centoire");
-  const sourceUrl = post.externalUrl || post.source?.siteUrl;
+  const sourceUrl = post.source?.siteUrl;
   const publishedDateStr = post.publishedAt
     ? new Date(post.publishedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "Recently";
@@ -370,7 +371,7 @@ export function PostCard({
                           This post was openly sourced from {sourceName}.
                         </p>
                         <p className="font-ui text-[11px] text-[#737373] leading-relaxed mt-2">
-                          Scraped on {publishedDateStr}. Indexed by Centoire to help the fashion community discover and explore conversations from across the web.
+                          Added on {publishedDateStr}. Indexed by Centoire to help the fashion community discover and explore conversations from across the web.
                         </p>
                         <div className="border-t border-[#EAEAEA] my-2.5"></div>
                         <div className="font-ui font-semibold flex justify-between items-center text-[10px]">

@@ -2,16 +2,36 @@ name: centoire
 root: <%= ENV["PWD"] %>
 startup_window: control
 
+# Platform mode: NATS bus -> gateway -> core + extracted services. The UI talks to the
+# gateway (:8100). `make backend` / `make ui` still run the monolith standalone.
 windows:
+  - nats:
+      panes:
+        - nats:
+          - make nats
+
+  - gateway:
+      panes:
+        - gateway:
+          - make gateway
+
   - backend:
       panes:
-        - backend:
-          - make backend
+        - core:
+          - make core
+
+  - services:
+      layout: even-horizontal
+      panes:
+        - notifications:
+          - make notifications
+        - search:
+          - make search
 
   - ui:
       panes:
         - ui:
-          - make ui
+          - make ui-platform
 
   - agent:
       panes:

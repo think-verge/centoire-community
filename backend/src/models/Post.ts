@@ -30,6 +30,10 @@ export interface IPost extends Document {
   commentCount: number;
   bookmarkCount: number;
   viewCount: number;
+  /** "Read post" clicks out to the original article, counted by GET /r/:id. */
+  clickCount: number;
+  /** Subset of clickCount opened inside Centoire through the Reader extension (the rest opened a new tab). */
+  readerOpenCount: number;
   readTimeMinutes: number;
   publishedAt?: Date;
   reviewedBy?: Types.ObjectId;
@@ -77,6 +81,8 @@ const postSchema = new Schema<IPost>(
     commentCount: { type: Number, default: 0 },
     bookmarkCount: { type: Number, default: 0 },
     viewCount: { type: Number, default: 0 },
+    clickCount: { type: Number, default: 0 },
+    readerOpenCount: { type: Number, default: 0 },
     readTimeMinutes: { type: Number, default: 1 },
     publishedAt: { type: Date },
     reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },

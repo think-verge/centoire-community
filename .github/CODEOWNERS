@@ -1,2 +1,8 @@
-# All files in every service (ui/, backend/, ai-agent/, .github/) require review from both owners
+# Code owners for every file (backend/, ui/, ai-agent/, extension/, packages/, services/, .github/).
+#
+# A pull request needs approval from ONE of the owners below (any single owner is enough).
+# GitHub never counts the author's own approval, so a PR opened by one owner is approved by the other.
+#
+# The number of required approvals and who may merge without a review are repository settings
+# (Settings -> Branches / Rules), not part of this file.
 *   @devyansh3 @devyansh-thinkverge

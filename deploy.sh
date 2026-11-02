@@ -19,6 +19,12 @@ if [ ! -f "$FRONTEND_ENV" ]; then
   exit 1
 fi
 
+echo "==> Installing shared workspace packages (@centoire/*, built by postinstall)"
+# backend depends on ../packages/* via file: links, so they must exist and be built first.
+cd "$APP_DIR"
+rm -rf node_modules packages/*/node_modules packages/*/dist
+npm ci
+
 echo "==> Installing backend dependencies"
 cd "$BACKEND_DIR"
 rm -rf node_modules

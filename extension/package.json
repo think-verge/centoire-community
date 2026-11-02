@@ -1,0 +1,23 @@
+{
+  "name": "@centoire/reader-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs --variant=prod",
+    "build:dev": "node scripts/build.mjs --variant=dev",
+    "zip": "npm run build && cd dist/prod && zip -r ../centoire-reader.zip .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@centoire/contracts": "*"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/node": "^22.10.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

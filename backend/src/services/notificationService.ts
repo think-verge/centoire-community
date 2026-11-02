@@ -26,39 +26,42 @@ async function notify(input: NotifyInput): Promise<void> {
 // (voteService, engagementService, userService, postService, moderationService, circleService)
 // only ever call emitDomainEvent(), never notify() directly. That seam is what
 // lets notification-service become its own process later without touching them.
-onDomainEvent("user.followed", ({ followerId, followeeId }) => {
-  void notify({ recipientId: followeeId, actorId: followerId, type: "user.followed" });
-});
-onDomainEvent("post.upvoted", ({ actorId, recipientId, postId }) => {
-  void notify({ recipientId, actorId, type: "post.upvoted", targetPostId: postId });
-});
-onDomainEvent("comment.upvoted", ({ actorId, recipientId, commentId, postId }) => {
-  void notify({ recipientId, actorId, type: "comment.upvoted", targetCommentId: commentId, targetPostId: postId });
-});
-onDomainEvent("comment.created", ({ actorId, recipientId, postId, commentId }) => {
-  void notify({ recipientId, actorId, type: "comment.created", targetPostId: postId, targetCommentId: commentId });
-});
-onDomainEvent("comment.replied", ({ actorId, recipientId, postId, commentId }) => {
-  void notify({ recipientId, actorId, type: "comment.replied", targetPostId: postId, targetCommentId: commentId });
-});
-onDomainEvent("comment.mentioned", ({ actorId, recipientId, postId, commentId }) => {
-  void notify({ recipientId, actorId, type: "comment.mentioned", targetPostId: postId, targetCommentId: commentId });
-});
-onDomainEvent("post.approved", ({ postId, recipientId }) => {
-  void notify({ recipientId, type: "post.approved", targetPostId: postId });
-});
-onDomainEvent("post.rejected", ({ postId, recipientId }) => {
-  void notify({ recipientId, type: "post.rejected", targetPostId: postId });
-});
-onDomainEvent("circle.invite", ({ actorId, recipientId, circleId, inviteToken }) => {
-  void notify({
-    recipientId,
-    actorId,
-    type: "circle.invite",
-    targetCircleId: circleId,
-    targetInviteToken: inviteToken,
+// Registered explicitly (not on import) so an importer can never silently miss or double-register them.
+export function registerNotificationListeners(): void {
+  onDomainEvent("user.followed", ({ followerId, followeeId }) => {
+    void notify({ recipientId: followeeId, actorId: followerId, type: "user.followed" });
   });
-});
+  onDomainEvent("post.upvoted", ({ actorId, recipientId, postId }) => {
+    void notify({ recipientId, actorId, type: "post.upvoted", targetPostId: postId });
+  });
+  onDomainEvent("comment.upvoted", ({ actorId, recipientId, commentId, postId }) => {
+    void notify({ recipientId, actorId, type: "comment.upvoted", targetCommentId: commentId, targetPostId: postId });
+  });
+  onDomainEvent("comment.created", ({ actorId, recipientId, postId, commentId }) => {
+    void notify({ recipientId, actorId, type: "comment.created", targetPostId: postId, targetCommentId: commentId });
+  });
+  onDomainEvent("comment.replied", ({ actorId, recipientId, postId, commentId }) => {
+    void notify({ recipientId, actorId, type: "comment.replied", targetPostId: postId, targetCommentId: commentId });
+  });
+  onDomainEvent("comment.mentioned", ({ actorId, recipientId, postId, commentId }) => {
+    void notify({ recipientId, actorId, type: "comment.mentioned", targetPostId: postId, targetCommentId: commentId });
+  });
+  onDomainEvent("post.approved", ({ postId, recipientId }) => {
+    void notify({ recipientId, type: "post.approved", targetPostId: postId });
+  });
+  onDomainEvent("post.rejected", ({ postId, recipientId }) => {
+    void notify({ recipientId, type: "post.rejected", targetPostId: postId });
+  });
+  onDomainEvent("circle.invite", ({ actorId, recipientId, circleId, inviteToken }) => {
+    void notify({
+      recipientId,
+      actorId,
+      type: "circle.invite",
+      targetCircleId: circleId,
+      targetInviteToken: inviteToken,
+    });
+  });
+}
 
 const LIST_POPULATE = [
   { path: "actorId", select: "handle displayName avatarUrl" },

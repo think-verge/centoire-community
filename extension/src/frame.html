@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Centoire Reader</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #fff; font-family: system-ui, sans-serif; color: #111; }
+      #article { border: 0; width: 100%; height: 100%; display: block; background: #fff; }
+      #prompt { display: none; height: 100%; align-items: center; justify-content: center; text-align: center; padding: 24px; box-sizing: border-box; }
+      #prompt .box { max-width: 420px; }
+      #prompt h1 { font-size: 20px; margin: 0 0 8px; }
+      #prompt p { font-size: 14px; line-height: 1.5; color: #555; margin: 0 0 16px; }
+      #enable { background: #b3202f; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div id="prompt">
+      <div class="box">
+        <h1>Read articles inside Centoire</h1>
+        <p>
+          To show the original article here, your browser needs to let the Centoire Reader load other websites
+          for you. It only does this for the article you open, and only while it is open.
+        </p>
+        <button id="enable" type="button">Enable reader</button>
+      </div>
+    </div>
+    <script src="frame.js"></script>
+  </body>
+</html>
