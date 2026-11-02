@@ -1,0 +1,33 @@
+name: "Vogue Business"
+domain: "voguebusiness.com"
+is_paid: true
+engine: "playwright"
+
+auth:
+  type: "credentials"
+  env_user_key: "VOGUE_BUSINESS_EMAIL"
+  env_pass_key: "VOGUE_BUSINESS_PASSWORD"
+  login_url: "https://www.voguebusiness.com/account/login"
+  username_selector: "input[type='email'], input[name='email']"
+  password_selector: "input[type='password'], input[name='password']"
+  submit_selector: "button[type='submit']"
+  wait_for_selector: "[data-testid='BodyWrapper'], .body__inner-container, div[class*='article-body']"
+
+attribution:
+  canonical: true
+  show_read_original_link: true
+
+selectors:
+  title: "h1, .content-header__hed, [data-testid='ContentHeaderHed']"
+  author: "[data-testid='BylineName'], .byline__name, span[class*='byline'], a[rel='author']"
+  lead_image: "figure[class*='lead-image'] img, [data-testid='LeadAsset'] img, .lead-media img"
+  body: "[data-testid='BodyWrapper'], .body__inner-container, div[class*='article-body'], article"
+  remove:
+    - "figure[class*='lead-image']"
+    - "[data-testid='PaywallBarrier']"
+    - "div[class*='paywall']"
+    - "div[class*='newsletter']"
+    - "div[class*='ad-wrapper']"
+    - "div[class*='social-icons']"
+    - "aside"
+    - ".article-recirc"

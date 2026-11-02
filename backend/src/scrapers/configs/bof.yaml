@@ -1,13 +1,21 @@
 name: "Business of Fashion"
 domain: "businessoffashion.com"
 is_paid: true
+engine: "playwright"
 
 auth:
-  type: "cookie"
-  env_cookie_key: "BOF_COOKIE"
+  type: "credentials"
   env_user_key: "BOF_EMAIL"
   env_pass_key: "BOF_PASSWORD"
   login_url: "https://www.businessoffashion.com/login"
+  username_selector: "input[type='email'], input[name='email']"
+  password_selector: "input[type='password'], input[name='password']"
+  submit_selector: "button[type='submit']"
+  wait_for_selector: "div[class*='article-body'], script#fusion-metadata"
+
+attribution:
+  canonical: true
+  show_read_original_link: true
 
 selectors:
   title: "h1, .article-headline"

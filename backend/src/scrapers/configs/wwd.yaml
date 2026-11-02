@@ -1,0 +1,36 @@
+name: "WWD (Women's Wear Daily)"
+domain: "wwd.com"
+is_paid: true
+engine: "playwright"
+
+auth:
+  type: "credentials"
+  env_user_key: "WWD_EMAIL"
+  env_pass_key: "WWD_PASSWORD"
+  login_url: "https://wwd.com/login/"
+  username_selector: "input[type='email'], input[name='username'], input[name='email']"
+  password_selector: "input[type='password'], input[name='password']"
+  submit_selector: "button[type='submit'], input[type='submit']"
+  wait_for_selector: ".article-body, .c-content, .c-article-body"
+
+attribution:
+  canonical: true
+  show_read_original_link: true
+
+selectors:
+  title: "h1.article-title, h1.c-title, .article-headline, h1"
+  author: ".c-byline__link, .c-byline, span.author, a[rel='author']"
+  lead_image: "figure.c-picture img, .c-picture__image, .article-lead-image img"
+  body: ".article-body, .c-content, .c-article-body, div[class*='article-body']"
+  remove:
+    - "figure.c-picture:first-child"
+    - ".c-tag-list"
+    - ".c-recommended"
+    - ".c-comments"
+    - ".c-gate"
+    - ".c-newsletter"
+    - ".c-ad"
+    - ".pmc-adm"
+    - ".c-social-share"
+    - "div[class*='ad-container']"
+    - "div[class*='advertisement']"

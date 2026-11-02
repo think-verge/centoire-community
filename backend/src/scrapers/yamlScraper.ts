@@ -12,12 +12,20 @@ export interface ScraperConfig {
   name: string;
   domain: string;
   is_paid: boolean;
+  engine?: "http" | "playwright";
   auth?: {
-    type?: "cookie" | "credentials";
-    env_cookie_key?: string;
+    type?: "credentials";
     env_user_key?: string;
     env_pass_key?: string;
     login_url?: string;
+    username_selector?: string;
+    password_selector?: string;
+    submit_selector?: string;
+    wait_for_selector?: string;
+  };
+  attribution?: {
+    canonical?: boolean;
+    show_read_original_link?: boolean;
   };
   selectors: {
     title: string;
@@ -36,41 +44,77 @@ export interface ScrapedArticleResult {
   isPaywalled: boolean;
   isPaidSource: boolean;
   excerpt: string;
+  canonicalUrl: string;
+  readTimeMinutes: number;
+  sourceName: string;
+  engineUsed: "http" | "playwright" | "arc-xp";
 }
 
 // In-memory cache of loaded YAML configs
 const configCache = new Map<string, ScraperConfig>();
+let configsLoaded = false;
+
+function loadAllConfigs(): void {
+  if (configsLoaded) return;
+  try {
+    if (fs.existsSync(CONFIGS_DIR)) {
+      const files = fs.readdirSync(CONFIGS_DIR).filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
+      for (const file of files) {
+        if (file === "default.yaml" || file === "default.yml") continue;
+        const filePath = path.join(CONFIGS_DIR, file);
+        try {
+          const parsed = YAML.parse(fs.readFileSync(filePath, "utf-8")) as ScraperConfig;
+          if (parsed && parsed.domain) {
+            configCache.set(parsed.domain.toLowerCase(), parsed);
+          }
+        } catch (err) {
+          console.warn(`[scraper] Failed to parse config ${file}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[scraper] Failed to read CONFIGS_DIR:`, err);
+  }
+  configsLoaded = true;
+}
 
 export function loadConfigForUrl(url: string): ScraperConfig {
+  loadAllConfigs();
+
   const hostname = (() => {
     try {
-      return new URL(url).hostname.replace(/^www\./, "");
+      return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
     } catch {
       return "";
     }
   })();
 
-  if (hostname.includes("businessoffashion.com")) {
-    const cached = configCache.get("bof");
-    if (cached) return cached;
-    const filePath = path.join(CONFIGS_DIR, "bof.yaml");
-    if (fs.existsSync(filePath)) {
-      const parsed = YAML.parse(fs.readFileSync(filePath, "utf-8")) as ScraperConfig;
-      configCache.set("bof", parsed);
-      return parsed;
+  // 1. Check if any cached config domain matches the hostname
+  for (const [domain, config] of configCache.entries()) {
+    if (domain !== "*" && (hostname === domain || hostname.endsWith(`.${domain}`) || hostname.includes(domain))) {
+      return config;
     }
   }
 
-  // Fallback to default
+  // 2. Fallback to default
   const defaultPath = path.join(CONFIGS_DIR, "default.yaml");
   if (fs.existsSync(defaultPath)) {
-    return YAML.parse(fs.readFileSync(defaultPath, "utf-8")) as ScraperConfig;
+    try {
+      return YAML.parse(fs.readFileSync(defaultPath, "utf-8")) as ScraperConfig;
+    } catch {
+      // fallback
+    }
   }
 
   return {
     name: "Fallback Default",
     domain: "*",
     is_paid: false,
+    engine: "http",
+    attribution: {
+      canonical: true,
+      show_read_original_link: true,
+    },
     selectors: {
       title: "h1",
       body: "article, main",
@@ -79,9 +123,26 @@ export function loadConfigForUrl(url: string): ScraperConfig {
   };
 }
 
+function calculateReadTime(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 220));
+}
+
+function buildAttributionHtml(sourceName: string, sourceUrl: string): string {
+  const safeName = sourceName.replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  const safeUrl = sourceUrl.replace(/"/g, "%22").replace(/</g, "%3C");
+  return `\n<div class="article-attribution" style="margin-top: 2rem; padding: 1rem 1.25rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; color: #475569;">
+  <p style="margin: 0 0 0.35rem 0; font-weight: 600; color: #0f172a;">Originally published on ${safeName}</p>
+  <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline; font-weight: 500;">
+    Read original story on ${safeName} &rarr;
+  </a>
+</div>`;
+}
+
 /**
  * Scrape full article using site-specific YAML rules.
- * Handles Free vs Paid, authenticated cookies from .env, and strips duplicate images.
+ * Handles Free vs Paid, Playwright-ready specs,
+ * dynamic reading time calculation, and Medium/daily.dev canonical attribution.
  */
 export async function scrapeArticleWithYaml(
   url: string,
@@ -95,19 +156,6 @@ export async function scrapeArticleWithYaml(
     "Accept-Language": "en-US,en;q=0.9",
     Referer: "https://www.google.com/",
   };
-
-  // Paid credentials / cookie injection (PCL)
-  if (config.is_paid && config.auth?.env_cookie_key) {
-    const cookieVal = process.env[config.auth.env_cookie_key];
-    if (cookieVal) {
-      headers["Cookie"] = cookieVal.trim();
-      console.log(`[scraper] attached paid auth cookie for ${config.name}`);
-    } else {
-      console.warn(
-        `[scraper] ${config.name} is a paid source, but ${config.auth.env_cookie_key} is not set in .env.`
-      );
-    }
-  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);
@@ -158,7 +206,8 @@ export async function scrapeArticleWithYaml(
   const $ = cheerio.load(rawHtml);
 
   // Extract Title
-  const title = $(config.selectors.title).first().text().trim() ||
+  const title =
+    $(config.selectors.title).first().text().trim() ||
     $('meta[property="og:title"]').attr("content") ||
     "";
 
@@ -211,8 +260,15 @@ export async function scrapeArticleWithYaml(
           const extractedExcerpt =
             data.subheadlines?.basic || data.description?.basic || fullText.trim().slice(0, 300);
 
+          // Append Medium/daily.dev style attribution banner if configured
+          if (config.attribution?.show_read_original_link !== false) {
+            fullHtml += buildAttributionHtml(config.name, url);
+          }
+
+          const readTime = calculateReadTime(fullText);
+
           console.log(
-            `[scraper] Arc XP / Fusion extraction succeeded for ${url} (${fullText.trim().length} chars)`
+            `[scraper] Arc XP / Fusion extraction succeeded for ${url} (${fullText.trim().length} chars, ${readTime} min read)`
           );
 
           return {
@@ -223,6 +279,10 @@ export async function scrapeArticleWithYaml(
             isPaywalled: false,
             isPaidSource: config.is_paid,
             excerpt: extractedExcerpt.slice(0, 300),
+            canonicalUrl: url,
+            readTimeMinutes: readTime,
+            sourceName: config.name,
+            engineUsed: "arc-xp",
           };
         }
       }
@@ -280,9 +340,16 @@ export async function scrapeArticleWithYaml(
     $body.find("figure:first-child, .lead-image, div[class*='hero']").first().find("img").remove();
   }
 
-  const contentHtml = $body.html()?.trim() || "";
+  let contentHtml = $body.html()?.trim() || "";
   const contentText = $body.text().replace(/\s+/g, " ").trim();
   const excerpt = contentText.slice(0, 300);
+
+  // Append Medium/daily.dev style attribution banner if configured
+  if (config.attribution?.show_read_original_link !== false) {
+    contentHtml += buildAttributionHtml(config.name, url);
+  }
+
+  const readTime = calculateReadTime(contentText);
 
   return {
     title,
@@ -292,5 +359,9 @@ export async function scrapeArticleWithYaml(
     isPaywalled,
     isPaidSource: config.is_paid,
     excerpt,
+    canonicalUrl: url,
+    readTimeMinutes: readTime,
+    sourceName: config.name,
+    engineUsed: config.engine === "playwright" ? "playwright" : "http",
   };
 }

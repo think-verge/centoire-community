@@ -1,0 +1,33 @@
+name: "The Fashion Law"
+domain: "thefashionlaw.com"
+is_paid: true
+engine: "playwright"
+
+auth:
+  type: "credentials"
+  env_user_key: "TFL_EMAIL"
+  env_pass_key: "TFL_PASSWORD"
+  login_url: "https://www.thefashionlaw.com/login/"
+  username_selector: "input[name='log'], input[type='email'], input[name='user_login']"
+  password_selector: "input[name='pwd'], input[type='password']"
+  submit_selector: "input[name='wp-submit'], button[type='submit']"
+  wait_for_selector: ".entry-content, .post-content, article"
+
+attribution:
+  canonical: true
+  show_read_original_link: true
+
+selectors:
+  title: "h1.entry-title, .single-post-title, h1"
+  author: ".entry-author, .author-name, .byline, a[rel='author']"
+  lead_image: ".entry-thumbnail img, .post-thumbnail img, figure.featured-image img"
+  body: ".entry-content, .post-content, article .content, div[class*='entry-content']"
+  remove:
+    - "figure.featured-image"
+    - ".leaky-paywall-message"
+    - ".member-content-gate"
+    - ".sharedaddy"
+    - ".jp-relatedposts"
+    - ".ad-wrapper"
+    - ".widget-area"
+    - ".post-navigation"

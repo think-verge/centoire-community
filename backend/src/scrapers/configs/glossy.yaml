@@ -1,0 +1,33 @@
+name: "Glossy"
+domain: "glossy.co"
+is_paid: true
+engine: "playwright"
+
+auth:
+  type: "credentials"
+  env_user_key: "GLOSSY_EMAIL"
+  env_pass_key: "GLOSSY_PASSWORD"
+  login_url: "https://www.glossy.co/login/"
+  username_selector: "input[type='email'], input[name='email']"
+  password_selector: "input[type='password'], input[name='password']"
+  submit_selector: "button[type='submit']"
+  wait_for_selector: ".post-content, .entry-content, .article-content"
+
+attribution:
+  canonical: true
+  show_read_original_link: true
+
+selectors:
+  title: "h1.post-title, h1.entry-title, h1"
+  author: ".byline a, .author-name, span.author, a[rel='author']"
+  lead_image: "figure.featured-image img, .post-thumbnail img, .lead-media img"
+  body: ".post-content, .entry-content, .article-content, div[class*='post-content']"
+  remove:
+    - "figure.featured-image"
+    - ".piano-paywall"
+    - ".paywall-barrier"
+    - ".ad-slot"
+    - ".newsletter-signup"
+    - ".social-share-buttons"
+    - ".recirc-module"
+    - ".related-posts"
