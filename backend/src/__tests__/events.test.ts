@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import mongoose from "mongoose";
 import { EventBatchInputSchema, EventItemInputSchema } from "../schemas/events.js";
 import { ingestEventBatch } from "../services/eventService.js";
 import { Event } from "../models/Event.js";
@@ -64,7 +65,7 @@ describe("ingestEventBatch", () => {
   it("bulk writes events and emits behavior.batch onto eventBus", async () => {
     const bulkWriteSpy = vi.spyOn(Event, "bulkWrite").mockResolvedValueOnce({
       insertedCount: 2,
-    } as any);
+    } as unknown as mongoose.mongo.BulkWriteResult);
     const emitSpy = vi.spyOn(eventBus, "emitDomainEvent").mockImplementation(() => {});
 
     const items = [
@@ -85,11 +86,12 @@ describe("ingestEventBatch", () => {
   });
 
   it("handles duplicate key collisions gracefully by returning duplicates count", async () => {
-    const duplicateErr: any = new Error("E11000 duplicate key error");
-    duplicateErr.name = "MongoBulkWriteError";
-    duplicateErr.code = 11000;
-    duplicateErr.result = { insertedCount: 1 };
-    duplicateErr.writeErrors = [{ code: 11000 }];
+    const duplicateErr = Object.assign(new Error("E11000 duplicate key error"), {
+      name: "MongoBulkWriteError",
+      code: 11000,
+      result: { insertedCount: 1 },
+      writeErrors: [{ code: 11000 }],
+    });
 
     vi.spyOn(Event, "bulkWrite").mockRejectedValueOnce(duplicateErr);
     vi.spyOn(eventBus, "emitDomainEvent").mockImplementation(() => {});

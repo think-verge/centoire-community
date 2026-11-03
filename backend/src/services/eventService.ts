@@ -105,17 +105,25 @@ export async function ingestEventBatch(
     },
   }));
 
-  let accepted = 0;
+  let accepted: number;
   let duplicates = 0;
 
   try {
     const result = await Event.bulkWrite(ops, { ordered: false });
     accepted = result.insertedCount;
-  } catch (err: any) {
-    if (err.name === "MongoBulkWriteError" || err.code === 11000) {
+  } catch (err: unknown) {
+    const mongoErr = err as {
+      name?: string;
+      code?: number;
+      result?: { insertedCount?: number };
+      writeErrors?: Array<{ code?: number }>;
+    };
+    if (mongoErr.name === "MongoBulkWriteError" || mongoErr.code === 11000) {
       // Duplicates encountered; bulkWrite inserted whatever didn't collide
-      accepted = err.result?.insertedCount ?? 0;
-      duplicates = err.writeErrors ? err.writeErrors.filter((e: any) => e.code === 11000).length : items.length - accepted;
+      accepted = mongoErr.result?.insertedCount ?? 0;
+      duplicates = mongoErr.writeErrors
+        ? mongoErr.writeErrors.filter((e) => e.code === 11000).length
+        : items.length - accepted;
     } else {
       throw err;
     }
@@ -125,9 +133,9 @@ export async function ingestEventBatch(
   const busItems: BehaviorEventItem[] = normalizedDocs.map((d) => ({
     userId: d.userId ? d.userId.toString() : undefined,
     sessionId: (d.sessionId as string) || undefined,
-    action: d.action as any,
+    action: d.action as BehaviorEventItem["action"],
     postId: d.postId ? d.postId.toString() : undefined,
-    targetType: (d.targetType as any) || undefined,
+    targetType: (d.targetType as BehaviorEventItem["targetType"]) || undefined,
     targetId: (d.targetId as string) || undefined,
     position: (d.position as number) || undefined,
     source: (d.source as string) || undefined,
