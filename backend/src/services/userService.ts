@@ -1,3 +1,4 @@
+import { recordServerEvent } from "./eventService.js";
 import { Types } from "mongoose";
 import { Circle } from "../models/Circle.js";
 import { CircleMembership } from "../models/CircleMembership.js";
@@ -117,6 +118,7 @@ export async function followUser(followerId: string, followeeId: string): Promis
   await User.updateOne({ _id: followerId }, { $inc: { followingCount: 1 } });
   await User.updateOne({ _id: followeeId }, { $inc: { followerCount: 1 } });
   emitDomainEvent("user.followed", { followerId, followeeId });
+  void recordServerEvent({ userId: followerId, action: "follow", targetType: "creator", targetId: followeeId });
 }
 
 export async function unfollowUser(followerId: string, followeeId: string): Promise<void> {
