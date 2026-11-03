@@ -1,6 +1,6 @@
 # ADR 003: Recommendation Engine Platform Architecture
 
-**Date**: 2026-11-02  
+**Date**: 2026-11-02 (Updated 2026-11-03)  
 **Status**: Proposed / Accepted  
 **Authors**: Saumya Bhardwaj (Backend & Platform), Som Pande (Agentic & ML), Devyansh Sehgal (Reviewer)  
 **Ticket**: [#110](https://github.com/think-verge/centoire-community/issues/110) (Epic [#101](https://github.com/think-verge/centoire-community/issues/101))
@@ -16,8 +16,8 @@ Epic #101 introduces the **Stage 0 Recommendation Engine** for Centoire:
 - Stage 0 principles: no heavy online deep learning models in the critical path; based on 768-d post embeddings, ~40 k-means topic clusters, and user topic vectors.
 
 We need to establish:
-1. **Service Topology**: Where the Python services live in the monorepo.
-2. **Gateway Registration & Auth**: How Python services announce themselves to the edge Gateway and receive user identity.
+1. **Service Topology**: Where the recommendation service lives in the monorepo and how it calls the Python agent.
+2. **Gateway Registration & Auth**: How the service announces itself to the edge Gateway and receives user identity.
 3. **Data Stores & Atlas Vector Search Assessment**: Storage tier capacity vs vector indexing.
 4. **Event Transport**: NATS JetStream subjects for domain and behavioral events.
 5. **Developer & CI Workflow**: Local execution and automated verification.
@@ -28,9 +28,9 @@ We need to establish:
 
 | Aspect | Decision | Rationale |
 |---|---|---|
-| **Service Location** | Standalone Python service: `services/recsys/` | Keeps ML/feed orchestration separate from single-post processing (`ai-agent/`). Fits monorepo `services/*` structure. |
-| **Gateway Registration** | Native NATS client (`nats-py`) heartbeat to `gateway.services` | Reuses the platform's standard registration protocol defined by `@centoire/bahamut`. Zero gateway code changes needed. |
-| **Authentication** | Gateway validates JWT cookie at the edge and forwards `x-user-id`, `x-user-email`, `x-user-role`, and `x-gateway-secret` | Services trust identity only when `x-gateway-secret` matches internal configuration. |
+| **Service Location** | Dedicated Node.js service: `services/recsys/` (`@centoire/bahamut`) | Manages feed and suggestion APIs, candidate retrieval, and social graph filters. Calls Som's Python agent separately when ML scoring/embeddings are needed. |
+| **Gateway Registration** | Built-in Bahamut NATS registration (`gateway.services`) | Follows standard platform topology used by `services/notifications` and `services/search`. Zero custom gateway code. |
+| **Authentication** | Gateway validates JWT cookie at the edge and forwards `x-user-id`, `x-user-email`, `x-user-role`, and `x-gateway-secret` | Bahamut `resolveClaims` middleware automatically parses and injects `req.user`. |
 | **Data Store Strategy** | Hybrid: Separate `post_embeddings` with TTL + MongoDB B-Tree cluster indexes + In-Memory Topic Model | Tested Atlas M0 Free Tier (512 MB, max 3 search indexes). Avoids blowing storage limits and guarantees < 300 ms latency. |
 | **Event Transport** | NATS JetStream `CENTOIRE_EVENTS` stream: `events.post.*`, `events.behavior.*`, `events.social.*` | Decouples high-volume behavioral logging (impressions/dwell) from core DB writes. |
 
@@ -40,7 +40,14 @@ We need to establish:
 
 ### 3.1. Service Topology (`services/recsys/`)
 
-Instead of overloading `ai-agent/` (which handles prompt-based tasks like summary generation, safety checks, and moderation), we introduce `services/recsys/` as a dedicated Python FastAPI service:
+The recommendation platform consists of:
+1. **Node.js API & Orchestration Service (`services/recsys/`)**:
+   - Built with `@centoire/bahamut` and TypeScript ESM.
+   - Owns the public endpoints: `/api/v1/feed/for-you` and `/api/v1/suggestions`.
+   - Performs fast candidate generation (B-Tree indexed retrieval, social graph rules, private circle isolation).
+   - Calls the Python ML agent when heavy offline/online scoring or vector re-ranking is required.
+2. **Python ML Agent (`ai-agent/`)**:
+   - Handles Gemini 768-d embeddings, K-means topic clustering (~40 clusters), and model inference.
 
 ```
                       ┌─────────────────────────────────────────┐
@@ -51,10 +58,10 @@ Instead of overloading `ai-agent/` (which handles prompt-based tasks like summar
 UI (port 5173) ──► Gateway (:8100) ──┼──► core (:8000)
                      │               ├──► notifications (:8111)
                      │               ├──► search (:8112)
-                     └───────────────┴──► recsys (:8004) [FastAPI]
+                     └───────────────┴──► recsys (:8004) [Node.js + Bahamut]
                                             ├─ /api/v1/feed/for-you
                                             ├─ /api/v1/suggestions
-                                            └─ /internal/recsys/* (private)
+                                            └─ Calls Python Agent for ML/embeddings
 ```
 
 **Port & Prefix Allocation**:
@@ -63,7 +70,7 @@ UI (port 5173) ──► Gateway (:8100) ──┼──► core (:8000)
   - `/api/v1/feed/for-you` (personalized feed)
   - `/api/v1/suggestions` (circle and creator recommendations)
 - **Private Routes** (Gateway port `8101` only):
-  - `/internal/recsys/*` (re-clustering triggers, health, evaluation metrics)
+  - `/internal/recsys/*` (health, re-clustering triggers, metrics)
 - **Gateway Reservation**: `/api/v1/feed/for-you` and `/api/v1/suggestions` are added to `GATEWAY_RESERVED`. If `recsys` is offline, the gateway fails closed (503) or falls back to core's baseline feed according to configuration.
 
 ---
@@ -71,24 +78,7 @@ UI (port 5173) ──► Gateway (:8100) ──┼──► core (:8000)
 ### 3.2. Gateway Registration & Edge Authentication
 
 #### Dynamic Service Announcement
-`services/recsys` connects to NATS on startup and publishes a `ServicePing` every 5 seconds to `gateway.services`:
-
-```json
-{
-  "type": "hello",
-  "instanceId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "name": "recsys",
-  "address": "http://127.0.0.1:8004",
-  "routes": [
-    { "path": "/api/v1/feed/for-you" },
-    { "path": "/api/v1/suggestions" },
-    { "path": "/internal/recsys", "private": true }
-  ],
-  "load": 0.12,
-  "sentAt": 1730538000000
-}
-```
-On graceful shutdown (`SIGTERM`/`SIGINT`), it publishes `{ "type": "goodbye", ... }`.
+`services/recsys` uses Bahamut's `createServer({ config, bus })` which automatically publishes `ServicePing` heartbeats to NATS subject `gateway.services` every 5 seconds, and cleanly announces `goodbye` on shutdown.
 
 #### Edge Authentication Contract
 1. The client sends session cookies (`token`) to the Gateway (`http://localhost:8100`).
@@ -98,7 +88,7 @@ On graceful shutdown (`SIGTERM`/`SIGINT`), it publishes `{ "type": "goodbye", ..
    - `x-user-email`: user email
    - `x-user-role`: `user` | `admin`
    - `x-gateway-secret`: `GATEWAY_SECRET` from shared env
-4. FastAPI dependency `get_current_user` validates `x-gateway-secret == GATEWAY_SECRET` before trusting `x-user-id`. Unauthenticated public requests (guest feed) still pass through with `x-user-id: None`.
+4. In `services/recsys`, Bahamut's `resolveClaims` middleware populates `req.user` (`{ userId, email, role }`). Unauthenticated public requests (guest feed) still pass through with `req.user === undefined`.
 
 ---
 
@@ -156,7 +146,6 @@ Client impression events are **not** written row-by-row into MongoDB Atlas. The 
 
 ## 4. Local Execution & Tooling Integration
 
-- **Command**: `make recsys` (or automatically launched via `node scripts/dev.mjs` / `npm run dev`).
-- **Process Supervisor**: Managed alongside other platform services via `centmux` and `scripts/dev.mjs`.
-- **CI Matrix**: Added `recsys` import and syntax check leg in `.github/workflows/tests.yaml`.
-
+- **Command**: `make recsys` (or `cd services/recsys && npm run dev`).
+- **Process Supervisor**: Managed alongside other platform services via `centmux` (`.tmuxinator.yml`) and `Makefile`.
+- **CI Matrix**: Automatically included in monorepo workspace check legs (`npm run typecheck` and `npm run build`).

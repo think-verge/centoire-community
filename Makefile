@@ -37,7 +37,7 @@ notifications:
 search:
 	cd services/search && npm run dev
 recsys:
-	python -m uvicorn app.main:app --port 8004 --reload --app-dir services/recsys
+	cd services/recsys && npm run dev
 
 ## React dev server proxied through the gateway instead of straight to the monolith
 ui-platform:
