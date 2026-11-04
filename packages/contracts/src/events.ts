@@ -27,6 +27,22 @@ export interface CircleSnapshot {
   avatarUrl?: string;
 }
 
+export interface PostLifecycleEventPayload {
+  postId: string;
+  title: string;
+  excerpt: string;
+  aiSummary?: string;
+  hashtags: string[];
+  authorId?: string;
+  circleId?: string;
+  curated: boolean;
+  origin: "native" | "aggregated";
+  isCirclePrivate: boolean;
+  contentText?: string;
+  post?: PostSnapshot;
+  circle?: CircleSnapshot;
+}
+
 interface NotificationEventBase {
   actorId: string;
   recipientId: string;
@@ -34,6 +50,8 @@ interface NotificationEventBase {
 }
 
 export interface DomainEventPayloads {
+  "post.created": PostLifecycleEventPayload;
+  "post.updated": PostLifecycleEventPayload;
   "user.deleted": { userId: string };
   "user.followed": { followerId: string; followeeId: string; actor?: UserSnapshot };
   "post.upvoted": NotificationEventBase & { postId: string; post?: PostSnapshot };

@@ -28,6 +28,7 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
     slug: post.slug,
     origin: post.origin,
     status: post.status,
+    curated: Boolean(post.curated),
     title: post.title,
     excerpt: post.excerpt,
     coverImageUrl: post.coverImageUrl ?? null,

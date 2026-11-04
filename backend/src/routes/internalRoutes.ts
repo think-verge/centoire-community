@@ -5,6 +5,7 @@ import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 import * as hashtagService from "../services/hashtagService.js";
 import { MAX_POST_HASHTAGS, diffHashtags } from "../utils/hashtag.js";
+import { emitPostLifecycleEvent } from "../services/postLifecycleService.js";
 
 export const internalRouter = Router();
 
@@ -111,6 +112,19 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
         updated.rejectionReason = "Rejected by content policy";
         updated.reviewedAt = new Date();
         await updated.save();
+      }
+    }
+
+    // If the post was already published before this AI analysis arrived:
+    // - External posts wait for AI enrichment to emit post.created
+    // - Native posts re-emit post.updated to attach the newly enriched aiSummary
+    if (current?.status === "published") {
+      const refreshed = await Post.findById(id);
+      if (refreshed && refreshed.status === "published") {
+        const event = refreshed.origin === "aggregated" ? "post.created" : "post.updated";
+        void emitPostLifecycleEvent(event, refreshed).catch((err) => {
+          console.error(`[internalRoutes] Failed to emit ${event} for ${refreshed._id}:`, err);
+        });
       }
     }
 

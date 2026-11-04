@@ -8,6 +8,7 @@ export interface IPost extends Document {
   _id: Types.ObjectId;
   origin: PostOrigin;
   status: PostStatus;
+  curated?: boolean;
   authorId?: Types.ObjectId;
   sourceId?: Types.ObjectId;
   title: string;
@@ -60,6 +61,7 @@ const postSchema = new Schema<IPost>(
       enum: ["draft", "pending_review", "published", "rejected", "removed"],
       default: "draft",
     },
+    curated: { type: Boolean, default: false, index: true },
     authorId: { type: Schema.Types.ObjectId, ref: "User" },
     sourceId: { type: Schema.Types.ObjectId, ref: "Source" },
     title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -102,6 +104,7 @@ const postSchema = new Schema<IPost>(
 );
 
 postSchema.index({ status: 1, publishedAt: -1 });
+postSchema.index({ status: 1, curated: 1, publishedAt: -1 });
 postSchema.index({ status: 1, createdAt: -1 }); // for moderation queue ordering
 postSchema.index({ status: 1, hashtags: 1, publishedAt: -1 });
 postSchema.index({ status: 1, circleId: 1, publishedAt: -1 });
