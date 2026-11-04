@@ -48,6 +48,9 @@ export interface IPost extends Document {
   aiIsSpam?: boolean;
   aiSummary?: string;
   clickbaitDetected?: boolean;
+  embedding?: number[];
+  clusterId?: number;
+  clusterVersion?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -97,6 +100,9 @@ const postSchema = new Schema<IPost>(
     aiIsSpam: { type: Boolean },
     aiSummary: { type: String },
     clickbaitDetected: { type: Boolean },
+    embedding: { type: [Number] },
+    clusterId: { type: Number },
+    clusterVersion: { type: Number },
   },
   { timestamps: true },
 );
@@ -110,6 +116,7 @@ postSchema.index({ status: 1, category: 1, publishedAt: -1 });
 postSchema.index({ status: 1, category: 1, subcategory: 1, publishedAt: -1 });
 postSchema.index({ status: 1, country: 1, publishedAt: -1 });
 postSchema.index({ title: "text", contentText: "text", excerpt: "text" });
+postSchema.index({ clusterId: 1, createdAt: -1 }, { sparse: true });
 
 postSchema.pre("validate", function (next) {
   if (this.subcategory && !this.category) {
