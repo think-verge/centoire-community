@@ -44,7 +44,7 @@ const UnderlineExtension = Mark.create({
     return {
       toggleUnderline:
         () =>
-        ({ commands }: { commands: any }) => {
+        ({ commands }: { commands: { toggleMark: (name: string) => boolean } }) => {
           return commands.toggleMark(this.name);
         },
     };
@@ -64,6 +64,13 @@ interface MediaItem {
   sizeStr: string;
   type: "image" | "video";
   isCover: boolean;
+}
+
+interface DraftMeta {
+  mediaList?: MediaItem[];
+  bannerImageUrl?: string | null;
+  allowComments?: boolean;
+  shareToProfile?: boolean;
 }
 
 const FALLBACK_SUGGESTED_TAG_NAMES = [
@@ -203,8 +210,8 @@ export function ComposePage() {
         setHashtags(post.hashtags || []);
         setCircleId(post.circle?.id ?? "");
 
-        const contentObj = post.content as Record<string, unknown> | null;
-        const meta = (contentObj as any)?.meta;
+        const contentObj = post.content as (Record<string, unknown> & { meta?: DraftMeta }) | null;
+        const meta = contentObj?.meta;
 
         if (meta) {
           if (Array.isArray(meta.mediaList)) {
@@ -226,14 +233,15 @@ export function ComposePage() {
         setIsDirty(false);
         setSaveState("saved");
       })
-      .catch((err: any) => {
-        const isNotFound = err?.status === 404 || err?.message?.includes("not found");
+      .catch((err: unknown) => {
+        const errObj = err as { status?: number; message?: string } | undefined;
+        const isNotFound = errObj?.status === 404 || errObj?.message?.includes("not found");
         if (isNotFound) {
           setPostId(null);
           setError(null);
           navigate("/compose", { replace: true });
         } else {
-          setError(err?.message || "Failed to load draft");
+          setError(errObj?.message || "Failed to load draft");
         }
       });
   }, [routeId, editor, navigate]);
@@ -265,8 +273,9 @@ export function ComposePage() {
         if (id) {
           try {
             await updatePost(id, body);
-          } catch (updateErr: any) {
-            if (updateErr?.message?.includes("not found")) {
+          } catch (updateErr: unknown) {
+            const errObj = updateErr as { message?: string } | undefined;
+            if (errObj?.message?.includes("not found")) {
               const created = await createPost({ ...body, status: "draft" });
               id = created.id;
               setPostId(id);
@@ -340,8 +349,9 @@ export function ComposePage() {
         setDraftSavedToast(true);
         setTimeout(() => setDraftSavedToast(false), 3000);
       }
-    } catch (err: any) {
-      setError(err?.message || "Failed to save draft");
+    } catch (err: unknown) {
+      const errObj = err as { message?: string } | undefined;
+      setError(errObj?.message || "Failed to save draft");
     } finally {
       setIsSavingDraft(false);
     }
