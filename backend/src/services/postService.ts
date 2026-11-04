@@ -15,6 +15,7 @@ import { inferCountry } from "./regionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 import { MAX_POST_HASHTAGS, diffHashtags, normalizeHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
+import { emitPostLifecycleEvent } from "./postLifecycleService.js";
 
 interface PostInput {
   title: string;
@@ -101,6 +102,13 @@ export async function updatePost(
   }
   deriveTextFields(post);
   await post.save();
+
+  if (post.status === "published") {
+    void emitPostLifecycleEvent("post.updated", post).catch((err) => {
+      console.error(`[postService] Failed to emit post.updated for ${post._id}:`, err);
+    });
+  }
+
   return post;
 }
 
@@ -139,6 +147,15 @@ export async function finalizePublish(post: IPost): Promise<void> {
       });
       emitDomainEvent("post.approved", { postId: post._id.toString(), recipientId: post.authorId.toString() });
     }
+  }
+
+  // Post lifecycle hooks for embedding:
+  // Native posts emit on publish; external posts emit after ingestion/AI enrichment completes
+  // (or on approval if AI enrichment is already complete).
+  if (post.origin === "native" || (post.origin === "aggregated" && post.aiProcessed)) {
+    void emitPostLifecycleEvent("post.created", post).catch((err) => {
+      console.error(`[postService] Failed to emit post.created for ${post._id}:`, err);
+    });
   }
 }
 

@@ -1,20 +1,19 @@
 import type { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import type { Claims } from "@centoire/bahamut";
 import { env } from "../config/env.js";
 import { hasPermission, type Permission } from "../config/permissions.js";
 import type { UserRole } from "../models/User.js";
 import { ApiError } from "../utils/api-error.js";
 
-export interface AuthPayload {
-  userId: string;
-  email: string;
+export interface AuthPayload extends Claims {
   role: UserRole;
 }
 
 declare global {
   namespace Express {
     interface Request {
-      user?: AuthPayload;
+      user?: Claims;
     }
   }
 }
@@ -59,7 +58,7 @@ export function requireAdmin(req: Request, _res: Response, next: NextFunction): 
 export function requirePermission(permission: Permission) {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) throw new ApiError(401, "Authentication required");
-    if (!hasPermission(req.user.role, permission)) throw new ApiError(403, "Insufficient permissions");
+    if (!hasPermission(req.user.role as UserRole, permission)) throw new ApiError(403, "Insufficient permissions");
     next();
   };
 }
