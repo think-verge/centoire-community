@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { env } from "../config/env.js";
 import { Post } from "../models/Post.js";
 import { Cluster, ClusterMetadata } from "../models/Cluster.js";
+import { UserTopicMix } from "../models/UserTopicMix.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 import * as hashtagService from "../services/hashtagService.js";
@@ -370,6 +371,85 @@ internalRouter.get("/posts/with-embedding", async (req: Request, res: Response) 
       .lean();
 
     res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Returns user's topic mix profile. */
+internalRouter.get("/users/:id/topic-mix", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const doc = await UserTopicMix.findOne({ userId: id }).lean();
+    if (!doc) {
+      res.json({
+        userId: id,
+        mix: {},
+        rawPoints: {},
+        dailyEarned: {},
+        activeDays: 1,
+        lastActiveDate: new Date().toISOString().slice(0, 10),
+        hiddenPostIds: [],
+        clusterVersion: 1,
+      });
+      return;
+    }
+
+    res.json({
+      userId: id,
+      mix: doc.mix ? Object.fromEntries(doc.mix instanceof Map ? doc.mix : Object.entries(doc.mix)) : {},
+      rawPoints: doc.rawPoints ? Object.fromEntries(doc.rawPoints instanceof Map ? doc.rawPoints : Object.entries(doc.rawPoints)) : {},
+      dailyEarned: doc.dailyEarned ? Object.fromEntries(doc.dailyEarned instanceof Map ? doc.dailyEarned : Object.entries(doc.dailyEarned)) : {},
+      activeDays: doc.activeDays ?? 1,
+      lastActiveDate: doc.lastActiveDate ?? new Date().toISOString().slice(0, 10),
+      hiddenPostIds: doc.hiddenPostIds ?? [],
+      clusterVersion: doc.clusterVersion ?? 1,
+      updatedAt: doc.updatedAt,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Upserts user's topic mix profile. */
+internalRouter.put("/users/:id/topic-mix", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      mix,
+      rawPoints,
+      dailyEarned,
+      activeDays,
+      lastActiveDate,
+      hiddenPostIds,
+      clusterVersion,
+    } = req.body as {
+      mix: Record<string, number>;
+      rawPoints?: Record<string, number>;
+      dailyEarned?: Record<string, number>;
+      activeDays?: number;
+      lastActiveDate?: string;
+      hiddenPostIds?: string[];
+      clusterVersion?: number;
+    };
+
+    const update: Record<string, unknown> = {
+      mix: mix || {},
+      ...(rawPoints !== undefined && { rawPoints }),
+      ...(dailyEarned !== undefined && { dailyEarned }),
+      ...(activeDays !== undefined && { activeDays }),
+      ...(lastActiveDate !== undefined && { lastActiveDate }),
+      ...(hiddenPostIds !== undefined && { hiddenPostIds }),
+      ...(clusterVersion !== undefined && { clusterVersion }),
+    };
+
+    const updated = await UserTopicMix.findOneAndUpdate(
+      { userId: id },
+      { $set: update },
+      { upsert: true, new: true },
+    ).lean();
+
+    res.json({ ok: true, data: updated });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
