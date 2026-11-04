@@ -12,9 +12,13 @@ import { readPostUrl } from "../lib/readPost";
 export function PostCard({
   post,
   onOpenPost,
+  authorPlacement: authorPlacementProp,
+  provenancePlacement: provenancePlacementProp,
 }: {
   post: PostCardType;
   onOpenPost?: (post: PostCardType) => void;
+  authorPlacement?: "bottom" | "top" | "auto";
+  provenancePlacement?: "bottom" | "top" | "auto";
 }) {
   const navigate = useNavigate();
   const external = post.origin === "aggregated" && post.externalUrl;
@@ -35,39 +39,32 @@ export function PostCard({
     }
   }
 
-  const [authorPlacement, setAuthorPlacement] = useState<"bottom" | "top">("bottom");
-  const [provenancePlacement, setProvenancePlacement] = useState<"bottom" | "top">("bottom");
+  const [authorPlacement, setAuthorPlacement] = useState<"bottom" | "top">(
+    authorPlacementProp === "top" ? "top" : "bottom"
+  );
+  const [provenancePlacement, setProvenancePlacement] = useState<"bottom" | "top">(
+    provenancePlacementProp === "top" ? "top" : "bottom"
+  );
   const [lastOpened, setLastOpened] = useState<"author" | "options" | "provenance" | null>(null);
   const authorAnchorRef = useRef<HTMLDivElement>(null);
   const provenanceAnchorRef = useRef<HTMLDivElement>(null);
 
   function checkAuthorPlacement() {
-    if (authorAnchorRef.current) {
-      const rect = authorAnchorRef.current.getBoundingClientRect();
-      const docHeight = document.documentElement.scrollHeight;
-      const cardBottomInDoc = window.scrollY + rect.bottom;
-      const spaceBelowInDoc = docHeight - cardBottomInDoc;
-      // Only flip to top for cards at the very bottom/last row of the feed where document space is scarce (< 280px)
-      if (spaceBelowInDoc < 280 && rect.top > 200) {
-        setAuthorPlacement("top");
-      } else {
-        setAuthorPlacement("bottom");
-      }
+    if (authorPlacementProp && authorPlacementProp !== "auto") {
+      setAuthorPlacement(authorPlacementProp);
+      return;
     }
+    // Always position below as explicitly requested
+    setAuthorPlacement("bottom");
   }
 
   function checkProvenancePlacement() {
-    if (provenanceAnchorRef.current) {
-      const rect = provenanceAnchorRef.current.getBoundingClientRect();
-      const docHeight = document.documentElement.scrollHeight;
-      const cardBottomInDoc = window.scrollY + rect.bottom;
-      const spaceBelowInDoc = docHeight - cardBottomInDoc;
-      if (spaceBelowInDoc < 280 && rect.top > 200) {
-        setProvenancePlacement("top");
-      } else {
-        setProvenancePlacement("bottom");
-      }
+    if (provenancePlacementProp && provenancePlacementProp !== "auto") {
+      setProvenancePlacement(provenancePlacementProp);
+      return;
     }
+    // Always position below as explicitly requested
+    setProvenancePlacement("bottom");
   }
 
   function handleAuthorEnter() {
@@ -251,7 +248,7 @@ export function PostCard({
   return (
     <article
       className={`group relative break-inside-avoid rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300 ${
-        authorTooltipOpen || provenanceOpen || lastOpened === "options" ? "z-30" : "hover:z-20"
+        authorTooltipOpen || provenanceOpen || lastOpened === "options" ? "z-50" : "hover:z-30"
       }`}
       style={{ boxShadow: '0px 4px 14px rgba(17, 17, 17, 0.14)' }}
     >
@@ -321,7 +318,7 @@ export function PostCard({
             onOptionsToggle={(open) => {
               if (open) setLastOpened("options");
             }}
-            optionsZIndex={lastOpened === "options" ? 70 : 50}
+            optionsZIndex={lastOpened === "options" ? 100 : 70}
             onHide={handleHidePost}
             prependNode={
               <div className="flex items-center">
@@ -347,7 +344,7 @@ export function PostCard({
                     <div
                       onMouseEnter={handleProvenanceEnter}
                       onMouseLeave={handleProvenanceLeave}
-                      style={{ zIndex: lastOpened === "provenance" ? 70 : 50 }}
+                      style={{ zIndex: lastOpened === "provenance" ? 100 : 70 }}
                       className={`absolute ${
                         isProvTop
                           ? "bottom-full mb-2 after:-bottom-2 after:h-2"
@@ -445,7 +442,7 @@ export function PostCard({
                     <div
                       onMouseEnter={handleAuthorEnter}
                       onMouseLeave={handleAuthorLeave}
-                      style={{ zIndex: lastOpened === "author" ? 70 : 50 }}
+                      style={{ zIndex: lastOpened === "author" ? 100 : 70 }}
                       className={`absolute ${
                         isAuthorTop
                           ? "bottom-full mb-[6px] after:-bottom-[6px] after:h-[6px]"

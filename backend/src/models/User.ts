@@ -25,6 +25,8 @@ export interface IUser extends Document {
   followingCount: number;
   postCount: number;
   dismissedPosts: Types.ObjectId[];
+  active_days?: number;
+  lastActiveDate?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +60,8 @@ const userSchema = new Schema<IUser>(
     followingCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
     dismissedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+    active_days: { type: Number, default: 0 },
+    lastActiveDate: { type: String },
   },
   { timestamps: true },
 );
