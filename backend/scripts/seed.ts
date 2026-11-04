@@ -6,6 +6,7 @@ import { ModerationPolicy } from "../src/models/ModerationPolicy.js";
 import { Source } from "../src/models/Source.js";
 import { Hashtag } from "../src/models/Hashtag.js";
 import { User } from "../src/models/User.js";
+import { Post } from "../src/models/Post.js";
 import { SEED_HASHTAGS } from "../src/config/seedHashtags.js";
 import { normalizeHashtag } from "../src/utils/hashtag.js";
 import { slugify } from "../src/utils/slugify.js";
@@ -321,6 +322,188 @@ async function main(): Promise<void> {
     }
   }
   console.log(`[seed] ${CIRCLES.length} circles ensured`);
+
+  // Seed creators & published native posts (Cold-Start & Discovery Polish)
+  const SEED_CREATORS = [
+    {
+      email: "elena@centoire.app",
+      displayName: "Elena Vance",
+      handle: "elena_vance",
+      bio: "Fashion journalist & couture critic. Formerly Vogue Paris, now curating independent runway perspectives.",
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop",
+      role: "creator" as const,
+      followedHashtags: ["couture", "runway", "editorial", "fashion"],
+      reputation: 85,
+      followerCount: 1420,
+      followingCount: 38,
+      postCount: 12,
+    },
+    {
+      email: "marco@centoire.app",
+      displayName: "Marco Chen",
+      handle: "marco_chen",
+      bio: "Textile engineer & material researcher. Exploring algorithmic looms, dense flax weaves & technical fabrics.",
+      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop",
+      role: "creator" as const,
+      followedHashtags: ["textiles", "fashion-tech", "sustainability", "design"],
+      reputation: 92,
+      followerCount: 980,
+      followingCount: 45,
+      postCount: 8,
+    },
+    {
+      email: "camille@centoire.app",
+      displayName: "Camille Laurent",
+      handle: "camille_l",
+      bio: "Parisian street style photographer & creative director. Chronicling movement, silhouettes, and everyday aesthetics.",
+      avatarUrl: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=300&fit=crop",
+      role: "creator" as const,
+      followedHashtags: ["street-style", "photography", "wardrobe", "fashion"],
+      reputation: 110,
+      followerCount: 2310,
+      followingCount: 62,
+      postCount: 19,
+    },
+    {
+      email: "kenji@centoire.app",
+      displayName: "Kenji Sato",
+      handle: "kenji_sato",
+      bio: "Tokyo-based knitwear designer & experimental yarn collector. Documenting shima seiki techniques.",
+      avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop",
+      role: "creator" as const,
+      followedHashtags: ["knitwear", "textiles", "menswear", "design"],
+      reputation: 74,
+      followerCount: 840,
+      followingCount: 29,
+      postCount: 6,
+    },
+    {
+      email: "sofia@centoire.app",
+      displayName: "Sofia Rossi",
+      handle: "sofia_rossi",
+      bio: "Milanese leather craft & accessory artisan. Highlighting small atelier traditions and slow design.",
+      avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop",
+      role: "creator" as const,
+      followedHashtags: ["accessories", "craft", "luxury", "fashion"],
+      reputation: 68,
+      followerCount: 1150,
+      followingCount: 33,
+      postCount: 9,
+    },
+  ];
+
+  const SEED_POSTS = [
+    {
+      creatorHandle: "elena_vance",
+      title: "The Architecture of Modern Couture: Volume, Drape, and Structural Restraint",
+      slug: "architecture-of-modern-couture-volume-drape",
+      excerpt: "Why the Spring/Summer ateliers are retreating from surface ornamentation to focus on pure structural line and tactile luxury.",
+      coverImageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&h=500&fit=crop",
+      hashtags: ["couture", "runway", "fashion", "editorial"],
+      readTimeMinutes: 5,
+      upvoteCount: 142,
+      commentCount: 18,
+    },
+    {
+      creatorHandle: "marco_chen",
+      title: "Algorithmic Looms and High-Density Flax: Redefining Sustainable Wefts",
+      slug: "algorithmic-looms-and-high-density-flax",
+      excerpt: "Blending traditional Belgian coarse flax with computational Jacquard weaving creates a tensile strength that rivals synthetic polymers.",
+      coverImageUrl: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&h=500&fit=crop",
+      hashtags: ["textiles", "fashion-tech", "sustainability"],
+      readTimeMinutes: 4,
+      upvoteCount: 98,
+      commentCount: 12,
+    },
+    {
+      creatorHandle: "camille_l",
+      title: "A Fresh Perspective on Paris Street Style: Quiet Neutrals and Sculptural Forms",
+      slug: "fresh-perspective-paris-street-style-neutrals",
+      excerpt: "Spotted outside the Palais de Tokyo: oversized trench coats, structured leather totes, and vintage wool trousers that speak without shouting.",
+      coverImageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&h=500&fit=crop",
+      hashtags: ["street-style", "fashion", "wardrobe"],
+      readTimeMinutes: 3,
+      upvoteCount: 231,
+      commentCount: 34,
+    },
+    {
+      creatorHandle: "kenji_sato",
+      title: "Dimensional Knitwear: Gauge Variations and Seamless WholeGarment Techniques",
+      slug: "dimensional-knitwear-gauge-variations-techniques",
+      excerpt: "An inside look at our latest capsule knitted on 3D flatbed machines without a single cut seam or wasted yarn.",
+      coverImageUrl: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800&h=500&fit=crop",
+      hashtags: ["knitwear", "textiles", "design"],
+      readTimeMinutes: 4,
+      upvoteCount: 87,
+      commentCount: 9,
+    },
+    {
+      creatorHandle: "sofia_rossi",
+      title: "Preserving the Tuscan Saddle Stitch: Craftsmanship in an Age of Fast Luxury",
+      slug: "preserving-tuscan-saddle-stitch-craftsmanship",
+      excerpt: "Why true hand-burnished edges and two-needle saddle stitching endure when factory heat-glued seams peel within months.",
+      coverImageUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800&h=500&fit=crop",
+      hashtags: ["accessories", "craft", "luxury"],
+      readTimeMinutes: 5,
+      upvoteCount: 115,
+      commentCount: 16,
+    },
+  ];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const creatorsByHandle = new Map<string, any>();
+  for (const c of SEED_CREATORS) {
+    let user = await User.findOne({ handle: c.handle });
+    if (!user) {
+      user = await User.create({
+        ...c,
+        passwordHash: await bcrypt.hash("creator-pass-123", 12),
+        emailVerified: true,
+        onboardingCompletedAt: new Date(),
+      });
+      console.log(`[seed] creator user created (@${c.handle})`);
+    } else {
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            role: "creator",
+            bio: c.bio,
+            avatarUrl: c.avatarUrl,
+            followedHashtags: c.followedHashtags,
+          },
+        },
+      );
+    }
+    creatorsByHandle.set(c.handle, user);
+  }
+
+  for (const p of SEED_POSTS) {
+    const creator = creatorsByHandle.get(p.creatorHandle);
+    if (!creator) continue;
+    const existing = await Post.findOne({ slug: p.slug });
+    if (!existing) {
+      await Post.create({
+        title: p.title,
+        slug: p.slug,
+        excerpt: p.excerpt,
+        contentHtml: `<p>${p.excerpt}</p><p>Read full editorial discussion on Centoire community.</p>`,
+        content: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: p.excerpt }] }] },
+        coverImageUrl: p.coverImageUrl,
+        hashtags: p.hashtags,
+        origin: "native",
+        status: "published",
+        authorId: creator._id,
+        readTimeMinutes: p.readTimeMinutes,
+        upvoteCount: p.upvoteCount,
+        commentCount: p.commentCount,
+        bookmarkCount: Math.floor(p.upvoteCount / 3),
+        publishedAt: new Date(Date.now() - Math.floor(Math.random() * 5 + 1) * 24 * 60 * 60 * 1000),
+      });
+      console.log(`[seed] native post created: "${p.title}"`);
+    }
+  }
+  console.log(`[seed] ${SEED_CREATORS.length} creators and ${SEED_POSTS.length} posts ensured`);
 
   await disconnectDb();
   console.log("[seed] done");

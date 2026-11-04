@@ -1,6 +1,8 @@
 import { Types, type PipelineStage } from "mongoose";
+import { Circle } from "../models/Circle.js";
 import { Post, type IPost } from "../models/Post.js";
 import { User } from "../models/User.js";
+import { env } from "../config/env.js";
 import { decodeCursor, encodeCursor } from "../utils/cursor.js";
 import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as userService from "./userService.js";
@@ -198,7 +200,34 @@ async function getCreatorIds(): Promise<Types.ObjectId[]> {
   return creators.map((u) => u._id);
 }
 
-export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
+export const recsysMetrics = {
+  requests: 0,
+  successes: 0,
+  fallbacks: 0,
+  totalLatencyMs: 0,
+  lastLatencyMs: 0,
+  get fallbackRate() {
+    return this.requests === 0 ? 0 : this.fallbacks / this.requests;
+  },
+  reset() {
+    this.requests = 0;
+    this.successes = 0;
+    this.fallbacks = 0;
+    this.totalLatencyMs = 0;
+    this.lastLatencyMs = 0;
+  },
+};
+
+export async function trackDailyActiveUser(userId: string): Promise<void> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return;
+  const today = new Date().toISOString().slice(0, 10);
+  await User.updateOne(
+    { _id: userId, lastActiveDate: { $ne: today } },
+    { $inc: { active_days: 1 }, $set: { lastActiveDate: today } },
+  );
+}
+
+export async function forYouCore(userId: string, cursor?: string): Promise<FeedPage> {
   const user = await User.findById(userId).select("followedHashtags");
   const interests = user?.followedHashtags ?? [];
   const [followedIds, circleIds, creatorIds] = await Promise.all([
@@ -220,6 +249,115 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
     match.$or = orConditions;
   }
   return rankedFeed(match, interests, followedIds, circleIds, creatorIds, cursor, userId);
+}
+
+export const feedOperations = {
+  forYouCore,
+};
+
+export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
+  await trackDailyActiveUser(userId);
+
+  if (!env.RECSYS_FEED) {
+    return feedOperations.forYouCore(userId, cursor);
+  }
+
+  const start = Date.now();
+  recsysMetrics.requests++;
+
+  try {
+    const url = new URL(`${env.RECSYS_URL}/api/v1/feed/for-you`);
+    if (cursor) url.searchParams.set("cursor", cursor);
+    url.searchParams.set("limit", String(PAGE_SIZE));
+
+    const signal = AbortSignal.timeout(env.RECSYS_TIMEOUT_MS);
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-user-id": userId,
+        "x-gateway-secret": env.INTERNAL_SECRET,
+      },
+      signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(`Recsys returned HTTP ${res.status}`);
+    }
+
+    const data = (await res.json()) as {
+      items?: Array<string | { id?: string; postId?: string; _id?: string }>;
+      cursor?: string | null;
+      nextCursor?: string | null;
+    };
+
+    const elapsed = Date.now() - start;
+    recsysMetrics.lastLatencyMs = elapsed;
+    recsysMetrics.totalLatencyMs += elapsed;
+
+    const rawIds = Array.isArray(data.items)
+      ? data.items
+          .map((it) => (typeof it === "string" ? it : it.id ?? it.postId ?? it._id))
+          .filter((id): id is string => typeof id === "string" && Types.ObjectId.isValid(id))
+      : [];
+
+    if (rawIds.length === 0) {
+      recsysMetrics.fallbacks++;
+      return feedOperations.forYouCore(userId, cursor);
+    }
+
+    const objectIds = rawIds.map((id) => new Types.ObjectId(id));
+
+    // Second line of defense: check private circles and dismissed posts
+    const [dismissed, userCircleIds] = await Promise.all([
+      getDismissedPostIds(userId),
+      userService.getMembershipCircleIds(userId),
+    ]);
+    const dismissedSet = new Set(dismissed.map((d) => d.toString()));
+    const userCircleSet = new Set(userCircleIds.map((c) => c.toString()));
+
+    const candidatePosts = await Post.find({
+      _id: { $in: objectIds },
+      status: "published",
+    }).select("_id circleId");
+
+    const circleIdsToCheck = candidatePosts
+      .map((p) => p.circleId)
+      .filter((c): c is Types.ObjectId => Boolean(c));
+
+    const privateCircles = circleIdsToCheck.length > 0
+      ? await Circle.find({
+          _id: { $in: circleIdsToCheck },
+          isPrivate: true,
+        }).select("_id")
+      : [];
+    const privateCircleSet = new Set(privateCircles.map((c) => c._id.toString()));
+
+    const allowedPostIdSet = new Set<string>();
+    for (const p of candidatePosts) {
+      const pid = p._id.toString();
+      if (dismissedSet.has(pid)) continue;
+      if (p.circleId) {
+        const cid = p.circleId.toString();
+        if (privateCircleSet.has(cid) && !userCircleSet.has(cid)) {
+          continue; // User is not member of this private circle
+        }
+      }
+      allowedPostIdSet.add(pid);
+    }
+
+    const finalOrderedIds = objectIds.filter((id) => allowedPostIdSet.has(id.toString()));
+    recsysMetrics.successes++;
+    const nextCursor = data.nextCursor ?? data.cursor ?? null;
+    return buildPage(finalOrderedIds, userId, nextCursor);
+  } catch (err) {
+    const elapsed = Date.now() - start;
+    recsysMetrics.lastLatencyMs = elapsed;
+    recsysMetrics.totalLatencyMs += elapsed;
+    recsysMetrics.fallbacks++;
+    console.warn(`[recsys] fallback to core feed for user ${userId}: ${(err as Error).message}`);
+    return feedOperations.forYouCore(userId, cursor);
+  }
 }
 
 /** Shared "new"-sort pagination: keyset cursor on (publishedAt, _id). Used by

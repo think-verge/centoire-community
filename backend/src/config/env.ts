@@ -38,6 +38,10 @@ export const env = {
   ANNOUNCE_ADDRESS: process.env.ANNOUNCE_ADDRESS ?? "",
   // true = the notifications service owns /notifications and the event listeners.
   NOTIFICATIONS_EXTERNAL: process.env.NOTIFICATIONS_EXTERNAL === "true",
+  // Recommendation engine (Ticket #115)
+  RECSYS_FEED: process.env.RECSYS_FEED === "true",
+  RECSYS_URL: process.env.RECSYS_URL ?? "http://localhost:8004",
+  RECSYS_TIMEOUT_MS: Number(process.env.RECSYS_TIMEOUT_MS ?? 500),
 };
 
 export const isProduction = env.NODE_ENV === "production";
