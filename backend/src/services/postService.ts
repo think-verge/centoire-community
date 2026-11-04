@@ -257,7 +257,10 @@ export async function getBySlug(
   viewerId?: string,
   viewerRole?: UserRole,
 ): Promise<IPost> {
-  const post = await Post.findOne({ slug })
+  const query = Types.ObjectId.isValid(slug)
+    ? { $or: [{ _id: new Types.ObjectId(slug) }, { slug }] }
+    : { slug };
+  const post = await Post.findOne(query)
     .populate("authorId", "handle displayName avatarUrl reputation role followerCount")
     .populate("sourceId", "name siteUrl faviconUrl")
     .populate("circleId", "name slug");
