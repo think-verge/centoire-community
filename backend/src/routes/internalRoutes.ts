@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { env } from "../config/env.js";
 import { Post } from "../models/Post.js";
+import { Cluster, ClusterMetadata } from "../models/Cluster.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 import * as hashtagService from "../services/hashtagService.js";
@@ -115,6 +116,250 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
     }
 
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Returns cluster documents (active version by default) so the embedding service can find the nearest cluster. */
+internalRouter.get("/clusters", async (req: Request, res: Response) => {
+  try {
+    const versionQuery = req.query["version"];
+    let filter: Record<string, unknown> = {};
+
+    if (versionQuery && versionQuery !== "all") {
+      filter = { version: Number(versionQuery) };
+    } else if (!versionQuery) {
+      const meta = await ClusterMetadata.findOne({ key: "global" }).lean();
+      if (meta?.activeVersion) {
+        filter = { version: meta.activeVersion };
+      }
+    }
+
+    const clusters = await Cluster.find(filter)
+      .select("clusterId centre postCount version updatedAt")
+      .lean();
+
+    const result = clusters.map((c) => ({
+      cluster_id: c.clusterId,
+      centre: c.centre,
+      post_count: c.postCount ?? 0,
+      version: c.version,
+      updated_at: c.updatedAt,
+    }));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Returns cluster metadata (active version, total clusters). */
+internalRouter.get("/clusters/metadata", async (_req: Request, res: Response) => {
+  try {
+    let meta = await ClusterMetadata.findOne({ key: "global" }).lean();
+    if (!meta) {
+      const latestCluster = await Cluster.findOne({}).sort({ version: -1 }).lean();
+      const initialVersion = latestCluster?.version ?? 1;
+      const count = await Cluster.countDocuments({ version: initialVersion });
+      meta = await ClusterMetadata.findOneAndUpdate(
+        { key: "global" },
+        { $setOnInsert: { activeVersion: initialVersion, totalClusters: count } },
+        { upsert: true, new: true },
+      ).lean();
+    }
+    res.json({
+      activeVersion: meta?.activeVersion ?? 1,
+      totalClusters: meta?.totalClusters ?? 0,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Saves staged clusters in bulk for a specific version. */
+internalRouter.post("/clusters/bulk", async (req: Request, res: Response) => {
+  try {
+    const { version, clusters } = req.body as {
+      version: number;
+      clusters: Array<{ clusterId: number; centre: number[]; postCount?: number }>;
+    };
+
+    if (!version || !Array.isArray(clusters) || clusters.length === 0) {
+      res.status(400).json({ error: "version and non-empty clusters array required" });
+      return;
+    }
+
+    const operations = clusters.map((c) => ({
+      updateOne: {
+        filter: { version, clusterId: c.clusterId },
+        update: {
+          $set: {
+            centre: c.centre,
+            postCount: c.postCount ?? 0,
+            version,
+            clusterId: c.clusterId,
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await Cluster.bulkWrite(operations);
+    res.json({ ok: true, count: clusters.length, version });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Performs atomic version cutover and updates post cluster assignments. */
+internalRouter.post("/clusters/cutover", async (req: Request, res: Response) => {
+  try {
+    const { newVersion, postAssignments } = req.body as {
+      newVersion: number;
+      postAssignments?: Array<{ postId: string; clusterId: number }>;
+    };
+
+    if (!newVersion) {
+      res.status(400).json({ error: "newVersion is required" });
+      return;
+    }
+
+    // 1. Update post assignments in bulk if provided
+    let updatedPostsCount = 0;
+    if (Array.isArray(postAssignments) && postAssignments.length > 0) {
+      const batchSize = 1000;
+      for (let i = 0; i < postAssignments.length; i += batchSize) {
+        const batch = postAssignments.slice(i, i + batchSize);
+        const operations = batch.map((p) => ({
+          updateOne: {
+            filter: { _id: p.postId },
+            update: {
+              $set: {
+                clusterId: p.clusterId,
+                clusterVersion: newVersion,
+              },
+            },
+          },
+        }));
+        const resBatch = await Post.bulkWrite(operations);
+        updatedPostsCount += resBatch.modifiedCount;
+      }
+    }
+
+    // 2. Count clusters in the new version
+    const totalClusters = await Cluster.countDocuments({ version: newVersion });
+
+    // 3. Atomically activate the new version in metadata
+    await ClusterMetadata.findOneAndUpdate(
+      { key: "global" },
+      { $set: { activeVersion: newVersion, totalClusters } },
+      { upsert: true, new: true },
+    );
+
+    res.json({
+      ok: true,
+      activeVersion: newVersion,
+      totalClusters,
+      updatedPostsCount,
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Updates a post's embedding fields after the AI agent generates an embedding. */
+internalRouter.patch("/posts/:id/embedding", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      embedding,
+      clusterId,
+      clusterVersion,
+      modelName,
+      modelVersion,
+      embeddingStatus,
+    } = req.body as {
+      embedding?: number[];
+      clusterId?: number;
+      clusterVersion?: number;
+      modelName?: string;
+      modelVersion?: string;
+      embeddingStatus: "pending" | "completed" | "failed";
+    };
+
+    if (embeddingStatus === "failed") {
+      await Post.updateOne({ _id: id }, { $set: { embeddingStatus: "failed" } });
+      res.json({ ok: true });
+      return;
+    }
+
+    if (embeddingStatus === "completed") {
+      const update: Record<string, unknown> = { embeddingStatus: "completed" };
+      if (embedding !== undefined) update.embedding = embedding;
+      if (clusterId !== undefined) update.clusterId = clusterId;
+      if (clusterVersion !== undefined) update.clusterVersion = clusterVersion;
+      if (modelName !== undefined) update.embeddingModel = modelName;
+      if (modelVersion !== undefined) update.embeddingVersion = modelVersion;
+      await Post.updateOne({ _id: id }, { $set: update });
+      res.json({ ok: true });
+      return;
+    }
+
+    res.status(400).json({ error: "Invalid embeddingStatus" });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * Returns posts that have no embedding or embeddingStatus != "completed".
+ * Used by the backfill script.
+ */
+internalRouter.get("/posts/without-embedding", async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query["limit"] ?? 50), 200);
+    const offset = Number(req.query["offset"] ?? 0);
+
+    const posts = await Post.find({
+      $or: [
+        { embeddingStatus: { $exists: false } },
+        { embeddingStatus: { $ne: "completed" } },
+      ],
+    })
+      .select(
+        "_id title excerpt aiSummary hashtags circleName authorHandle origin contentText embeddingStatus",
+      )
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .lean();
+
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * Returns posts that already have embeddings.
+ * Used by the topic clustering and weekly reclustering jobs.
+ */
+internalRouter.get("/posts/with-embedding", async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query["limit"] ?? 500), 2000);
+    const offset = Number(req.query["offset"] ?? 0);
+
+    const posts = await Post.find({
+      embedding: { $exists: true, $ne: null },
+      embeddingStatus: "completed",
+    })
+      .select("_id title embedding clusterId clusterVersion")
+      .sort({ _id: 1 })
+      .skip(offset)
+      .limit(limit)
+      .lean();
+
+    res.json(posts);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
