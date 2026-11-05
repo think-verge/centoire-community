@@ -8,6 +8,10 @@ export const PublicUserSchema = registry.register(
     displayName: z.string(),
     avatarUrl: z.string().nullable(),
     bio: z.string().nullable(),
+    role: z.enum(["member", "creator", "editor", "admin"]).optional(),
+    profileRole: z.string().nullable().optional(),
+    location: z.string().nullable().optional(),
+    domains: z.array(z.string()).optional(),
     reputation: z.number(),
     followerCount: z.number(),
     followingCount: z.number(),
@@ -24,6 +28,7 @@ export const CurrentUserSchema = registry.register(
     emailVerified: z.boolean(),
     onboardingCompleted: z.boolean(),
     followedHashtags: z.array(z.string()),
+    likedCreators: z.array(z.string()).optional(),
   }),
 );
 

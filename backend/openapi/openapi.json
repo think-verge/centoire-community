@@ -614,6 +614,29 @@
             "type": "string",
             "nullable": true
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "creator",
+              "editor",
+              "admin"
+            ]
+          },
+          "profileRole": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "reputation": {
             "type": "number"
           },
@@ -654,15 +677,6 @@
               "email": {
                 "type": "string"
               },
-              "role": {
-                "type": "string",
-                "enum": [
-                  "member",
-                  "creator",
-                  "editor",
-                  "admin"
-                ]
-              },
               "emailVerified": {
                 "type": "boolean"
               },
@@ -674,11 +688,17 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "likedCreators": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "required": [
-              "email",
               "role",
+              "email",
               "emailVerified",
               "onboardingCompleted",
               "followedHashtags"
@@ -951,6 +971,76 @@
           "avatarUrl": {
             "type": "string",
             "format": "uri"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "profileRole": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "likedCreators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CompleteOnboardingInput": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{3,24}$"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "avatarUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "profileRole": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "likedCreators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
