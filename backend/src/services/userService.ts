@@ -9,6 +9,7 @@ import { Bookmark, BookmarkFolder } from "../models/Bookmark.js";
 import { Vote } from "../models/Vote.js";
 import { Notification } from "../models/Notification.js";
 import { CircleInvite } from "../models/CircleInvite.js";
+import { UserTopicMix } from "../models/UserTopicMix.js";
 import { diffHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
@@ -20,6 +21,18 @@ const RESERVED_HANDLES = new Set([
   "admin", "centoire", "settings", "feed", "discover", "circles", "search",
   "onboarding", "login", "signup", "api", "me", "studio", "help", "about",
 ]);
+
+export interface UpdateMeInput {
+  displayName?: string;
+  handle?: string;
+  bio?: string;
+  avatarUrl?: string;
+  location?: string;
+  profileRole?: string;
+  role?: string;
+  domains?: string[];
+  likedCreators?: string[];
+}
 
 export async function checkHandleAvailability(
   handle: string,
@@ -51,7 +64,7 @@ export async function getByHandle(handle: string): Promise<IUser> {
 
 export async function updateMe(
   userId: string,
-  input: { displayName?: string; handle?: string; bio?: string; avatarUrl?: string },
+  input: UpdateMeInput,
 ): Promise<IUser> {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
@@ -66,6 +79,19 @@ export async function updateMe(
   if (input.displayName !== undefined) user.displayName = input.displayName;
   if (input.bio !== undefined) user.bio = input.bio;
   if (input.avatarUrl !== undefined) user.avatarUrl = input.avatarUrl;
+  if (input.location !== undefined) user.location = input.location.trim();
+  if (input.profileRole !== undefined) user.profileRole = input.profileRole.trim();
+  if (input.role !== undefined && input.profileRole === undefined) {
+    user.profileRole = input.role.trim();
+  }
+  if (input.domains !== undefined) {
+    user.domains = [...new Set(input.domains.map((d) => d.trim()).filter(Boolean))];
+  }
+  if (input.likedCreators !== undefined) {
+    user.likedCreators = input.likedCreators
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+  }
 
   await user.save();
   return user;
@@ -90,17 +116,128 @@ export async function setInterests(userId: string, hashtags: string[]): Promise<
   return user;
 }
 
-export async function completeOnboarding(userId: string): Promise<IUser> {
+/** Seeds topic mix (10 points per chosen domain, normalized to 100%) and notifies recsys. */
+export async function seedTopicMix(
+  userId: string | Types.ObjectId,
+  domains: string[],
+): Promise<void> {
+  const cleanDomains = [...new Set(domains.map((d) => d.trim().toLowerCase()).filter(Boolean))];
+  if (cleanDomains.length === 0) return;
+
+  const pointsPerDomain = 10.0;
+  const rawPoints: Record<string, number> = {};
+  const dailyEarned: Record<string, number> = {};
+  const mix: Record<string, number> = {};
+
+  const totalPoints = cleanDomains.length * pointsPerDomain;
+  for (const d of cleanDomains) {
+    rawPoints[d] = pointsPerDomain;
+    dailyEarned[d] = pointsPerDomain;
+    mix[d] = Math.round((pointsPerDomain / totalPoints) * 10000) / 100;
+  }
+
+  const sumMix = Object.values(mix).reduce((a, b) => a + b, 0);
+  const diff = Math.round((100 - sumMix) * 100) / 100;
+  if (Math.abs(diff) > 0.0001 && cleanDomains[0]) {
+    mix[cleanDomains[0]] = Math.round((mix[cleanDomains[0]] + diff) * 100) / 100;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const uid = typeof userId === "string" ? new Types.ObjectId(userId) : userId;
+
+  await UserTopicMix.findOneAndUpdate(
+    { userId: uid },
+    {
+      $set: {
+        mix,
+        rawPoints,
+        dailyEarned,
+        activeDays: 1,
+        lastActiveDate: today,
+        hiddenPostIds: [],
+        clusterVersion: 1,
+      },
+    },
+    { upsert: true, new: true },
+  );
+
+  try {
+    const url = `${env.RECSYS_SERVICE_URL}/internal/recsys/topic-mix/${uid}/seed`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Secret": env.AI_INTERNAL_SECRET,
+      },
+      body: JSON.stringify({ domains: cleanDomains }),
+      signal: controller.signal,
+    }).catch(() => {}).finally(() => clearTimeout(timeout));
+  } catch {
+    // Non-blocking fallback if recsys is offline
+  }
+}
+
+export async function completeOnboarding(
+  userId: string,
+  input?: Partial<UpdateMeInput>,
+): Promise<IUser> {
   const user = await User.findById(userId);
   if (!user) throw new ApiError(404, "User not found");
+
+  if (input) {
+    if (input.handle && input.handle !== user.handle) {
+      const handle = input.handle.toLowerCase();
+      if (RESERVED_HANDLES.has(handle)) throw new ApiError(409, "This handle is reserved");
+      const taken = await User.findOne({ handle, _id: { $ne: user._id } });
+      if (taken) throw new ApiError(409, "This handle is already taken");
+      user.handle = handle;
+    }
+    if (input.displayName !== undefined) user.displayName = input.displayName;
+    if (input.bio !== undefined) user.bio = input.bio;
+    if (input.avatarUrl !== undefined) user.avatarUrl = input.avatarUrl;
+    if (input.location !== undefined) user.location = input.location.trim();
+    if (input.profileRole !== undefined) user.profileRole = input.profileRole.trim();
+    if (input.role !== undefined && input.profileRole === undefined) {
+      user.profileRole = input.role.trim();
+    }
+    if (input.domains !== undefined) {
+      user.domains = [...new Set(input.domains.map((d) => d.trim()).filter(Boolean))];
+    }
+    if (input.likedCreators !== undefined) {
+      user.likedCreators = input.likedCreators
+        .filter((id) => Types.ObjectId.isValid(id))
+        .map((id) => new Types.ObjectId(id));
+    }
+  }
+
   if (!user.handle) throw new ApiError(422, "Set a handle before finishing onboarding");
   if ((user.followedHashtags ?? []).length < 3) {
     throw new ApiError(422, "Pick at least 3 hashtags before finishing onboarding");
   }
+
   if (!user.onboardingCompletedAt) {
     user.onboardingCompletedAt = new Date();
-    await user.save();
   }
+
+  // Auto-follow liked creators chosen during onboarding
+  if (user.likedCreators?.length) {
+    for (const creatorId of user.likedCreators) {
+      try {
+        await followUser(user._id.toString(), creatorId.toString());
+      } catch {
+        // ignore already following or not found
+      }
+    }
+  }
+
+  // Seed topic mix with 10 points per chosen domain
+  if (user.domains?.length) {
+    await seedTopicMix(user._id, user.domains);
+  }
+
+  await user.save();
   return user;
 }
 
