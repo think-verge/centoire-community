@@ -23,6 +23,17 @@ import {
 } from "../../lib/circleInviteStorage";
 import logoDark from "../../assets/landing/logo-dark.svg";
 
+interface OnboardingUpdateMeData {
+  displayName?: string;
+  handle?: string;
+  bio?: string;
+  avatarUrl?: string;
+  profileRole?: string;
+  location?: string;
+  domains?: string[];
+  likedCreators?: string[];
+}
+
 export function OnboardingPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +42,7 @@ export function OnboardingPage() {
 
   // 0-indexed step for array indexing
   const step = currentStep - 1;
+  const [likedCreators, setLikedCreators] = useState<string[]>([]);
 
   useEffect(() => {
     const inviteParam = searchParams.get("invite");
@@ -70,8 +82,8 @@ export function OnboardingPage() {
         </header>
 
         {step === 0 && <InterestsStep onDone={() => setStep(1)} onBack={() => navigate("/")} />}
-        {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} />}
-        {step === 2 && <ProfileStep onBack={() => setStep(1)} />}
+        {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} onUpdateLikedCreators={(ids) => setLikedCreators(ids)} />}
+        {step === 2 && <ProfileStep onBack={() => setStep(1)} likedCreators={likedCreators} />}
       </div>
     </main>
   );
@@ -79,19 +91,32 @@ export function OnboardingPage() {
 
 function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const [selected, setSelected] = useState<string[]>([]);
+  const updateMe = useUpdateMe();
   const setInterests = useSetInterests({
     mutation: {
-      onSuccess: onDone,
+      onSuccess: async () => {
+        const domainList = selected.map((s) => s.toLowerCase().trim()).filter(Boolean);
+        try {
+          await updateMe.mutateAsync({
+            data: {
+              domains: domainList,
+            } as OnboardingUpdateMeData,
+          });
+        } catch {
+          // ignore
+        }
+        onDone();
+      },
     },
   });
   return (
     <section className="flex flex-col flex-1 min-h-0">
       <div className="flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-9">
         <h1 className="font-editorial text-[32px] sm:text-[32px] font-normal text-charcoal leading-tight">
-          Follow hashtags you care about
+          Tailor your Broadsheet
         </h1>
-        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14px] leading-[1.6] pr-0 whitespace-nowrap">
-          Pick hashtags to shape your daily Centoire feed. You can search for more and change them any time in Settings.
+        <p className="mt-3 text-[#8A8A8A] font-ui text-[14px] sm:text-[14px] leading-[1.6] pr-0">
+          Select multiple niches below. We configure your daily Centoire feed based on these slow-fashion indices.
         </p>
 
         <div className="mt-8">
@@ -137,7 +162,7 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
   );
 }
 
-function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function FollowStep({ onDone, onBack, onUpdateLikedCreators }: { onDone: () => void; onBack: () => void; onUpdateLikedCreators?: (ids: string[]) => void }) {
   const { data, isLoading } = useGetOnboardingSuggestions();
   
   const followUser = useFollowUser();
@@ -367,7 +392,12 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
           <button
             type="button"
             disabled={totalFollows < 1}
-            onClick={onDone}
+            onClick={() => {
+              if (onUpdateLikedCreators) {
+                onUpdateLikedCreators(Array.from(followedIds));
+              }
+              onDone();
+            }}
             className={`px-8 py-3.5 font-ui text-[13px] font-bold uppercase tracking-wider transition-colors flex items-center gap-2 ${totalFollows >= 1
               ? "bg-[#111111] text-white hover:bg-black"
               : "bg-[#C9C9C9] text-white cursor-not-allowed"
@@ -385,15 +415,17 @@ function FollowStep({ onDone, onBack }: { onDone: () => void; onBack: () => void
   );
 }
 
-function ProfileStep({ onBack }: { onBack: () => void }) {
+function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; likedCreators?: string[] }) {
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const currentUser = user as (typeof user & { profileRole?: string; location?: string });
   const [handle, setHandle] = useState(user?.handle ?? "");
   const [bio, setBio] = useState(user?.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<string | null>("editor");
+  const [selectedRole, setSelectedRole] = useState<string | null>(currentUser?.profileRole || "editor");
+  const [location, setLocation] = useState(currentUser?.location ?? "");
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingHandle, setIsCheckingHandle] = useState(false);
   const [handleStatus, setHandleStatus] = useState<{ available: boolean; message: string } | null>(null);
@@ -491,6 +523,16 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
       ),
     },
     {
+      id: "designer",
+      title: "Designer",
+      description: "I design garments and aesthetics",
+    },
+    {
+      id: "stylist",
+      title: "Stylist",
+      description: "I style looks and curate wardrobes",
+    },
+    {
       id: "professional",
       title: "Professional",
       description: "I work in fashion or luxury",
@@ -519,7 +561,14 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
     setIsSettingUp(true);
     try {
       await updateMe.mutateAsync({
-        data: { handle, bio: bio || undefined, avatarUrl: avatarUrl ?? undefined },
+        data: {
+          handle: handle.trim().toLowerCase(),
+          bio: bio || undefined,
+          avatarUrl: avatarUrl ?? undefined,
+          profileRole: selectedRole || undefined,
+          location: location.trim() || undefined,
+          likedCreators: likedCreators.length > 0 ? likedCreators : undefined,
+        } as OnboardingUpdateMeData,
       });
       await complete.mutateAsync();
     } catch {
@@ -688,8 +737,9 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
             </div>
           </div>
 
-          {/* Role */}
-          <div>
+          {/* Role & Location Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
             <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
               PRIMARY STYLE ROLE
             </label>
@@ -713,10 +763,23 @@ function ProfileStep({ onBack }: { onBack: () => void }) {
                 </svg>
               </div>
             </div>
+            </div>
+          <div>
+            <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+              LOCATION / BASE CITY (OPTIONAL)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Paris, France; Milan, Italy"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full border border-[#EAEAEA] rounded-none px-4 py-2.5 text-[14px] text-[#111111] outline-none bg-white focus:border-[#D4D4D4]"
+            />
           </div>
+        </div>
 
           {/* Bio */}
-          <div>
+            <div>
             <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
               ONE-LINE STYLE BIO (OPTIONAL)
             </label>
