@@ -36,6 +36,8 @@ function ProfileSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
     displayName: user?.displayName ?? "",
     handle: user?.handle ?? "",
     bio: user?.bio ?? "",
+    location: ((user as unknown as { location?: string })?.location) ?? "",
+    profileRole: ((user as unknown as { profileRole?: string })?.profileRole) ?? "",
   });
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [saved, setSaved] = useState(false);
@@ -63,6 +65,8 @@ function ProfileSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
         handle: form.handle || undefined,
         bio: form.bio,
         avatarUrl: avatarUrl ?? undefined,
+        location: form.location.trim() || undefined,
+        profileRole: form.profileRole.trim() || undefined,
       },
     });
   }
@@ -100,6 +104,20 @@ function ProfileSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
           onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })}
           pattern="[a-z0-9_]{3,24}"
           title="3-24 characters: lowercase letters, numbers, underscores"
+        />
+        <Field
+          label="Role"
+          value={form.profileRole}
+          onChange={(e) => setForm({ ...form, profileRole: e.target.value })}
+          placeholder="e.g. Designer, Stylist, Enthusiast, Student"
+          maxLength={60}
+        />
+        <Field
+          label="Location"
+          value={form.location}
+          onChange={(e) => setForm({ ...form, location: e.target.value })}
+          placeholder="e.g. Paris, France or New York, NY"
+          maxLength={100}
         />
         <div>
           <label htmlFor="bio" className="mb-1.5 block text-sm font-medium">

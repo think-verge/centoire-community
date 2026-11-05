@@ -30,8 +30,12 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AcceptCircleInviteResponse,
   Circle,
+  CircleInvitePreview,
   CreateCircleInput,
+  CreateCircleInviteInput,
+  CreateCircleInviteResponse,
   ErrorResponse,
   FeedPage,
   ListCircleMembers200Item,
@@ -643,3 +647,205 @@ export function useListCircleMembers<TData = Awaited<ReturnType<typeof listCircl
 
 
 
+export const createCircleInvite = (
+    slug: string,
+    createCircleInviteInput: CreateCircleInviteInput,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CreateCircleInviteResponse>(
+      {url: `/circles/${slug}/invites`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createCircleInviteInput, signal
+    },
+      );
+    }
+  
+
+
+export const getCreateCircleInviteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCircleInvite>>, TError,{slug: string;data: CreateCircleInviteInput}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createCircleInvite>>, TError,{slug: string;data: CreateCircleInviteInput}, TContext> => {
+
+const mutationKey = ['createCircleInvite'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createCircleInvite>>, {slug: string;data: CreateCircleInviteInput}> = (props) => {
+          const {slug,data} = props ?? {};
+
+          return  createCircleInvite(slug,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCircleInviteMutationResult = NonNullable<Awaited<ReturnType<typeof createCircleInvite>>>
+    export type CreateCircleInviteMutationBody = CreateCircleInviteInput
+    export type CreateCircleInviteMutationError = ErrorType<ErrorResponse>
+
+    export const useCreateCircleInvite = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCircleInvite>>, TError,{slug: string;data: CreateCircleInviteInput}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createCircleInvite>>,
+        TError,
+        {slug: string;data: CreateCircleInviteInput},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateCircleInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const previewCircleInvite = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CircleInvitePreview>(
+      {url: `/circles/invites/${token}/preview`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getPreviewCircleInviteQueryKey = (token?: string,) => {
+    return [
+    `/circles/invites/${token}/preview`
+    ] as const;
+    }
+
+    
+export const getPreviewCircleInviteQueryOptions = <TData = Awaited<ReturnType<typeof previewCircleInvite>>, TError = ErrorType<ErrorResponse>>(token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPreviewCircleInviteQueryKey(token);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof previewCircleInvite>>> = ({ signal }) => previewCircleInvite(token, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PreviewCircleInviteQueryResult = NonNullable<Awaited<ReturnType<typeof previewCircleInvite>>>
+export type PreviewCircleInviteQueryError = ErrorType<ErrorResponse>
+
+
+export function usePreviewCircleInvite<TData = Awaited<ReturnType<typeof previewCircleInvite>>, TError = ErrorType<ErrorResponse>>(
+ token: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof previewCircleInvite>>,
+          TError,
+          Awaited<ReturnType<typeof previewCircleInvite>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePreviewCircleInvite<TData = Awaited<ReturnType<typeof previewCircleInvite>>, TError = ErrorType<ErrorResponse>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof previewCircleInvite>>,
+          TError,
+          Awaited<ReturnType<typeof previewCircleInvite>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePreviewCircleInvite<TData = Awaited<ReturnType<typeof previewCircleInvite>>, TError = ErrorType<ErrorResponse>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function usePreviewCircleInvite<TData = Awaited<ReturnType<typeof previewCircleInvite>>, TError = ErrorType<ErrorResponse>>(
+ token: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof previewCircleInvite>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPreviewCircleInviteQueryOptions(token,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const acceptCircleInvite = (
+    token: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AcceptCircleInviteResponse>(
+      {url: `/circles/invites/${token}/accept`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getAcceptCircleInviteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptCircleInvite>>, TError,{token: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof acceptCircleInvite>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['acceptCircleInvite'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acceptCircleInvite>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  acceptCircleInvite(token,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcceptCircleInviteMutationResult = NonNullable<Awaited<ReturnType<typeof acceptCircleInvite>>>
+    
+    export type AcceptCircleInviteMutationError = ErrorType<ErrorResponse>
+
+    export const useAcceptCircleInvite = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acceptCircleInvite>>, TError,{token: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof acceptCircleInvite>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+
+      const mutationOptions = getAcceptCircleInviteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
