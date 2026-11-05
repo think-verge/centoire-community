@@ -1,0 +1,91 @@
+# Instagram watchlist — streetwear & sneakers seed list.
+#
+# NOT YET VERIFIED. Handles are from general knowledge plus two leakers credited in
+# blog articles we sampled (lovedrose16, zsneakerheadz). Run
+#   python -m scripts.instagram_setup --check-watchlist
+# once Instagram is connected: it reports handles that don't exist or aren't
+# Business/Creator accounts (the API can only read those). Fix or remove them.
+#
+#   role    insider      — leakers and insiders: the layer measured as AHEAD of the blogs
+#           brand        — brand accounts: usually level with the blogs (embargoes)
+#           collaborator — artists/athletes/designers who tease collabs themselves
+#           retailer     — shops; sometimes post samples or early pairs
+#   tier    fast = every 10 min (6 calls/h), normal = 30 min (2/h), slow = 60 min (1/h)
+#
+# Budget: 15 fast (90/h) + 25 normal (50/h) + 20 slow (20/h) = 160 calls/hour,
+# under the 180/hour planning budget (IG_MAX_CALLS_PER_HOUR). Check GET /instagram.
+
+accounts:
+  # ---------- insiders / leakers (fast) ----------
+  - {handle: zsneakerheadz,  role: insider, region: GLOBAL, tier: fast}   # credited in Just Fresh Kicks
+  - {handle: lovedrose16,    role: insider, region: GLOBAL, tier: fast}   # credited in Just Fresh Kicks
+  - {handle: py_rates,       role: insider, region: GLOBAL, tier: fast}
+  - {handle: hanzuying,      role: insider, region: GLOBAL, tier: fast}
+  - {handle: us11,           role: insider, region: GLOBAL, tier: fast}
+  - {handle: soleretriever,  role: insider, region: GLOBAL, tier: fast}
+
+  # ---------- top brands (fast) ----------
+  - {handle: nike,               role: brand, region: GLOBAL, tier: fast}
+  - {handle: jumpman23,          role: brand, region: GLOBAL, tier: fast}
+  - {handle: nikesportswear,     role: brand, region: GLOBAL, tier: fast}
+  - {handle: adidasoriginals,    role: brand, region: GLOBAL, tier: fast}
+  - {handle: newbalance,         role: brand, region: GLOBAL, tier: fast}
+  - {handle: supremenewyork,     role: brand, region: US,     tier: fast}
+  - {handle: palaceskateboards,  role: brand, region: GB,     tier: fast}
+  - {handle: kith,               role: brand, region: US,     tier: fast}
+  - {handle: travisscott,        role: collaborator, region: US, tier: fast}
+
+  # ---------- brands (normal) ----------
+  - {handle: nikesb,                 role: brand, region: GLOBAL, tier: normal}
+  - {handle: adidas,                 role: brand, region: GLOBAL, tier: normal}
+  - {handle: asics,                  role: brand, region: JP,     tier: normal}
+  - {handle: puma,                   role: brand, region: GLOBAL, tier: normal}
+  - {handle: converse,               role: brand, region: GLOBAL, tier: normal}
+  - {handle: vans,                   role: brand, region: GLOBAL, tier: normal}
+  - {handle: salomon,                role: brand, region: GLOBAL, tier: normal}
+  - {handle: hoka,                   role: brand, region: GLOBAL, tier: normal}
+  - {handle: crocs,                  role: brand, region: GLOBAL, tier: normal}
+  - {handle: stussy,                 role: brand, region: US,     tier: normal}
+  - {handle: aimeleondore,           role: brand, region: US,     tier: normal}
+  - {handle: fearofgod,              role: brand, region: US,     tier: normal}
+  - {handle: nocta,                  role: brand, region: US,     tier: normal}
+  - {handle: cactusplantfleamarket,  role: brand, region: US,     tier: normal}
+  - {handle: jjjjound,               role: brand, region: GLOBAL, tier: normal}
+  - {handle: patta,                  role: brand, region: NL,     tier: normal}
+  - {handle: bape_us,                role: brand, region: US,     tier: normal}
+
+  # ---------- collaborators / designers (normal) ----------
+  - {handle: ronniefieg,       role: collaborator, region: US, tier: normal}
+  - {handle: jerrylorenzo,     role: collaborator, region: US, tier: normal}
+  - {handle: joefreshgoods,    role: collaborator, region: US, tier: normal}
+  - {handle: salehebembury,    role: collaborator, region: US, tier: normal}
+  - {handle: nigelsylvester,   role: collaborator, region: US, tier: normal}
+  - {handle: badbunnypr,       role: collaborator, region: GLOBAL, tier: normal}
+  - {handle: jbalvin,          role: collaborator, region: GLOBAL, tier: normal}
+  - {handle: nigo,             role: collaborator, region: JP, tier: normal}
+
+  # ---------- India (slow) ----------
+  - {handle: vegnonveg,        role: retailer, region: IN, tier: slow}
+  - {handle: superkicksindia,  role: retailer, region: IN, tier: slow}
+  - {handle: crepdogcrew,      role: retailer, region: IN, tier: slow}
+  - {handle: limitededt,       role: retailer, region: IN, tier: slow}
+  - {handle: bluorng,          role: brand,    region: IN, tier: slow}
+  - {handle: jaywalking.in,    role: brand,    region: IN, tier: slow}
+
+  # ---------- Japan / Korea / Europe (slow) ----------
+  - {handle: atmos_tokyo,      role: retailer, region: JP, tier: slow}
+  - {handle: billys_tokyo,     role: retailer, region: JP, tier: slow}
+  - {handle: wormosaka,        role: retailer, region: JP, tier: slow}   # posted a Travis Scott sample (Just Fresh Kicks)
+  - {handle: kasina_official,  role: retailer, region: KR, tier: slow}
+  - {handle: sneakersnstuff,   role: retailer, region: SE, tier: slow}
+  - {handle: endclothing,      role: retailer, region: GB, tier: slow}
+
+  # ---------- US shops (slow) ----------
+  - {handle: undefeatedinc,    role: retailer, region: US, tier: slow}
+  - {handle: bdgastore,        role: retailer, region: US, tier: slow}
+  - {handle: cncpts,           role: retailer, region: US, tier: slow}
+  - {handle: extrabutterny,    role: retailer, region: US, tier: slow}
+  - {handle: amamaniere,       role: retailer, region: US, tier: slow}
+  - {handle: kawsone,          role: collaborator, region: US, tier: slow}
+  - {handle: aleali,           role: collaborator, region: US, tier: slow}
+  - {handle: unionlosangeles,  role: retailer, region: US, tier: slow}

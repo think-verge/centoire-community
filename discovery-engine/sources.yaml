@@ -1,0 +1,82 @@
+# Discovery Engine watchlist — streetwear & sneakers MVP.
+#
+# Every entry was checked live on 2026-11-04 and returned items.
+#
+#   type    rss | reddit | shopify
+#   region  ISO-3166 alpha-2 of the audience the source writes for, or GLOBAL
+#   role    publisher  — editorial sites we want to be early against or alongside
+#           benchmark  — the "mainstream" we measure lead time against (BoF, WWD)
+#           aggregator — Google News searches; broad, mainstream-ish coverage
+#           community  — Reddit; where leaks and early chatter show up
+#           retailer   — Shopify stores; a new product listing is an early drop signal
+#   tier    fast (3 min) | normal (10 min) | slow (30 min)
+#   exclude_title  optional list of case-insensitive regexes; matching items are dropped
+
+# Publishers (as Google News names them) whose items are always dropped: spam and SEO farms.
+blocked_publishers:
+  - auroradesio.it
+
+sources:
+  # ---------- publishers: global / US ----------
+  - {id: hypebeast,          name: Hypebeast,              type: rss, region: GLOBAL, role: publisher, tier: fast,   url: "https://hypebeast.com/feed"}
+  - {id: hypebeast-footwear, name: Hypebeast Footwear,     type: rss, region: GLOBAL, role: publisher, tier: fast,   url: "https://hypebeast.com/footwear/feed"}
+  - {id: hypebae,            name: Hypebae,                type: rss, region: GLOBAL, role: publisher, tier: normal, url: "https://hypebae.com/feed"}
+  - {id: highsnobiety,       name: Highsnobiety,           type: rss, region: GLOBAL, role: publisher, tier: fast,   url: "https://www.highsnobiety.com/feed/"}
+  - {id: sneakernews,        name: Sneaker News,           type: rss, region: US,     role: publisher, tier: fast,   url: "https://sneakernews.com/feed/"}
+  - {id: sneakerbardetroit,  name: Sneaker Bar Detroit,    type: rss, region: US,     role: publisher, tier: fast,   url: "https://sneakerbardetroit.com/feed/"}
+  - {id: nicekicks,          name: Nice Kicks,             type: rss, region: US,     role: publisher, tier: normal, url: "https://www.nicekicks.com/feed/"}
+  - {id: justfreshkicks,     name: Just Fresh Kicks,       type: rss, region: US,     role: publisher, tier: normal, url: "https://www.justfreshkicks.com/feed/"}
+  - {id: footwearnews,       name: Footwear News,          type: rss, region: US,     role: publisher, tier: normal, url: "https://footwearnews.com/feed/"}
+  - {id: thehundreds,        name: The Hundreds,           type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.thehundreds.com/blogs/content.atom"}
+  - {id: vogue,              name: Vogue,                  type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.vogue.com/feed/rss"}
+
+  # ---------- publishers: regional ----------
+  - {id: dazed,              name: Dazed,                  type: rss, region: GB,     role: publisher, tier: normal, url: "https://www.dazeddigital.com/rss"}
+  - {id: gq-uk,              name: GQ UK,                  type: rss, region: GB,     role: publisher, tier: slow,   url: "https://www.gq-magazine.co.uk/feed/rss"}
+  - {id: hypebeast-jp,       name: Hypebeast Japan,        type: rss, region: JP,     role: publisher, tier: normal, url: "https://hypebeast.com/jp/feed"}
+  - {id: fashionsnap,        name: Fashionsnap,            type: rss, region: JP,     role: publisher, tier: normal, url: "https://www.fashionsnap.com/rss.xml"}
+  - {id: wwd-japan,          name: WWD Japan,              type: rss, region: JP,     role: publisher, tier: normal, url: "https://www.wwdjapan.com/feed"}
+  - {id: hypebeast-kr,       name: Hypebeast Korea,        type: rss, region: KR,     role: publisher, tier: normal, url: "https://www.hypebeast.kr/feed"}
+  - {id: hypebeast-cn,       name: Hypebeast China,        type: rss, region: CN,     role: publisher, tier: normal, url: "https://hypebeast.cn/feed"}
+  - {id: hypebeast-hk,       name: Hypebeast (Traditional Chinese), type: rss, region: HK, role: publisher, tier: normal, url: "https://hypebeast.com/zh/feed"}
+  - {id: vogue-india,        name: Vogue India,            type: rss, region: IN,     role: publisher, tier: slow,   url: "https://www.vogue.in/feed/rss"}
+  - {id: homegrown,          name: Homegrown,              type: rss, region: IN,     role: publisher, tier: slow,   url: "https://homegrown.co.in/feed"}
+
+  # ---------- benchmarks: what "mainstream" looks like ----------
+  - {id: wwd,                name: WWD,                    type: rss, region: US,     role: benchmark, tier: fast,   url: "https://wwd.com/feed/"}
+  # BoF blocks direct feed access; Google News carries its articles with publish times.
+  - {id: bof,                name: The Business of Fashion, type: rss, region: GLOBAL, role: benchmark, tier: fast,  url: "https://news.google.com/rss/search?q=site:businessoffashion.com+when:2d&hl=en-US&gl=US&ceid=US:en",
+     exclude_title: ['\bjob with\b']}  # BoF Careers listings
+
+  # ---------- aggregators: Google News searches per market ----------
+  - {id: gn-us-sneaker-collab,   name: "Google News US: sneaker collab",   type: rss, region: US, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=sneaker+collab+when:1d&hl=en-US&gl=US&ceid=US:en"}
+  - {id: gn-us-sneaker-release,  name: "Google News US: sneaker release",  type: rss, region: US, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=sneaker+release+when:1d&hl=en-US&gl=US&ceid=US:en"}
+  - {id: gn-us-streetwear,       name: "Google News US: streetwear",       type: rss, region: US, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=streetwear+when:1d&hl=en-US&gl=US&ceid=US:en"}
+  - {id: gn-gb-streetwear,       name: "Google News UK: streetwear",       type: rss, region: GB, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=streetwear+when:1d&hl=en-GB&gl=GB&ceid=GB:en"}
+  - {id: gn-fr-sneakers,         name: "Google News France: sneakers",     type: rss, region: FR, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=sneakers+when:1d&hl=fr&gl=FR&ceid=FR:fr"}
+  - {id: gn-in-sneakers,         name: "Google News India: sneakers",      type: rss, region: IN, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=sneakers+when:1d&hl=en-IN&gl=IN&ceid=IN:en"}
+  - {id: gn-in-streetwear,       name: "Google News India: streetwear",    type: rss, region: IN, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=streetwear+when:1d&hl=en-IN&gl=IN&ceid=IN:en"}
+  - {id: gn-jp-sneakers,         name: "Google News Japan: スニーカー",     type: rss, region: JP, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=%E3%82%B9%E3%83%8B%E3%83%BC%E3%82%AB%E3%83%BC+when:1d&hl=ja&gl=JP&ceid=JP:ja"}
+  - {id: gn-kr-sneakers,         name: "Google News Korea: 스니커즈",       type: rss, region: KR, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=%EC%8A%A4%EB%8B%88%EC%BB%A4%EC%A6%88+when:1d&hl=ko&gl=KR&ceid=KR:ko"}
+
+  # ---------- community: Reddit ----------
+  # Unauthenticated Reddit allows very few requests, so all subreddits are combined
+  # ("a+b+c") into a single feed. Each post's region comes from its subreddit.
+  - id: reddit
+    name: "Reddit: sneakers & streetwear"
+    type: reddit
+    region: GLOBAL
+    role: community
+    tier: normal
+    url: "https://www.reddit.com/r/Sneakers+streetwear+malefashion+SNKRS+Sneakers_India+IndianStreetwear/new/.rss?limit=100"
+    region_by_tag: {SNKRS: US, Sneakers_India: IN, IndianStreetwear: IN}
+
+  # ---------- retailers: new Shopify listings ----------
+  - {id: kith,               name: Kith,                   type: shopify, region: US, role: retailer, tier: fast,   url: "https://kith.com"}
+  - {id: undefeated,         name: Undefeated,             type: shopify, region: US, role: retailer, tier: fast,   url: "https://undefeated.com"}
+  - {id: bodega,             name: Bodega,                 type: shopify, region: US, role: retailer, tier: normal, url: "https://bdgastore.com"}
+  - {id: concepts,           name: Concepts,               type: shopify, region: US, role: retailer, tier: normal, url: "https://cncpts.com"}
+  - {id: extrabutter,        name: Extra Butter,           type: shopify, region: US, role: retailer, tier: normal, url: "https://extrabutterny.com"}
+  - {id: aimeleondore,       name: Aimé Leon Dore,         type: shopify, region: US, role: retailer, tier: normal, url: "https://www.aimeleondore.com"}
+  - {id: stussy,             name: Stüssy,                 type: shopify, region: US, role: retailer, tier: normal, url: "https://www.stussy.com"}
+  - {id: culturekings,       name: Culture Kings,          type: shopify, region: AU, role: retailer, tier: normal, url: "https://www.culturekings.com.au"}
