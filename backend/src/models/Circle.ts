@@ -39,5 +39,6 @@ const circleSchema = new Schema<ICircle>(
 circleSchema.index({ name: "text", description: "text" });
 circleSchema.index({ memberCount: -1 });
 circleSchema.index({ hashtags: 1, memberCount: -1 });
+circleSchema.index({ isPrivate: 1 });
 
 export const Circle = mongoose.model<ICircle>("Circle", circleSchema);
