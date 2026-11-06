@@ -136,6 +136,135 @@ export async function getMembershipCircleIds(userId: string): Promise<Types.Obje
   return memberships.map((m) => m.circleId);
 }
 
+export async function blockUser(userId: string, targetUserId: string): Promise<void> {
+  if (userId === targetUserId) throw new ApiError(422, "You cannot block yourself");
+  if (!Types.ObjectId.isValid(targetUserId)) throw new ApiError(400, "Invalid target user ID");
+
+  const target = await User.findById(targetUserId);
+  if (!target) throw new ApiError(404, "User not found");
+
+  await User.updateOne(
+    { _id: userId },
+    { $addToSet: { blockedUsers: new Types.ObjectId(targetUserId) } },
+  );
+
+  // When blocking, automatically sever follow relations in both directions
+  await Promise.all([
+    unfollowUser(userId, targetUserId),
+    unfollowUser(targetUserId, userId),
+  ]);
+
+  emitDomainEvent("social.user_blocked", { userId, targetUserId });
+}
+
+export async function unblockUser(userId: string, targetUserId: string): Promise<void> {
+  if (!Types.ObjectId.isValid(targetUserId)) throw new ApiError(400, "Invalid target user ID");
+  await User.updateOne(
+    { _id: userId },
+    { $pull: { blockedUsers: new Types.ObjectId(targetUserId) } },
+  );
+  emitDomainEvent("social.user_unblocked", { userId, targetUserId });
+}
+
+export async function muteUser(userId: string, targetUserId: string): Promise<void> {
+  if (userId === targetUserId) throw new ApiError(422, "You cannot mute yourself");
+  if (!Types.ObjectId.isValid(targetUserId)) throw new ApiError(400, "Invalid target user ID");
+
+  const target = await User.findById(targetUserId);
+  if (!target) throw new ApiError(404, "User not found");
+
+  await User.updateOne(
+    { _id: userId },
+    { $addToSet: { mutedUsers: new Types.ObjectId(targetUserId) } },
+  );
+
+  emitDomainEvent("social.user_muted", { userId, targetUserId });
+}
+
+export async function unmuteUser(userId: string, targetUserId: string): Promise<void> {
+  if (!Types.ObjectId.isValid(targetUserId)) throw new ApiError(400, "Invalid target user ID");
+  await User.updateOne(
+    { _id: userId },
+    { $pull: { mutedUsers: new Types.ObjectId(targetUserId) } },
+  );
+  emitDomainEvent("social.user_unmuted", { userId, targetUserId });
+}
+
+export async function getBlockedUserIds(userId?: string): Promise<Types.ObjectId[]> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return [];
+  const user = await User.findById(userId).select("blockedUsers").lean();
+  return ((user as any)?.blockedUsers ?? []) as Types.ObjectId[];
+}
+
+export async function getMutedUserIds(userId?: string): Promise<Types.ObjectId[]> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return [];
+  const user = await User.findById(userId).select("mutedUsers").lean();
+  return ((user as any)?.mutedUsers ?? []) as Types.ObjectId[];
+}
+
+export async function getBlockedAndMutedUserIds(userId?: string): Promise<Types.ObjectId[]> {
+  if (!userId || !Types.ObjectId.isValid(userId)) return [];
+  const user = await User.findById(userId).select("blockedUsers mutedUsers").lean();
+  const blocked = ((user as any)?.blockedUsers ?? []) as Types.ObjectId[];
+  const muted = ((user as any)?.mutedUsers ?? []) as Types.ObjectId[];
+  const set = new Set([...blocked.map((id) => id.toString()), ...muted.map((id) => id.toString())]);
+  return Array.from(set).map((id) => new Types.ObjectId(id));
+}
+
+export async function getBlockedUsers(userId: string): Promise<IUser[]> {
+  const ids = await getBlockedUserIds(userId);
+  if (ids.length === 0) return [];
+  return User.find({ _id: { $in: ids } });
+}
+
+export async function getMutedUsers(userId: string): Promise<IUser[]> {
+  const ids = await getMutedUserIds(userId);
+  if (ids.length === 0) return [];
+  return User.find({ _id: { $in: ids } });
+}
+
+export interface SocialGraphContext {
+  userId: string;
+  followedUserIds: string[];
+  membershipCircleIds: string[];
+  dismissedPostIds: string[];
+  blockedUserIds: string[];
+  mutedUserIds: string[];
+  allExcludedAuthorIds: string[];
+}
+
+export async function getSocialGraph(userId: string): Promise<SocialGraphContext> {
+  if (!userId || !Types.ObjectId.isValid(userId)) {
+    throw new ApiError(400, "Invalid user ID");
+  }
+
+  const [user, follows, memberships] = await Promise.all([
+    User.findById(userId).select("dismissedPosts blockedUsers mutedUsers").lean(),
+    Follow.find({ followerId: userId }).select("followeeId").lean(),
+    CircleMembership.find({ userId }).select("circleId").lean(),
+  ]);
+
+  if (!user) throw new ApiError(404, "User not found");
+
+  const followedUserIds = follows.map((f) => String(f.followeeId));
+  const membershipCircleIds = memberships.map((m) => String(m.circleId));
+  const dismissedPostIds = ((user as any).dismissedPosts ?? []).map((id: unknown) => String(id));
+  const blockedUserIds = ((user as any).blockedUsers ?? []).map((id: unknown) => String(id));
+  const mutedUserIds = ((user as any).mutedUsers ?? []).map((id: unknown) => String(id));
+
+  const excludedSet = new Set([...blockedUserIds, ...mutedUserIds]);
+
+  return {
+    userId,
+    followedUserIds,
+    membershipCircleIds,
+    dismissedPostIds,
+    blockedUserIds,
+    mutedUserIds,
+    allExcludedAuthorIds: Array.from(excludedSet),
+  };
+}
+
 export async function isFollowing(followerId: string, followeeId: string): Promise<boolean> {
   const follow = await Follow.findOne({ followerId, followeeId });
   return Boolean(follow);
@@ -224,6 +353,12 @@ export async function deleteAccount(userId: string): Promise<void> {
 
   // Delete circle invites sent to or created by this user
   await CircleInvite.deleteMany({ $or: [{ email: user.email }, { invitedBy: userId }] });
+
+  // Clean up user from other users' blocked and muted lists
+  await User.updateMany(
+    { $or: [{ blockedUsers: userId }, { mutedUsers: userId }] },
+    { $pull: { blockedUsers: userId, mutedUsers: userId } },
+  );
 
   // Finally delete the user document from the DB
   await User.findByIdAndDelete(userId);

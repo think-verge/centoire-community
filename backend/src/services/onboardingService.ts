@@ -1,7 +1,9 @@
+import { Types } from "mongoose";
 import { Circle, type ICircle } from "../models/Circle.js";
 import { Follow } from "../models/Follow.js";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { User, type IUser } from "../models/User.js";
+import * as userService from "./userService.js";
 
 export interface OnboardingSuggestions {
   creators: IUser[];
@@ -14,11 +16,15 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
   const user = await User.findById(userId);
   const interests = user?.followedHashtags ?? [];
 
+  // Exclude self and any blocked or muted creators
+  const excludedAuthorIds = await userService.getBlockedAndMutedUserIds(userId);
+  const excludedIds = [new Types.ObjectId(userId), ...excludedAuthorIds];
+
   // Creators: only role:"creator" users — invite-only privileged accounts.
   // Primary: creators who share the user's interests.
   // Fallback: top creators overall (still role-filtered).
   const matching = await User.find({
-    _id: { $ne: userId },
+    _id: { $nin: excludedIds },
     role: "creator",
     handle: { $exists: true },
     followedHashtags: { $in: interests },
@@ -28,8 +34,9 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
 
   let creators = matching;
   if (creators.length < 6) {
+    const existingIds = [...excludedIds, ...creators.map((c) => c._id)];
     const fallback = await User.find({
-      _id: { $ne: userId, $nin: creators.map((c) => c._id) },
+      _id: { $nin: existingIds },
       role: "creator",
       handle: { $exists: true },
     })
