@@ -3,7 +3,8 @@
 Reddit sources share a lock and a minimum gap between requests, because Reddit
 answers 429 to unauthenticated clients that poll several subreddits at once.
 Instagram sources share one call budget (see app.instagram) and only start once
-IG_USER_ID and IG_ACCESS_TOKEN are set.
+IG_USER_ID and IG_ACCESS_TOKEN are set. Brand sitemaps and pages are diffed
+against every URL they have listed before (see app.sites).
 """
 from __future__ import annotations
 
@@ -18,6 +19,7 @@ from app.config import Settings
 from app.fetchers import NotModified, fetch
 from app.instagram import InstagramClient, InstagramSkipped
 from app.models import FetchedItem, Source
+from app.sites import SiteWatcher
 from app.sources import ItemFilter, load_blocked_publishers, planned_instagram_calls_per_hour
 from app.store import Store
 
@@ -53,10 +55,16 @@ class Poller:
         self._reddit_lock = asyncio.Lock()
         self._reddit_last = 0.0
         self._filter = ItemFilter(load_blocked_publishers(settings.sources_file))
+        self.sites = SiteWatcher(store)
+
+    def _interval(self, source: Source) -> int:
+        return source.interval or self.settings.interval_for(source.type, source.tier)
 
     async def _fetch(self, client: httpx.AsyncClient, source: Source) -> list[FetchedItem]:
         if source.type == "instagram":
             return await self.instagram.fetch(client, source.handle)
+        if source.type in ("sitemap", "page"):
+            return await self.sites.fetch(client, source, self._http_cache[source.id])
         if source.type == "reddit":
             async with self._reddit_lock:
                 wait = self.settings.reddit_gap_seconds - (time.monotonic() - self._reddit_last)
@@ -95,13 +103,13 @@ class Poller:
             log.info("%-24s +%d new%s", source.id, new, " (baseline)" if baseline else "")
 
     def _next_wait(self, source: Source) -> float:
-        interval = self.settings.interval_for(source.type, source.tier)
+        interval = self._interval(source)
         if source.type == "instagram" and self._errors[source.id] >= ERROR_BACKOFF_AFTER:
             return ERROR_BACKOFF_SECONDS
         return interval + random.uniform(-0.1, 0.1) * interval
 
     async def _loop(self, client: httpx.AsyncClient, source: Source) -> None:
-        interval = self.settings.interval_for(source.type, source.tier)
+        interval = self._interval(source)
         # Spread the first round out so we don't hit every host (or the IG budget) at once.
         spread = 300 if source.type == "instagram" else min(20, interval / 4)
         await asyncio.sleep(random.uniform(0, spread))

@@ -6,7 +6,7 @@ from typing import Any
 
 import motor.motor_asyncio
 from pymongo import ASCENDING, DESCENDING
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError, DuplicateKeyError
 
 from app.models import FetchedItem, Item, Source
 from app.urls import item_key
@@ -31,8 +31,11 @@ class Store:
         self.source_status = self.db["source_status"]
         # Instagram accounts mentioned in watched posts but not (yet) on the watchlist.
         self.ig_candidates = self.db["ig_candidates"]
+        # Every URL a sitemap / page source has ever listed (see app.sites).
+        self.site_url_docs = self.db["site_urls"]
 
     async def init(self) -> None:
+        await self.site_url_docs.create_index([("source_id", ASCENDING), ("url", ASCENDING)], unique=True)
         await self.items.create_index("key", unique=True)
         await self.items.create_index([("first_seen_at", DESCENDING)])
         await self.items.create_index([("regions", ASCENDING), ("first_seen_at", DESCENDING)])
@@ -93,6 +96,20 @@ class Store:
                 },
                 upsert=True,
             )
+
+    async def site_urls(self, source_id: str) -> set[str]:
+        cursor = self.site_url_docs.find({"source_id": source_id}, {"_id": 0, "url": 1})
+        return {d["url"] async for d in cursor}
+
+    async def add_site_urls(self, source_id: str, urls: list[str]) -> None:
+        now = utcnow()
+        try:
+            await self.site_url_docs.insert_many(
+                [{"source_id": source_id, "url": u, "first_listed_at": now} for u in urls], ordered=False
+            )
+        except BulkWriteError as exc:  # already-known URLs (e.g. after a restart) are fine
+            if any(e.get("code") != 11000 for e in exc.details.get("writeErrors", [])):
+                raise
 
     async def candidates(self, watched: set[str], limit: int = 50) -> list[dict]:
         """Mentioned accounts not on the watchlist, most-mentioned by distinct accounts first."""

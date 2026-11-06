@@ -19,6 +19,8 @@ class Settings:
 
         sources = Path(os.getenv("SOURCES_FILE", "sources.yaml"))
         self.sources_file: Path = sources if sources.is_absolute() else REPO_ROOT / sources
+        brand_sites = Path(os.getenv("BRAND_SITES_FILE", "brand_sites.yaml"))
+        self.brand_sites_file: Path = brand_sites if brand_sites.is_absolute() else REPO_ROOT / brand_sites
 
         self.intervals: dict[str, int] = {
             "fast": int(os.getenv("INTERVAL_FAST", "180")),

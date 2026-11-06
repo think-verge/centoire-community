@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-SourceType = Literal["rss", "reddit", "shopify", "instagram"]
+SourceType = Literal["rss", "reddit", "shopify", "instagram", "sitemap", "page"]
 SourceRole = Literal[
     "publisher", "benchmark", "aggregator", "community", "retailer",
     "brand", "insider", "collaborator",
@@ -26,6 +26,12 @@ class Source(BaseModel):
     region_by_tag: dict[str, str] = Field(default_factory=dict)
     # Regexes (case-insensitive); items whose title matches any of them are dropped.
     exclude_title: list[str] = Field(default_factory=list)
+    # Sitemap / page sources: regexes (case-insensitive); only matching URLs are watched.
+    include_url: list[str] = Field(default_factory=list)
+    # Sitemap / page sources: open each new URL to read its real title, image and date.
+    enrich: bool = True
+    # Poll interval in seconds, overriding the tier (for very large sitemaps).
+    interval: int | None = None
 
     @property
     def handle(self) -> str:

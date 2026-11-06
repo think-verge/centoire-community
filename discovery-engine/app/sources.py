@@ -44,6 +44,8 @@ def load_instagram(path: Path) -> list[Source]:
 
 def load_watchlist(settings: Settings) -> list[Source]:
     sources = load_sources(settings.sources_file) + load_instagram(settings.instagram_file)
+    if settings.brand_sites_file.exists():
+        sources += load_sources(settings.brand_sites_file)
     _check_unique(sources, settings.sources_file)
     return sources
 

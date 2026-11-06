@@ -4,9 +4,17 @@ Watches streetwear & sneaker sources across regions, stores every new item with 
 time we **first saw it**, and (by the end of the MVP week) groups items into stories,
 flags what's breaking, and measures how far ahead of BoF / WWD we were.
 
-The watchlist lives in [`sources.yaml`](sources.yaml): publishers, benchmarks (BoF, WWD),
-Google News searches per market, Reddit, and Shopify stores (new listings = early drop signal).
-Every source has a `region`; items carry `regions`, so everything can be filtered by market.
+The watchlist is split in three files. Every source has a `region`; items carry `regions`,
+so everything can be filtered by market.
+
+- [`brand_sites.yaml`](brand_sites.yaml): **early, official signals** from brands' own sites:
+  Nike SNKRS launch-page sitemaps for US/JP/GB/KR/IN, Nike landing pages and newsroom,
+  Supreme previews and news, ASICS press, and brand blogs (Stüssy, ALD, Kith, BAPE, Patta,
+  JJJJound). Sitemaps and pages have no feed, so the engine remembers every URL they have
+  ever listed and reports only new ones (`app/sites.py`).
+- [`instagram.yaml`](instagram.yaml): brand, insider and collaborator Instagram accounts.
+- [`sources.yaml`](sources.yaml): publishers, benchmarks (BoF, WWD), Google News searches per
+  market, Reddit, and Shopify store catalogues (release/availability, not early news).
 
 ## Run
 
@@ -34,6 +42,7 @@ published before we started watching, so they never count toward lead time.
 |---|---|
 | 1–2 Watchlist + poller (RSS, Google News, Reddit, Shopify), regions, first-seen times | done |
 | 3 Instagram connector: 60-account watchlist ([instagram.yaml](instagram.yaml)), call budget + auto back-off, engagement snapshots, tagged-account candidates (`/instagram`, `/instagram/candidates`) | built; waiting for Meta credentials — see [docs/instagram-setup.md](docs/instagram-setup.md) |
+| 3 Brand websites: sitemap and newsroom diffing, brand blog feeds ([brand_sites.yaml](brand_sites.yaml)) | done, live |
 | 4 Story grouping (embeddings) + Gemini summary, tags, countries, relevance filter | |
 | 5 Breaking detection + lead time vs BoF/WWD | |
 | 6 Live page | |
