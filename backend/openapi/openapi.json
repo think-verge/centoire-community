@@ -104,6 +104,9 @@
           },
           "bookmarked": {
             "type": "boolean"
+          },
+          "authorFollowed": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -168,6 +171,9 @@
               "avatarUrl": {
                 "type": "string",
                 "nullable": true
+              },
+              "followerCount": {
+                "type": "number"
               }
             },
             "required": [
@@ -839,6 +845,10 @@
           "postCount": {
             "type": "number"
           },
+          "isPrivate": {
+            "type": "boolean",
+            "default": false
+          },
           "viewerRole": {
             "type": "string",
             "nullable": true,
@@ -847,6 +857,12 @@
               "moderator",
               "member"
             ]
+          },
+          "memberAvatars": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "createdAt": {
             "type": "string"
@@ -968,6 +984,9 @@
           "coverImageUrl": {
             "type": "string",
             "format": "uri"
+          },
+          "isPrivate": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -1009,6 +1028,96 @@
           "circles",
           "followedCreatorIds",
           "joinedCircleIds"
+        ]
+      },
+      "CreateCircleInviteInput": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "CreateCircleInviteResponse": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "notification",
+              "email"
+            ]
+          },
+          "recipientName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "link",
+          "token"
+        ]
+      },
+      "CircleInvitePreview": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "circleName": {
+            "type": "string"
+          },
+          "circleSlug": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "coverImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "inviterName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "valid",
+          "status",
+          "email",
+          "circleName",
+          "circleSlug",
+          "inviterName"
+        ]
+      },
+      "AcceptCircleInviteResponse": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
         ]
       },
       "Health": {
@@ -1686,7 +1795,8 @@
               "comment.replied",
               "comment.mentioned",
               "post.approved",
-              "post.rejected"
+              "post.rejected",
+              "circle.invite"
             ]
           },
           "actor": {
@@ -1734,6 +1844,35 @@
               "slug",
               "title"
             ]
+          },
+          "targetCircle": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "avatarUrl": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "id",
+              "slug",
+              "name",
+              "avatarUrl"
+            ]
+          },
+          "targetInviteToken": {
+            "type": "string",
+            "nullable": true
           },
           "readAt": {
             "type": "string",
@@ -2900,6 +3039,160 @@
         "responses": {
           "204": {
             "description": "No longer following"
+          }
+        }
+      }
+    },
+    "/users/{id}/block": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "blockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User blocked"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unblockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unblocked"
+          }
+        }
+      }
+    },
+    "/users/{id}/mute": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "muteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User muted"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unmuteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unmuted"
+          }
+        }
+      }
+    },
+    "/users/me/blocks": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getBlockedUsers",
+        "responses": {
+          "200": {
+            "description": "List of blocked users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/mutes": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getMutedUsers",
+        "responses": {
+          "200": {
+            "description": "List of muted users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -4263,6 +4556,187 @@
         }
       }
     },
+    "/circles/{slug}/invites": {
+      "post": {
+        "tags": [
+          "circles"
+        ],
+        "operationId": "createCircleInvite",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCircleInviteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation created and emailed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCircleInviteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Only owners and moderators can invite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Circle not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/circles/invites/{token}/preview": {
+      "get": {
+        "tags": [
+          "circles"
+        ],
+        "operationId": "previewCircleInvite",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Circle invitation preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CircleInvitePreview"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invitation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/circles/invites/{token}/accept": {
+      "post": {
+        "tags": [
+          "circles"
+        ],
+        "operationId": "acceptCircleInvite",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Circle joined via invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptCircleInviteResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invitation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invitation already used",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Invitation expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/sources": {
       "get": {
         "tags": [
@@ -4423,10 +4897,10 @@
           {
             "schema": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 100
+              "maxLength": 100,
+              "default": ""
             },
-            "required": true,
+            "required": false,
             "name": "q",
             "in": "query"
           },
@@ -4438,7 +4912,8 @@
                 "posts",
                 "people",
                 "circles",
-                "hashtags"
+                "hashtags",
+                "tags"
               ]
             },
             "required": false,

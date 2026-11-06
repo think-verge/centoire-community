@@ -68,6 +68,36 @@ export async function unfollow(req: Request, res: Response): Promise<void> {
   res.status(204).end();
 }
 
+export async function blockUser(req: Request, res: Response): Promise<void> {
+  await userService.blockUser(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}
+
+export async function unblockUser(req: Request, res: Response): Promise<void> {
+  await userService.unblockUser(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}
+
+export async function muteUser(req: Request, res: Response): Promise<void> {
+  await userService.muteUser(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}
+
+export async function unmuteUser(req: Request, res: Response): Promise<void> {
+  await userService.unmuteUser(req.user!.userId, req.params.id as string);
+  res.status(204).end();
+}
+
+export async function getBlockedUsers(req: Request, res: Response): Promise<void> {
+  const users = await userService.getBlockedUsers(req.user!.userId);
+  res.json(users.map((u) => serializeUser(u)));
+}
+
+export async function getMutedUsers(req: Request, res: Response): Promise<void> {
+  const users = await userService.getMutedUsers(req.user!.userId);
+  res.json(users.map((u) => serializeUser(u)));
+}
+
 export async function promoteUser(req: Request, res: Response): Promise<void> {
   const user = await userService.promoteUser(req.user!.userId, req.params.id as string, req.body.role);
   res.json(serializeUser(user));

@@ -25,6 +25,8 @@ export interface IUser extends Document {
   followingCount: number;
   postCount: number;
   dismissedPosts: Types.ObjectId[];
+  blockedUsers: Types.ObjectId[];
+  mutedUsers: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,11 +60,15 @@ const userSchema = new Schema<IUser>(
     followingCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
     dismissedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    mutedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true },
 );
 
 userSchema.index({ handle: "text", displayName: "text", bio: "text" });
 userSchema.index({ role: 1 });
+userSchema.index({ blockedUsers: 1 });
+userSchema.index({ mutedUsers: 1 });
 
 export const User = mongoose.model<IUser>("User", userSchema);

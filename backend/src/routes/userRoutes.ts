@@ -29,8 +29,14 @@ userRouter.post(
   requireAuth,
   asyncHandler(userController.completeOnboarding),
 );
+userRouter.get("/me/blocks", requireAuth, asyncHandler(userController.getBlockedUsers));
+userRouter.get("/me/mutes", requireAuth, asyncHandler(userController.getMutedUsers));
 userRouter.post("/:id/follow", requireAuth, asyncHandler(userController.follow));
 userRouter.delete("/:id/follow", requireAuth, asyncHandler(userController.unfollow));
+userRouter.post("/:id/block", requireAuth, asyncHandler(userController.blockUser));
+userRouter.delete("/:id/block", requireAuth, asyncHandler(userController.unblockUser));
+userRouter.post("/:id/mute", requireAuth, asyncHandler(userController.muteUser));
+userRouter.delete("/:id/mute", requireAuth, asyncHandler(userController.unmuteUser));
 userRouter.patch(
   "/:id/role",
   requireAuth,
