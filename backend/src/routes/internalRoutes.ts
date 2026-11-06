@@ -4,16 +4,30 @@ import { Post } from "../models/Post.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 import * as hashtagService from "../services/hashtagService.js";
+import * as userService from "../services/userService.js";
 import { MAX_POST_HASHTAGS, diffHashtags } from "../utils/hashtag.js";
 
 export const internalRouter = Router();
 
 internalRouter.use((req, res, next) => {
-  if (req.headers["x-internal-secret"] !== env.AI_INTERNAL_SECRET) {
+  const secret = req.headers["x-internal-secret"] || req.headers["x-gateway-secret"];
+  if (secret !== env.AI_INTERNAL_SECRET && secret !== env.INTERNAL_SECRET) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
   next();
+});
+
+/** Exposes the social graph and safety filters (follows, circles, blocks, mutes) for recsys */
+internalRouter.get("/recsys/social-graph/:userId", async (req: Request, res: Response) => {
+  try {
+    const userId = req.params.userId as string;
+    const graph = await userService.getSocialGraph(userId);
+    res.json(graph);
+  } catch (err) {
+    const statusCode = (err as any).statusCode || 500;
+    res.status(statusCode).json({ error: (err as Error).message });
+  }
 });
 
 /** Receives AI processing results from the ai-agent service after async analysis. */

@@ -1,4 +1,6 @@
 import { Types, type PipelineStage } from "mongoose";
+import { Circle } from "../models/Circle.js";
+import { CircleMembership } from "../models/CircleMembership.js";
 import { Post, type IPost } from "../models/Post.js";
 import { User } from "../models/User.js";
 import { decodeCursor, encodeCursor } from "../utils/cursor.js";
@@ -133,6 +135,19 @@ async function getDismissedPostIds(userId?: string): Promise<Types.ObjectId[]> {
   return ((user as any)?.dismissedPosts ?? []) as Types.ObjectId[];
 }
 
+async function getInaccessiblePrivateCircleIds(userId?: string): Promise<Types.ObjectId[]> {
+  const privateCircles = await Circle.find({ isPrivate: true }).select("_id").lean();
+  if (privateCircles.length === 0) return [];
+  if (!userId || !Types.ObjectId.isValid(userId)) {
+    return privateCircles.map((c) => c._id);
+  }
+  const memberships = await CircleMembership.find({ userId }).select("circleId").lean();
+  const joinedSet = new Set(memberships.map((m) => m.circleId.toString()));
+  return privateCircles
+    .filter((c) => !joinedSet.has(c._id.toString()))
+    .map((c) => c._id);
+}
+
 async function buildPage(
   ids: Types.ObjectId[],
   userId: string | undefined,
@@ -171,9 +186,19 @@ async function rankedFeed(
   cursor: string | undefined,
   userId?: string,
 ): Promise<FeedPage> {
-  const dismissed = await getDismissedPostIds(userId);
+  const [dismissed, excludedAuthors, inaccessibleCircles] = await Promise.all([
+    getDismissedPostIds(userId),
+    userService.getBlockedAndMutedUserIds(userId),
+    match.circleId ? Promise.resolve([]) : getInaccessiblePrivateCircleIds(userId),
+  ]);
   if (dismissed.length > 0) {
     match._id = { $nin: dismissed };
+  }
+  if (excludedAuthors.length > 0) {
+    match.authorId = { $nin: excludedAuthors };
+  }
+  if (inaccessibleCircles.length > 0) {
+    match.circleId = { $nin: inaccessibleCircles };
   }
 
   const offset = decodeCursor<RankedCursor>(cursor)?.offset ?? 0;
@@ -230,10 +255,20 @@ async function keysetPublishedFeed(
   userId?: string,
 ): Promise<FeedPage> {
   const decoded = decodeCursor<KeysetCursor>(cursor);
-  const dismissed = await getDismissedPostIds(userId);
+  const [dismissed, excludedAuthors, inaccessibleCircles] = await Promise.all([
+    getDismissedPostIds(userId),
+    userService.getBlockedAndMutedUserIds(userId),
+    base.circleId ? Promise.resolve([]) : getInaccessiblePrivateCircleIds(userId),
+  ]);
   const filter: Record<string, unknown> = { ...base, publishedAt: { $ne: null } };
   if (dismissed.length > 0) {
     filter._id = { $nin: dismissed };
+  }
+  if (excludedAuthors.length > 0) {
+    filter.authorId = { $nin: excludedAuthors };
+  }
+  if (inaccessibleCircles.length > 0) {
+    filter.circleId = { $nin: inaccessibleCircles };
   }
   if (decoded) {
     filter.$or = [
@@ -323,11 +358,13 @@ export async function circleFeed(
 }
 
 export async function following(userId: string, cursor?: string): Promise<FeedPage> {
-  const [followedIds, circleIds, followedSourceIds, dismissed] = await Promise.all([
+  const [followedIds, circleIds, followedSourceIds, dismissed, excludedAuthors, inaccessibleCircles] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
     userService.getFollowedSourceIds(userId),
     getDismissedPostIds(userId),
+    userService.getBlockedAndMutedUserIds(userId),
+    getInaccessiblePrivateCircleIds(userId),
   ]);
   const decoded = decodeCursor<KeysetCursor>(cursor);
   const orConditions: Record<string, unknown>[] = [];
@@ -341,6 +378,12 @@ export async function following(userId: string, cursor?: string): Promise<FeedPa
   };
   if (dismissed.length > 0) {
     filter._id = { $nin: dismissed };
+  }
+  if (excludedAuthors.length > 0) {
+    filter.authorId = { $nin: excludedAuthors };
+  }
+  if (inaccessibleCircles.length > 0) {
+    filter.circleId = { $nin: inaccessibleCircles };
   }
   if (decoded) {
     filter.$and = [
