@@ -4,7 +4,9 @@ Reddit sources share a lock and a minimum gap between requests, because Reddit
 answers 429 to unauthenticated clients that poll several subreddits at once.
 Instagram sources share one call budget (see app.instagram) and only start once
 IG_USER_ID and IG_ACCESS_TOKEN are set. Brand sitemaps and pages are diffed
-against every URL they have listed before (see app.sites).
+against every URL they have listed before (see app.sites). New items are read for
+the sources they credit, and credited primary sources are added as they qualify
+(see app.origins).
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ from app.config import Settings
 from app.fetchers import NotModified, fetch
 from app.instagram import InstagramClient, InstagramSkipped
 from app.models import FetchedItem, Source
+from app.origins import OriginTracker
 from app.sites import SiteWatcher
 from app.sources import ItemFilter, load_blocked_publishers, planned_instagram_calls_per_hour
 from app.store import Store
@@ -29,12 +32,15 @@ log = logging.getLogger("discovery.poller")
 # so a misspelt handle or a personal (non-business) account doesn't burn the call budget.
 ERROR_BACKOFF_AFTER = 3
 ERROR_BACKOFF_SECONDS = 6 * 3600
+# How often credited origins are checked and, if they qualify, added to the watchlist.
+PROMOTE_EVERY_SECONDS = 1800
 
 
 class Poller:
     def __init__(self, settings: Settings, store: Store, sources: list[Source]) -> None:
         self.settings = settings
         self.store = store
+        self.all_sources = list(sources)  # including Instagram accounts waiting for credentials
         self.instagram = InstagramClient(settings)
         if not self.instagram.configured:
             skipped = sum(1 for s in sources if s.type == "instagram")
@@ -56,6 +62,24 @@ class Poller:
         self._reddit_last = 0.0
         self._filter = ItemFilter(load_blocked_publishers(settings.sources_file))
         self.sites = SiteWatcher(store)
+        self.origins = OriginTracker(self)
+        self._client_live: httpx.AsyncClient | None = None
+        self._tasks: set[asyncio.Task] = set()
+
+    def add_source(self, source: Source) -> None:
+        """Start watching a source while running (used for discovered primary sources)."""
+        if any(s.id == source.id for s in self.all_sources):
+            return
+        self.all_sources.append(source)
+        if source.type == "instagram" and not self.instagram.configured:
+            return
+        self.sources.append(source)
+        self._http_cache[source.id] = {}
+        self._errors[source.id] = 0
+        if self._client_live:
+            task = asyncio.create_task(self._loop(self._client_live, source))
+            self._tasks.add(task)
+            task.add_done_callback(self._tasks.discard)
 
     def _interval(self, source: Source) -> int:
         return source.interval or self.settings.interval_for(source.type, source.tier)
@@ -98,9 +122,14 @@ class Poller:
         self._errors[source.id] = 0
         items = [i for i in items if self._filter.keep(source, i)]
         new = await self.store.save_items(source, items, baseline=baseline)
-        await self.store.record_poll(source, ok=True, fetched=len(items), new=new)
+        await self.store.record_poll(source, ok=True, fetched=len(items), new=len(new))
         if new:
-            log.info("%-24s +%d new%s", source.id, new, " (baseline)" if baseline else "")
+            log.info("%-24s +%d new%s", source.id, len(new), " (baseline)" if baseline else "")
+            # Credits count even on the first poll: a story's origin doesn't depend on when we started.
+            try:
+                await self.origins.process(client, source, new)
+            except Exception:
+                log.exception("origin tracing failed for %s", source.id)
 
     def _next_wait(self, source: Source) -> float:
         interval = self._interval(source)
@@ -126,9 +155,21 @@ class Poller:
             limits=httpx.Limits(max_connections=20),
         )
 
+    async def _promote_loop(self, client: httpx.AsyncClient) -> None:
+        await asyncio.sleep(120)  # let the first round of polls record some credits
+        while True:
+            try:
+                added = await self.origins.promote(client)
+                if added:
+                    log.info("origin tracing added %d primary sources", added)
+            except Exception:
+                log.exception("origin promotion failed")
+            await asyncio.sleep(PROMOTE_EVERY_SECONDS)
+
     async def run_forever(self) -> None:
         async with self._client() as client:
-            await asyncio.gather(*(self._loop(client, s) for s in self.sources))
+            self._client_live = client
+            await asyncio.gather(self._promote_loop(client), *(self._loop(client, s) for s in list(self.sources)))
 
     async def run_round(self) -> None:
         """Poll every source once (for testing and `--once`)."""

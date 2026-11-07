@@ -33,6 +33,11 @@ class Store:
         self.ig_candidates = self.db["ig_candidates"]
         # Every URL a sitemap / page source has ever listed (see app.sites).
         self.site_url_docs = self.db["site_urls"]
+        # Origin tracing (see app.origins): names publishers credit, per-publisher totals,
+        # and the sources that were added automatically from them.
+        self.origins = self.db["origin_candidates"]
+        self.citing = self.db["citing_publishers"]
+        self.discovered = self.db["discovered_sources"]
 
     async def init(self) -> None:
         await self.site_url_docs.create_index([("source_id", ASCENDING), ("url", ASCENDING)], unique=True)
@@ -45,9 +50,11 @@ class Store:
         doc = await self.source_status.find_one({"_id": source_id}, {"last_ok_at": 1})
         return bool(doc and doc.get("last_ok_at"))
 
-    async def save_items(self, source: Source, fetched: list[FetchedItem], *, baseline: bool) -> int:
-        """Insert unseen items; return how many were new. Existing keys keep their first_seen_at."""
-        new = 0
+    async def save_items(
+        self, source: Source, fetched: list[FetchedItem], *, baseline: bool
+    ) -> list[FetchedItem]:
+        """Insert unseen items; return the new ones. Existing keys keep their first_seen_at."""
+        new: list[FetchedItem] = []
         now = utcnow()
         for f in fetched:
             regions = source.regions_for(f.extra.get("tag"))
@@ -64,7 +71,7 @@ class Store:
             )
             try:
                 await self.items.insert_one(item.model_dump())
-                new += 1
+                new.append(f)
                 if not baseline:
                     await self._note_mentions(source, f, now)
             except DuplicateKeyError:
@@ -110,6 +117,66 @@ class Store:
         except BulkWriteError as exc:  # already-known URLs (e.g. after a restart) are fine
             if any(e.get("code") != 11000 for e in exc.details.get("writeErrors", [])):
                 raise
+
+    async def record_citations(self, publisher: str, source: Source, item: FetchedItem, cites: list[dict]) -> None:
+        """Count each credited name once per story, and how many stories this publisher has traced."""
+        key = item_key(item.url, publisher=item.publisher, title=item.title)
+        now = utcnow()
+        first = await self.citing.update_one(
+            {"_id": publisher, "item_keys": {"$ne": key}},
+            {"$inc": {"items": 1}, "$push": {"item_keys": {"$each": [key], "$slice": -2000}}},
+        )
+        if not first.modified_count:
+            await self.citing.update_one(
+                {"_id": publisher}, {"$setOnInsert": {"items": 1, "item_keys": [key]}}, upsert=True)
+        regions = source.regions_for(item.extra.get("tag"))
+        day = (item.published_at or now).strftime("%Y-%m-%d")
+        for c in cites:
+            oid = f"{c['platform']}:{c['name']}"
+            citation = {"source_id": source.id, "publisher": publisher, "item_url": item.url,
+                        "title": item.title[:200], "kind": c["kind"], "context": c.get("context", ""), "at": now}
+            await self.origins.update_one(
+                {"_id": oid},
+                {"$setOnInsert": {"platform": c["platform"], "name": c["name"], "status": "new",
+                                  "first_cited_at": now}},
+                upsert=True,
+            )
+            # Only the first sighting of this story counts, so re-reading an article never double-counts.
+            await self.origins.update_one(
+                {"_id": oid, "item_keys": {"$ne": key}},
+                {
+                    "$set": {"last_cited_at": now},
+                    "$inc": {"stories": 1, f"by.{publisher.replace('.', '_')}": 1},
+                    "$addToSet": {"publishers": publisher, "kinds": c["kind"], "regions": {"$each": regions},
+                                  "days": day, "item_keys": key},
+                    "$push": {"citations": {"$each": [citation], "$slice": -30}},
+                },
+            )
+
+    async def citing_totals(self) -> dict[str, int]:
+        return {d["_id"]: d["items"] async for d in self.citing.find({}, {"items": 1})}
+
+    async def origin_candidates(self, *, statuses: tuple[str, ...] | None = None, limit: int = 0) -> list[dict]:
+        query = {"status": {"$in": list(statuses)}} if statuses else {}
+        cursor = self.origins.find(query, {"item_keys": 0}).sort([("stories", DESCENDING)])
+        if limit:
+            cursor = cursor.limit(limit)
+        return await cursor.to_list(length=None)
+
+    async def set_origin_status(self, origin_id: str, status: str, *, reason: str = "") -> None:
+        await self.origins.update_one(
+            {"_id": origin_id}, {"$set": {"status": status, "status_reason": reason, "status_at": utcnow()}})
+
+    async def add_discovered_source(self, source: Source, *, origin_id: str) -> None:
+        await self.discovered.update_one(
+            {"_id": source.id},
+            {"$set": {**source.model_dump(), "origin_id": origin_id, "added_at": utcnow()}},
+            upsert=True,
+        )
+
+    async def discovered_sources(self) -> list[Source]:
+        fields = set(Source.model_fields)
+        return [Source(**{k: v for k, v in d.items() if k in fields}) async for d in self.discovered.find()]
 
     async def candidates(self, watched: set[str], limit: int = 50) -> list[dict]:
         """Mentioned accounts not on the watchlist, most-mentioned by distinct accounts first."""

@@ -10,10 +10,12 @@ import html
 import re
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlsplit
 
 import feedparser
 import httpx
 
+from app.citations import extract_citations
 from app.models import FetchedItem, Source
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -93,6 +95,10 @@ def parse_feed(body: bytes) -> list[FetchedItem]:
         tags = entry.get("tags") or []
         if tags and tags[0].get("term"):
             extra["tag"] = tags[0]["term"]  # subreddit name on Reddit feeds
+        # Who the article credits as the story's origin (see app.origins).
+        body = (entry.get("content") or [{}])[0].get("value") or entry.get("summary") or ""
+        if body:
+            extra["citations"] = extract_citations(body, url, urlsplit(url).netloc)
         items.append(
             FetchedItem(
                 url=url,

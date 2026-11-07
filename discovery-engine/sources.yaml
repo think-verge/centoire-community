@@ -8,9 +8,11 @@
 #           benchmark  — the "mainstream" we measure lead time against (BoF, WWD)
 #           aggregator — Google News searches; broad, mainstream-ish coverage
 #           community  — Reddit; where leaks and early chatter show up
-#           retailer   — Shopify stores; a new product listing is an early drop signal
+#           retailer   — Shopify store catalogues: a listing confirms a release; tested 2026-11-05, not early news.
+#                        Slow tier: Shopify rate-limits per IP across every store it hosts.
 #   tier    fast (3 min) | normal (10 min) | slow (30 min)
 #   exclude_title  optional list of case-insensitive regexes; matching items are dropped
+#   fetch_article  the feed has no article text: open new articles to read who they credit
 
 # Publishers (as Google News names them) whose items are always dropped: spam and SEO farms.
 blocked_publishers:
@@ -23,10 +25,10 @@ sources:
   - {id: hypebae,            name: Hypebae,                type: rss, region: GLOBAL, role: publisher, tier: normal, url: "https://hypebae.com/feed"}
   - {id: highsnobiety,       name: Highsnobiety,           type: rss, region: GLOBAL, role: publisher, tier: fast,   url: "https://www.highsnobiety.com/feed/"}
   - {id: sneakernews,        name: Sneaker News,           type: rss, region: US,     role: publisher, tier: fast,   url: "https://sneakernews.com/feed/"}
-  - {id: sneakerbardetroit,  name: Sneaker Bar Detroit,    type: rss, region: US,     role: publisher, tier: fast,   url: "https://sneakerbardetroit.com/feed/"}
-  - {id: nicekicks,          name: Nice Kicks,             type: rss, region: US,     role: publisher, tier: normal, url: "https://www.nicekicks.com/feed/"}
+  - {id: sneakerbardetroit,  name: Sneaker Bar Detroit,    type: rss, region: US,     role: publisher, tier: fast,   fetch_article: true, url: "https://sneakerbardetroit.com/feed/"}
+  - {id: nicekicks,          name: Nice Kicks,             type: rss, region: US,     role: publisher, tier: normal, fetch_article: true, url: "https://www.nicekicks.com/feed/"}
   - {id: justfreshkicks,     name: Just Fresh Kicks,       type: rss, region: US,     role: publisher, tier: normal, url: "https://www.justfreshkicks.com/feed/"}
-  - {id: footwearnews,       name: Footwear News,          type: rss, region: US,     role: publisher, tier: normal, url: "https://footwearnews.com/feed/"}
+  - {id: footwearnews,       name: Footwear News,          type: rss, region: US,     role: publisher, tier: normal, fetch_article: true, url: "https://footwearnews.com/feed/"}
   - {id: thehundreds,        name: The Hundreds,           type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.thehundreds.com/blogs/content.atom"}
   - {id: vogue,              name: Vogue,                  type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.vogue.com/feed/rss"}
 
@@ -72,11 +74,11 @@ sources:
     region_by_tag: {SNKRS: US, Sneakers_India: IN, IndianStreetwear: IN}
 
   # ---------- retailers: new Shopify listings ----------
-  - {id: kith,               name: Kith,                   type: shopify, region: US, role: retailer, tier: fast,   url: "https://kith.com"}
-  - {id: undefeated,         name: Undefeated,             type: shopify, region: US, role: retailer, tier: fast,   url: "https://undefeated.com"}
-  - {id: bodega,             name: Bodega,                 type: shopify, region: US, role: retailer, tier: normal, url: "https://bdgastore.com"}
-  - {id: concepts,           name: Concepts,               type: shopify, region: US, role: retailer, tier: normal, url: "https://cncpts.com"}
-  - {id: extrabutter,        name: Extra Butter,           type: shopify, region: US, role: retailer, tier: normal, url: "https://extrabutterny.com"}
-  - {id: aimeleondore,       name: Aimé Leon Dore,         type: shopify, region: US, role: retailer, tier: normal, url: "https://www.aimeleondore.com"}
-  - {id: stussy,             name: Stüssy,                 type: shopify, region: US, role: retailer, tier: normal, url: "https://www.stussy.com"}
-  - {id: culturekings,       name: Culture Kings,          type: shopify, region: AU, role: retailer, tier: normal, url: "https://www.culturekings.com.au"}
+  - {id: kith,               name: Kith,                   type: shopify, region: US, role: retailer, tier: slow,   url: "https://kith.com"}
+  - {id: undefeated,         name: Undefeated,             type: shopify, region: US, role: retailer, tier: slow,   url: "https://undefeated.com"}
+  - {id: bodega,             name: Bodega,                 type: shopify, region: US, role: retailer, tier: slow, url: "https://bdgastore.com"}
+  - {id: concepts,           name: Concepts,               type: shopify, region: US, role: retailer, tier: slow, url: "https://cncpts.com"}
+  - {id: extrabutter,        name: Extra Butter,           type: shopify, region: US, role: retailer, tier: slow, url: "https://extrabutterny.com"}
+  - {id: aimeleondore,       name: Aimé Leon Dore,         type: shopify, region: US, role: retailer, tier: slow, url: "https://www.aimeleondore.com"}
+  - {id: stussy,             name: Stüssy,                 type: shopify, region: US, role: retailer, tier: slow, url: "https://www.stussy.com"}
+  - {id: culturekings,       name: Culture Kings,          type: shopify, region: AU, role: retailer, tier: slow, url: "https://www.culturekings.com.au"}

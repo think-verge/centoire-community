@@ -10,6 +10,7 @@ SourceType = Literal["rss", "reddit", "shopify", "instagram", "sitemap", "page"]
 SourceRole = Literal[
     "publisher", "benchmark", "aggregator", "community", "retailer",
     "brand", "insider", "collaborator",
+    "discovered",  # added automatically: publishers credited it as a story's origin (app.origins)
 ]
 Tier = Literal["fast", "normal", "slow"]
 
@@ -30,6 +31,8 @@ class Source(BaseModel):
     include_url: list[str] = Field(default_factory=list)
     # Sitemap / page sources: open each new URL to read its real title, image and date.
     enrich: bool = True
+    # Publishers whose feed has no article text: open new articles to read their credits.
+    fetch_article: bool = False
     # Poll interval in seconds, overriding the tier (for very large sitemaps).
     interval: int | None = None
 

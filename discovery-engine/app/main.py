@@ -11,7 +11,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from app.config import get_settings
@@ -30,6 +30,9 @@ async def lifespan(app: FastAPI):
     store = Store(settings.mongodb_uri, settings.mongodb_db)
     await store.init()
     sources = load_watchlist(settings)
+    # Primary sources added automatically by origin tracing in earlier runs.
+    known = {s.id for s in sources}
+    sources += [s for s in await store.discovered_sources() if s.id not in known]
     app.state.store = store
     app.state.sources = sources
     app.state.settings = settings
@@ -78,7 +81,9 @@ async def items(
 async def sources() -> list[dict]:
     """Watchlist plus last poll result for each source."""
     status = {s["_id"]: s for s in await app.state.store.health()}
-    return [{**s.model_dump(), "status": status.get(s.id)} for s in app.state.sources]
+    poller = app.state.poller
+    sources = poller.all_sources if poller else app.state.sources
+    return [{**s.model_dump(), "status": status.get(s.id)} for s in sources]
 
 
 @app.get("/stats")
@@ -108,3 +113,27 @@ async def instagram_candidates(limit: int = Query(50, le=200)) -> list[dict]:
     """Accounts tagged in watched posts that aren't on the watchlist yet: review and add the good ones."""
     watched = {s.handle for s in app.state.sources if s.type == "instagram"}
     return await app.state.store.candidates(watched, limit=limit)
+
+
+@app.get("/origins")
+async def origins(
+    status: str | None = Query(None, description="new | watching | pending_instagram | waiting_budget | "
+                                                 "not_watchable | rejected"),
+    min_publishers: int = Query(1, ge=1),
+    limit: int = Query(100, le=500),
+) -> list[dict]:
+    """Names publishers credit as where their stories came from, most-credited first.
+    `watching` ones were added to the watchlist automatically (role `discovered`)."""
+    rows = await app.state.store.origin_candidates(statuses=(status,) if status else None)
+    rows = [r for r in rows if len(r.get("publishers", [])) >= min_publishers]
+    rows.sort(key=lambda r: (len(r.get("publishers", [])), r.get("stories", 0)), reverse=True)
+    return [{"id": r.pop("_id"), **{k: v for k, v in r.items() if k != "by"}} for r in rows[:limit]]
+
+
+@app.post("/origins/{origin_id}/reject")
+async def reject_origin(origin_id: str) -> dict:
+    """Never add this name (wrong account, not an origin). Doesn't remove an already-added source."""
+    if not await app.state.store.origins.find_one({"_id": origin_id}, {"_id": 1}):
+        raise HTTPException(404, "unknown origin")
+    await app.state.store.set_origin_status(origin_id, "rejected", reason="rejected by a person")
+    return {"id": origin_id, "status": "rejected"}
