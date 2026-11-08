@@ -10,7 +10,10 @@
 #   enrich        open each new page for its real title/image/date (false where pages
 #                 block us or the URL slug already says it all)
 #   interval      seconds, overriding the tier; the Nike sitemaps are 1–12 MB and Nike
-#                 ignores conditional requests, so they are fetched in full every time
+#                 ignores conditional requests, so they are fetched in full every time.
+#                 Nike regenerates them about once a day (~13:00 UTC; seen 2026-11-07), so
+#                 hourly is enough. Measured: a new SNKRS page lands hours to a day AFTER the
+#                 sneaker blogs; it confirms a launch, it doesn't break it.
 #
 # Checked and not watchable without a browser (blocked or rendered by script):
 # adidas.com / news.adidas.com, New Balance, Vans, Converse, HOKA, Crocs, Puma newsroom,
@@ -19,16 +22,16 @@
 sources:
   # ---------- Nike / Jordan / SB: SNKRS launch pages, per market ----------
   # A launch only on JP / KR / IN SNKRS is a regional exclusive: that's the geography signal.
-  - {id: nike-snkrs-us, name: Nike SNKRS US, type: sitemap, region: US, role: brand, interval: 900,  enrich: false,
-     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-us.xml", include_url: ['/launch/t/']}
+  - {id: nike-snkrs-us, name: Nike SNKRS US, type: sitemap, region: US, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-us.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
   - {id: nike-snkrs-jp, name: Nike SNKRS JP, type: sitemap, region: JP, role: brand, interval: 3600, enrich: false,
-     url: "https://www.nike.com/sitemap-v2-snkrsweb-ja-jp.xml", include_url: ['/launch/t/']}
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-ja-jp.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
   - {id: nike-snkrs-gb, name: Nike SNKRS GB, type: sitemap, region: GB, role: brand, interval: 3600, enrich: false,
-     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-gb.xml", include_url: ['/launch/t/']}
-  - {id: nike-snkrs-kr, name: Nike SNKRS KR, type: sitemap, region: KR, role: brand, interval: 1800, enrich: false,
-     url: "https://www.nike.com/sitemap-v2-snkrsweb-ko-kr.xml", include_url: ['/launch/t/']}
-  - {id: nike-snkrs-in, name: Nike SNKRS IN, type: sitemap, region: IN, role: brand, interval: 1800, enrich: false,
-     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-in.xml", include_url: ['/launch/t/']}
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-gb.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-kr, name: Nike SNKRS KR, type: sitemap, region: KR, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-ko-kr.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-in, name: Nike SNKRS IN, type: sitemap, region: IN, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-in.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
   # Campaign and collection landing pages (new collabs often get one before launch).
   - {id: nike-landing-us, name: Nike landing pages, type: sitemap, region: US, role: brand, interval: 3600, enrich: false,
      url: "https://www.nike.com/sitemap-v2-landingpage-en-us.xml"}
