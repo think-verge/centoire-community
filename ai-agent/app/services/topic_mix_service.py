@@ -116,10 +116,18 @@ def apply_lazy_decay(
     return max(0.0, points * decay_factor)
 
 
+def _parse_cluster_key(k: Any) -> Union[int, str]:
+    """Parse cluster key into int if numeric, otherwise preserve as str."""
+    try:
+        return int(k)
+    except (ValueError, TypeError):
+        return str(k)
+
+
 def normalize_mix(
     raw_points: dict[Union[int, str], float],
     min_share_pct: float = MIN_SHARE_THRESHOLD_PCT,
-) -> dict[int, float]:
+) -> dict[Union[int, str], float]:
     """
     Recompute percentages to 100% and drop clusters under `min_share_pct` (default 3%).
 
@@ -134,10 +142,10 @@ def normalize_mix(
         dict[cluster_id, percentage_0_to_100]
     """
     # Clean and filter non-positive
-    positive_points: dict[int, float] = {}
+    positive_points: dict[Union[int, str], float] = {}
     for cid, pts in raw_points.items():
         if pts > 0.0:
-            positive_points[int(cid)] = float(pts)
+            positive_points[_parse_cluster_key(cid)] = float(pts)
 
     if not positive_points:
         return {}
@@ -147,7 +155,7 @@ def normalize_mix(
         return {}
 
     # Initial share check: drop clusters under min_share_pct
-    kept: dict[int, float] = {}
+    kept: dict[Union[int, str], float] = {}
     for cid, pts in positive_points.items():
         raw_share = (pts / total_points) * 100.0
         if raw_share >= min_share_pct:
@@ -158,7 +166,7 @@ def normalize_mix(
 
     # Re-normalize kept clusters to strictly 100.0%
     kept_total = sum(kept.values())
-    normalized_mix: dict[int, float] = {}
+    normalized_mix: dict[Union[int, str], float] = {}
     for cid, pts in kept.items():
         percentage = (pts / kept_total) * 100.0
         normalized_mix[cid] = round(percentage, 2)
@@ -235,8 +243,8 @@ def process_user_event_batch(
             "hidden_post_ids": list[str],
         }
     """
-    raw = {int(k): float(v) for k, v in current_raw_points.items()}
-    daily = {int(k): float(v) for k, v in (current_daily_earned or {}).items()}
+    raw = {_parse_cluster_key(k): float(v) for k, v in current_raw_points.items()}
+    daily = {_parse_cluster_key(k): float(v) for k, v in (current_daily_earned or {}).items()}
     hidden = list(current_hidden_posts or [])
 
     # 1. Apply lazy decay across all existing clusters
@@ -262,7 +270,7 @@ def process_user_event_batch(
         if cluster_id_val is None:
             continue
 
-        cid = int(cluster_id_val)
+        cid = _parse_cluster_key(cluster_id_val)
         curr_pts = raw.get(cid, 0.0)
         curr_earned = daily.get(cid, 0.0)
 

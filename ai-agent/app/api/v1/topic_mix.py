@@ -31,6 +31,13 @@ AI_INTERNAL_SECRET = os.getenv("AI_INTERNAL_SECRET", "dev-internal-secret")
 _INTERNAL_HEADERS = {"X-Internal-Secret": AI_INTERNAL_SECRET}
 
 
+def _safe_mix_key(k: Any) -> Any:
+    try:
+        return int(k)
+    except (ValueError, TypeError):
+        return str(k)
+
+
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
@@ -121,8 +128,8 @@ async def get_user_topic_mix(user_id: str) -> TopicMixResponse:
     last_active = doc.get("lastActiveDate", today)
     active_days = int(doc.get("activeDays", 1))
 
-    raw_points = {int(k): float(v) for k, v in doc.get("rawPoints", {}).items()}
-    daily_earned = {int(k): float(v) for k, v in doc.get("dailyEarned", {}).items()}
+    raw_points = {_safe_mix_key(k): float(v) for k, v in doc.get("rawPoints", {}).items()}
+    daily_earned = {_safe_mix_key(k): float(v) for k, v in doc.get("dailyEarned", {}).items()}
 
     # Check if a new active day started
     if last_active != today:
@@ -178,8 +185,8 @@ async def ingest_user_events(user_id: str, request: EventBatchRequest) -> TopicM
         active_days += 1
         last_active = today
 
-    raw_points = {int(k): float(v) for k, v in doc.get("rawPoints", {}).items()}
-    daily_earned = {int(k): float(v) for k, v in doc.get("dailyEarned", {}).items()}
+    raw_points = {_safe_mix_key(k): float(v) for k, v in doc.get("rawPoints", {}).items()}
+    daily_earned = {_safe_mix_key(k): float(v) for k, v in doc.get("dailyEarned", {}).items()}
     hidden_posts = list(doc.get("hiddenPostIds", []))
 
     # Convert events to dicts

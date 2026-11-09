@@ -110,7 +110,13 @@ async def fetch_user_topic_mix(user_id: str) -> Dict[int, float]:
             if resp.status_code == 200:
                 data = resp.json()
                 mix = data.get("mix", {})
-                return {int(k): float(v) for k, v in mix.items()}
+                res: Dict[Any, float] = {}
+                for k, v in mix.items():
+                    try:
+                        res[int(k)] = float(v)
+                    except (ValueError, TypeError):
+                        res[str(k)] = float(v)
+                return res
     except Exception as exc:
         logger.warning("[suggestions_api] failed to fetch topic mix for %s: %s", user_id, exc)
 
