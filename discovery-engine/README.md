@@ -91,6 +91,24 @@ With `CENTOIRE_API_URL` and `CENTOIRE_DISCOVERY_SECRET` set (`app/review.py`), e
 Backend side: `backend/src/services/discoveryService.ts` and `/internal/discovery` routes on the
 `feat/discovery-review` branch.
 
+## Momentum: breaking, rising, early, steady, settled
+
+Every story sent for review carries a tag (`app/momentum.py`), recomputed every 2 minutes;
+pending posts are refreshed whenever it changes. Thresholds come from how 610 stories spread
+over 4 days (83% never left one website; those that reached 5+ got to 3 websites in a median
+5.3h; half of the stories with 3 websites within 6h reached 5+):
+
+| Tag | Rule |
+|---|---|
+| breaking | under 12h old and 3+ websites within 6h of the first |
+| rising | 2+ new websites in the last 12h, under 3 days old |
+| early | 1-2 websites, under 12h old, and a leak or first from a source whose first stories often spread (20%+ reached 3+ websites, 2+ times with a 1h lead) |
+| steady | a new website in the last 24h |
+| settled | no new website in 24h |
+
+Single-website stories are only sent for review when they're early. In the app, the review
+queue's "Sort: Momentum" puts breaking first.
+
 ## Run
 
 ```bash

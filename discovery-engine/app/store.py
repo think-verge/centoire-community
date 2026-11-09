@@ -232,6 +232,11 @@ class Store:
         cursor = self.stories.find(query, {"vectors": 0, "item_keys": 0}).sort("first_at", ASCENDING)
         return await cursor.to_list(length=None)
 
+    async def pending_review_stories(self) -> list[dict]:
+        """Stories sent for review that no editor has decided yet (their tag keeps changing)."""
+        cursor = self.stories.find({"review.status": "pending_review"}, {"vectors": 0, "item_keys": 0})
+        return await cursor.to_list(length=None)
+
     async def set_story_review(self, story_id: str, review: dict, *, merge: bool = False) -> None:
         update = {f"review.{k}": v for k, v in review.items()} if merge else {"review": review}
         await self.stories.update_one({"_id": story_id}, {"$set": update})

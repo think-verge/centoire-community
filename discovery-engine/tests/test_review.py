@@ -78,6 +78,9 @@ class FakeStore:
         return [s for s in self.stories.values()
                 if s["website_count"] >= min_websites or s["category"] == "leak"]
 
+    async def pending_review_stories(self):
+        return [s for s in self.stories.values() if (s.get("review") or {}).get("status") == "pending_review"]
+
     async def story_articles(self, sid):
         return ARTICLES
 

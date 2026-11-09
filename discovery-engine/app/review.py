@@ -29,6 +29,7 @@ import httpx
 from app.gemini import Gemini, GeminiError
 from app.gnews import resolve as resolve_google_news
 from app.models import Source
+from app.momentum import RANK, early_sources, momentum
 from app.origins import find_feed
 from app.stories import _utc
 from app.urls import site_key
@@ -51,7 +52,7 @@ MAX_SUGGESTIONS_PER_PASS = 5
 
 
 # Bump to resend every pending story once (e.g. after changing what the payload contains).
-PAYLOAD_VERSION = 3
+PAYLOAD_VERSION = 4
 # Google News links resolved per pass (each costs a ~600 KB page); the rest wait for the next pass.
 MAX_RESOLVE_PER_PASS = 40
 NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
@@ -141,7 +142,7 @@ def pick_link(articles: list[dict]) -> dict:
     raise ValueError("story has no articles")
 
 
-def story_payload(story: dict, articles: list[dict]) -> dict:
+def story_payload(story: dict, articles: list[dict], tag: dict | None = None) -> dict:
     """The post an editor reviews: the English headline and summary, linking to an English article
     when the story has one."""
     articles = sorted(with_resolved_urls(articles), key=lambda a: _utc(a.get("published_at") or a["first_seen_at"]))
@@ -180,6 +181,9 @@ def story_payload(story: dict, articles: list[dict]) -> dict:
                                                   "at": _iso(first["at"])}
     if story.get("seen_live_at"):
         payload["discovery"]["engineSawAt"] = _iso(story["seen_live_at"])
+    if tag:
+        payload["discovery"]["momentum"] = {"tag": tag["tag"], "reason": tag["reason"], "rank": RANK[tag["tag"]],
+                                            "computedAt": _iso(datetime.now(timezone.utc))}
     if image and image.startswith("http"):
         payload["coverImageUrl"] = image
     if region:
@@ -235,15 +239,37 @@ class ReviewBridge:
 
     # ---------- stories ----------
 
+    async def _candidates(self, now: datetime) -> tuple[list[dict], set[str]]:
+        """Stories that may need sending: recent ones carried by 2+ websites or leaks, fresh
+        single-website stories (they may be "early"), and everything still pending review."""
+        often_first = early_sources(await self.store.stories_for_review(
+            since=now - timedelta(days=LOOKBACK_DAYS), min_websites=1))
+        seen: dict[str, dict] = {}
+        for s in await self.store.stories_for_review(since=now - timedelta(hours=MAX_AGE_HOURS),
+                                                     min_websites=MIN_WEBSITES):
+            seen[s["_id"]] = s
+        for s in await self.store.stories_for_review(since=now - timedelta(hours=12), min_websites=1):
+            seen.setdefault(s["_id"], s)
+        for s in await self.store.pending_review_stories():
+            seen.setdefault(s["_id"], s)
+        return list(seen.values()), often_first
+
     async def push_stories(self) -> int:
-        since = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
+        now = datetime.now(timezone.utc)
+        stories, often_first = await self._candidates(now)
         due = []
-        for story in await self.store.stories_for_review(since=since, min_websites=MIN_WEBSITES):
+        for story in stories:
             review = story.get("review") or {}
             if review.get("status") not in (None, "pending_review"):
                 continue  # decided: the editor's version stands
+            tag = momentum(story, now, often_first)
+            story["_momentum"] = tag
+            if not review and story.get("website_count", 0) < MIN_WEBSITES and tag["tag"] != "early" \
+                    and story.get("category") != "leak":
+                continue  # a single website and nothing special about it: not for review yet
             if (review and story.get("website_count", 0) <= review.get("pushed_websites", 0)
-                    and review.get("payload_v") == PAYLOAD_VERSION and review.get("links_resolved", True)):
+                    and review.get("payload_v") == PAYLOAD_VERSION and review.get("links_resolved", True)
+                    and review.get("pushed_tag") == tag["tag"]):
                 continue  # nothing new since it was sent
             articles = await self.store.story_articles(story["_id"])
             if articles:
@@ -254,14 +280,14 @@ class ReviewBridge:
         await self._add_english(due)
         sent = 0
         for story, articles in due:
-            result = await self.app.post_story(story_payload(story, articles))
+            result = await self.app.post_story(story_payload(story, articles, story["_momentum"]))
             # Only links the resolution budget skipped count (failures are remembered as "").
             pending_links = self.poller.http_client() is not None and any(
                 is_google_news(a["url"]) and "resolved_url" not in (a.get("extra") or {}) for a in articles)
             await self.store.set_story_review(story["_id"], {
                 "post_id": result["postId"], "status": result["status"], "payload_v": PAYLOAD_VERSION,
                 # False: some Google News links weren't resolved yet; resend once they are
-                "links_resolved": not pending_links,
+                "links_resolved": not pending_links, "pushed_tag": story["_momentum"]["tag"],
                 "pushed_websites": story.get("website_count", 0), "pushed_at": datetime.now(timezone.utc)})
             sent += 1
         return sent
