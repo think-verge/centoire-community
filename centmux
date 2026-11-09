@@ -6,6 +6,20 @@
 
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 
+# nats-server survives `tmux kill-session` (it treats SIGHUP as a config reload), so stop any
+# leftover NATS started from THIS checkout. Matched by command line and working directory, so a NATS
+# belonging to another project is never touched.
+stop_stray_nats() {
+  local root pid cwd
+  root="$(pwd -P)"
+  for pid in $(pgrep -f "nats-server -js -sd \.data/nats" 2>/dev/null); do
+    cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+    if [ "$cwd" = "$root" ]; then
+      kill -TERM "$pid" 2>/dev/null && echo "centmux: stopped leftover NATS (pid $pid)."
+    fi
+  done
+}
+
 if ! command -v tmuxinator >/dev/null 2>&1; then
   echo "tmuxinator is not installed. Install it with: gem install tmuxinator" >&2
   exit 1
@@ -13,6 +27,8 @@ fi
 
 if [[ "${1:-}" == "kill" || "${1:-}" == "stop" ]]; then
   tmux kill-session -t centoire 2>/dev/null && echo "centmux: session stopped." || echo "centmux: no running session."
+  sleep 1
+  stop_stray_nats
   exit 0
 fi
 
@@ -25,6 +41,10 @@ if tmux has-session -t centoire 2>/dev/null; then
   fi
   exit 0
 fi
+
+# fresh start: clear a NATS left behind by an earlier session so the nats pane can bind its port
+stop_stray_nats
+sleep 1
 
 if [ "$TERM_PROGRAM" == "iTerm.app" ]; then
   tmuxinator start local -a false
