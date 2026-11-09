@@ -10,6 +10,7 @@ from .api.v1.embed import router as embed_router
 from .api.v1.clusters import router as clusters_router
 from .api.v1.topic_mix import router as topic_mix_router
 from .api.v1.feed import router as feed_router
+from .api.v1.suggestions import router as suggestions_router
 
 
 @asynccontextmanager
@@ -36,3 +37,4 @@ app.include_router(embed_router)
 app.include_router(clusters_router)
 app.include_router(topic_mix_router)
 app.include_router(feed_router)
+app.include_router(suggestions_router)
