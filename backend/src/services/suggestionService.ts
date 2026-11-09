@@ -134,6 +134,20 @@ export async function getSuggestedCircles(
   const userFollows = await Follow.find({ followerId: userOid }).select("followeeId");
   const followedUserIds = userFollows.map((f) => f.followeeId);
 
+  // Find user interests (hashtags and domains)
+  let userInterests: string[] = [];
+  try {
+    const user = await User.findById(userOid).select("followedHashtags domains").lean();
+    if (user) {
+      userInterests = [
+        ...((user as any).followedHashtags ?? []),
+        ...((user as any).domains ?? []),
+      ].map((h: string) => h.toLowerCase().trim().replace(/^#/, ""));
+    }
+  } catch {
+    // Non-blocking fallback
+  }
+
   // Exclude private circles unless specifically public
   const candidateCircles = await Circle.find({
     _id: { $nin: excludeOids },
@@ -161,17 +175,29 @@ export async function getSuggestedCircles(
     const cid = c._id.toString();
     const mutualCount = mutualFriendsByCircle.get(cid) ?? 0;
 
+    const circleTags = (c.hashtags ?? []).map((t: string) => t.toLowerCase().trim().replace(/^#/, ""));
+    const circleSlugWords = (c.slug ?? "").toLowerCase().split("-");
+    const circleNameWords = (c.name ?? "").toLowerCase().split(/\s+/);
+    const matchedInterest = userInterests.find((interest) =>
+      circleTags.includes(interest) ||
+      circleSlugWords.includes(interest) ||
+      circleNameWords.includes(interest)
+    );
+
     // Signal scoring: 3 * match + 2 * friends + 1.5 * activity + 1 * engagement
+    const interestSignal = matchedInterest ? 1.0 : 0.0;
     const friendsSignal = mutualCount >= 2 ? 0.67 : mutualCount === 1 ? 0.33 : 0.0;
     const activitySignal = Math.min(1.0, (c.postCount ?? 0) / 20.0);
-    const score = Number((2.0 * friendsSignal + 1.5 * activitySignal + 1.5).toFixed(2));
+    const score = Number((3.0 * interestSignal + 2.0 * friendsSignal + 1.5 * activitySignal + 1.0).toFixed(2));
 
     let reason = "Active community in fashion & culture";
-    if (mutualCount >= 2) {
+    if (matchedInterest) {
+      reason = `Based on your interest in #${matchedInterest}`;
+    } else if (mutualCount >= 2) {
       reason = `${mutualCount} friends are members`;
     } else if (mutualCount === 1) {
       reason = "1 friend is a member";
-    } else if (c.memberCount > 50) {
+    } else if (c.memberCount > 5) {
       reason = "Popular circle in the community";
     }
 

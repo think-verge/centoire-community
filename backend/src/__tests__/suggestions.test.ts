@@ -53,6 +53,11 @@ describe("Suggestions Schema Validation", () => {
 describe("Suggestion Feedback & Dismiss Mechanics", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue({ followedHashtags: [], domains: [], blockedUsers: [], mutedUsers: [] }),
+      }),
+    } as any);
   });
 
   it("dismissal sets 30-day window", async () => {
@@ -121,6 +126,11 @@ describe("Acceptance Criteria Verification", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(User, "findById").mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue({ followedHashtags: [], domains: [], blockedUsers: [], mutedUsers: [] }),
+      }),
+    } as any);
   });
 
   it("Acceptance Criterion 1: dismissed items do not return within the window", async () => {
