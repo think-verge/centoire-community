@@ -64,6 +64,23 @@ interface MediaItem {
   sizeStr: string;
   type: "image" | "video";
   isCover: boolean;
+  durationStr?: string;
+}
+
+function getVideoDuration(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      const sec = Math.round(video.duration);
+      const mins = Math.floor(sec / 60);
+      const remSec = sec % 60;
+      resolve(`${mins}:${remSec < 10 ? "0" : ""}${remSec}`);
+    };
+    video.onerror = () => resolve("0:18");
+    video.src = URL.createObjectURL(file);
+  });
 }
 
 interface DraftMeta {
@@ -373,6 +390,14 @@ export function ComposePage() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       try {
+        let durationStr: string | undefined;
+        if (file.type.startsWith("video")) {
+          try {
+            durationStr = await getVideoDuration(file);
+          } catch {
+            durationStr = "0:18";
+          }
+        }
         const result = await uploadImage({ file });
         setMediaList((prev) => {
           const hasCover = prev.some((m) => m.isCover);
@@ -385,6 +410,7 @@ export function ComposePage() {
               sizeStr: `${file.type.startsWith("video") ? "Video" : "Image"} · ${(file.size / (1024 * 1024)).toFixed(1)} MB`,
               type: file.type.startsWith("video") ? "video" : "image",
               isCover: !hasCover && prev.length === 0,
+              durationStr,
             },
           ];
         });
@@ -714,6 +740,11 @@ export function ComposePage() {
             {/* Drop Zone (Figma Upload area: Hug 76px, p-4, bg #EFEFEF, rounded browse button) */}
             <div
               onClick={() => mediaInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                void handleMediaUpload(e.dataTransfer.files);
+              }}
               className="cursor-pointer min-h-[76px] px-4 py-3.5 border border-dashed border-[#111111]/15 bg-[#EFEFEF] flex items-center justify-between gap-4 transition-colors hover:border-[#111111]/30 rounded-none"
             >
               <div className="flex items-center gap-3.5 text-left">
@@ -750,9 +781,12 @@ export function ComposePage() {
               ref={mediaInputRef}
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp,video/mp4"
+              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
               className="hidden"
-              onChange={(e) => void handleMediaUpload(e.target.files)}
+              onChange={(e) => {
+                void handleMediaUpload(e.target.files);
+                e.target.value = "";
+              }}
             />
 
             {/* Uploaded files container (Figma: Flow Horizontal, Width Fill 844px, Height Hug 213px, Gap 16px) */}
@@ -767,7 +801,14 @@ export function ComposePage() {
                       {/* Media preview: Fill width (270.67px in 3 cols), Height 142px, Radius 8px */}
                       <div className="relative h-[142px] w-full overflow-hidden rounded-[8px] bg-gray-100 border border-[#111111]/10">
                         {item.type === "video" ? (
-                          <video src={item.url} className="h-full w-full object-cover" />
+                          <video
+                            src={item.url}
+                            className="h-full w-full object-cover"
+                            controls={false}
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
                         ) : (
                           <img
                             src={item.url}
@@ -797,7 +838,7 @@ export function ComposePage() {
                         {item.type === "video" && !item.isCover && (
                           <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
                             <span className="text-[9px]">▷</span>
-                            <span>0:18</span>
+                            <span>{item.durationStr || "0:18"}</span>
                           </span>
                         )}
                       </div>
