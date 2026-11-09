@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AvatarBubble } from "../../components/AppShell";
 import { Button } from "../../components/Button";
 import { MasonryFeed } from "../../components/MasonryFeed";
+import { SimilarCreatorsSection } from "../../components/suggestions/SimilarCreatorsSection";
 import {
   getGetUserByHandleQueryKey,
   useFollowUser,
@@ -102,6 +103,8 @@ export function ProfilePage() {
           }
         />
       </div>
+
+      {!isSelf && <SimilarCreatorsSection currentUserId={profile.id} />}
     </div>
   );
 }
