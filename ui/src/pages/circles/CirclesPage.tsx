@@ -7,6 +7,8 @@ import {
   useListCircles,
 } from "../../lib/api/generated/circles/circles";
 import type { Circle } from "../../lib/api/generated/model";
+import { useSuggestedCircles, useDismissSuggestion } from "../../lib/api/suggestions";
+import { SuggestionReasonBadge } from "../../components/suggestions/SuggestionReasonBadge";
 
 const FILTERS = ["ALL", "RECOMMENDED", "FASHION", "ART", "LIFESTYLE"] as const;
 type CircleFilter = (typeof FILTERS)[number];
@@ -54,10 +56,18 @@ export function CirclesPage() {
   const cols = useContainerColumnCount(containerRef);
   const [query, setQuery] = useState("");
   const { data: rawCircles, isLoading } = useListCircles(query ? { q: query } : undefined);
+  const { data: suggestedCircles } = useSuggestedCircles(12);
+  const dismissSuggestionMutation = useDismissSuggestion();
+  const [dismissedCircleIds, setDismissedCircleIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<CircleFilter>("ALL");
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const circles = rawCircles || [];
+
+  const handleDismissRecommendedCircle = (circleId: string) => {
+    setDismissedCircleIds((prev) => new Set(prev).add(circleId));
+    dismissSuggestionMutation.mutate({ targetType: "circle", targetId: circleId });
+  };
 
   // Explicit primary category mappings to eliminate cross-category duplicate cards
   const CIRCLE_PRIMARY_CATEGORY: Record<string, "FASHION" | "ART" | "LIFESTYLE"> = {
@@ -102,9 +112,33 @@ export function CirclesPage() {
 
   // Curated standout picks across fashion, art, and lifestyle
   const recommendedSlugs = ["workwear-edit", "beauty-notes", "art-architecture", "japanese-denim"];
-  const recommendedCircles = recommendedSlugs
-    .map((slug) => circles.find((c) => c.slug === slug))
-    .filter((c): c is Circle => Boolean(c));
+  const recommendedCircles: Array<Circle & { reason?: string }> =
+    suggestedCircles && suggestedCircles.length > 0
+      ? suggestedCircles
+          .filter((sc) => !dismissedCircleIds.has(sc.id))
+          .map((sc) => {
+            const match = circles.find((c) => c.id === sc.id || c.slug === sc.slug);
+            if (match) return { ...match, reason: sc.reason };
+            return {
+              id: sc.id,
+              name: sc.name,
+              slug: sc.slug,
+              description: sc.description,
+              avatarUrl: sc.avatarUrl,
+              coverImageUrl: sc.coverImageUrl,
+              memberCount: sc.memberCount,
+              postCount: sc.postCount ?? 0,
+              isPrivate: sc.isPrivate ?? false,
+              rules: [],
+              hashtags: [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              reason: sc.reason,
+            } as unknown as Circle & { reason?: string };
+          })
+      : recommendedSlugs
+          .map((slug) => circles.find((c) => c.slug === slug))
+          .filter((c): c is Circle => Boolean(c));
 
   // In the main "ALL" view, prevent duplicate appearances so each circle card exists only once on the page
   const recommendedIds = new Set(recommendedCircles.map((c) => c.id));
@@ -133,7 +167,7 @@ export function CirclesPage() {
 
   // Determine circles for the View All section
   const getExpandedSectionCircles = () => {
-    let list: Circle[];
+    let list: Array<Circle & { reason?: string }>;
     switch (expandedSection) {
       case "RECOMMENDED FOR YOU":
       case "RECOMMENDED":
@@ -406,11 +440,22 @@ export function CirclesPage() {
                         className="grid gap-6 px-3 -mx-3 py-3 -my-3"
                         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}
                       >
-                        {filteredCircles.map((circle) => (
-                          <div key={circle.id} className="flex flex-col h-full">
-                            <CircleCard circle={circle} />
-                          </div>
-                        ))}
+                        {filteredCircles.map((circle) => {
+                          const circleWithReason = circle as Circle & { reason?: string };
+                          return (
+                            <div key={circle.id} className="flex flex-col h-full">
+                              <CircleCard
+                                circle={circle}
+                                reason={circleWithReason.reason}
+                                onDismiss={
+                                  circleWithReason.reason
+                                    ? () => handleDismissRecommendedCircle(circle.id)
+                                    : undefined
+                                }
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="mt-8 rounded-2xl border border-dashed border-[#111111]/20 p-12 text-center bg-white">
@@ -435,6 +480,7 @@ export function CirclesPage() {
                         railClass={railClass}
                         railItemClass={railItemClass}
                         onViewAll={() => setExpandedSection("RECOMMENDED FOR YOU")}
+                        onDismissCircle={handleDismissRecommendedCircle}
                         className="-mb-4 sm:-mb-3"
                       />
                     )}
@@ -500,13 +546,15 @@ function CircleCarousel({
   railClass,
   railItemClass,
   onViewAll,
+  onDismissCircle,
   className = "",
 }: {
   title: string;
-  circles: Circle[];
+  circles: Array<Circle & { reason?: string }>;
   railClass: string;
   railItemClass: string;
   onViewAll: () => void;
+  onDismissCircle?: (circleId: string) => void;
   className?: string;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -625,7 +673,11 @@ function CircleCarousel({
       >
         {circles.map((circle) => (
           <div key={circle.id} className={`${railItemClass} h-auto`}>
-            <CircleCard circle={circle} />
+            <CircleCard
+              circle={circle}
+              reason={circle.reason}
+              onDismiss={onDismissCircle && circle.reason ? () => onDismissCircle(circle.id) : undefined}
+            />
           </div>
         ))}
       </div>
@@ -633,7 +685,15 @@ function CircleCarousel({
   );
 }
 
-export function CircleCard({ circle }: { circle: Circle }) {
+export function CircleCard({
+  circle,
+  reason,
+  onDismiss,
+}: {
+  circle: Circle;
+  reason?: string;
+  onDismiss?: () => void;
+}) {
   const queryClient = useQueryClient();
   const [joined, setJoined] = useState(Boolean(circle.viewerRole));
   const [members, setMembers] = useState(circle.memberCount);
@@ -738,11 +798,31 @@ export function CircleCard({ circle }: { circle: Circle }) {
       style={{ boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.1)" }}
     >
       {/* Cover banner: from backend database, fallback to sleek neutral dark gradient if none */}
-      {cover ? (
-        <img src={cover} alt="" className="h-[36px] w-full object-cover shrink-0" />
-      ) : (
-        <div className="h-[36px] w-full bg-gradient-to-r from-[#1c1c1c] via-[#2d2d2d] to-[#1c1c1c] shrink-0" />
-      )}
+      <div className="relative">
+        {cover ? (
+          <img src={cover} alt="" className="h-[36px] w-full object-cover shrink-0" />
+        ) : (
+          <div className="h-[36px] w-full bg-gradient-to-r from-[#1c1c1c] via-[#2d2d2d] to-[#1c1c1c] shrink-0" />
+        )}
+        {onDismiss && (
+          <button
+            type="button"
+            aria-label={`Dismiss ${circle.name}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDismiss();
+            }}
+            className="absolute top-1.5 right-1.5 z-10 p-1 bg-black/50 hover:bg-black/80 text-white rounded-full transition-colors cursor-pointer shadow-sm"
+            title="Not interested"
+          >
+            <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
+      </div>
 
       {/* DP circle overlapping banner (-mt-5 = -20px, ~55% inside) + followers pill */}
       <div className="px-4 flex justify-between relative -mt-5">
@@ -824,6 +904,11 @@ export function CircleCard({ circle }: { circle: Circle }) {
             </span>
           )}
         </Link>
+        {reason && (
+          <div className="mt-1.5">
+            <SuggestionReasonBadge reason={reason} />
+          </div>
+        )}
         <p className="font-ui text-[14px] text-[#111111]/60 mt-2 line-clamp-3 leading-[20px] min-h-[60px] mb-2">
           {circle.description}
         </p>

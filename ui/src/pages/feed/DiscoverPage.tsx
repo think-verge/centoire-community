@@ -10,6 +10,7 @@ import { useGetFeedDiscoverInfinite } from "../../lib/api/generated/feed/feed";
 import { listSources } from "../../lib/api/generated/admin/admin";
 import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { cleanHashtag, formatCount } from "../../lib/hashtag";
+import { DiscoverSuggestionsView } from "../../components/suggestions/DiscoverSuggestionsView";
 import type { PostCard } from "../../lib/api/generated/model";
 import type { GetFeedDiscoverOrigin } from "../../lib/api/generated/model";
 
@@ -37,7 +38,7 @@ const DISCOVER_FILTER_CONFIG: FilterFieldDef[] = [
 export function DiscoverPage() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
-  const sort = (params.get("sort") as "trending" | "new") ?? "trending";
+  const sort = (params.get("sort") as "trending" | "new" | "recommended") ?? "trending";
   // "?tag=" is the pre-hashtag URL; accept it so old links still filter.
   const hashtag = cleanHashtag(params.get("hashtag") ?? params.get("tag") ?? "") || undefined;
   const { data: trending } = useGetTrendingHashtags({ limit: 20 }, { query: { staleTime: 5 * 60_000 } });
@@ -48,9 +49,10 @@ export function DiscoverPage() {
 
   const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useGetFeedDiscoverInfinite(
-      { sort, hashtag, origin, source },
+      { sort: sort === "recommended" ? "trending" : sort, hashtag, origin, source },
       {
         query: {
+          enabled: sort !== "recommended",
           initialPageParam: undefined,
           getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
         },
@@ -59,7 +61,7 @@ export function DiscoverPage() {
 
   const posts = data?.pages.flatMap((page) => page.items) ?? [];
 
-  function setSort(next: "trending" | "new") {
+  function setSort(next: "trending" | "new" | "recommended") {
     const nextParams = new URLSearchParams(params);
     nextParams.set("sort", next);
     setParams(nextParams, { replace: true });
@@ -79,80 +81,96 @@ export function DiscoverPage() {
       <h1 className="font-display-serif text-3xl font-semibold">Explore fashion</h1>
 
       <div className="mt-5 flex items-center gap-2">
-        {(["trending", "new"] as const).map((value) => (
+        {(
+          [
+            { value: "trending", label: "Trending" },
+            { value: "new", label: "New" },
+            { value: "recommended", label: "Recommended for You" },
+          ] as const
+        ).map(({ value, label }) => (
           <button
             key={value}
             type="button"
             aria-pressed={sort === value}
             onClick={() => setSort(value)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer ${
               sort === value
                 ? "bg-ink text-ink-inverse"
                 : "border border-line bg-paper text-ink-soft hover:border-ink-soft"
             }`}
           >
-            {value === "trending" ? "Trending" : "New"}
+            {label}
           </button>
         ))}
-        <div className="ml-auto">
-          <ServerFilterBar config={DISCOVER_FILTER_CONFIG} />
-        </div>
+        {sort !== "recommended" && (
+          <div className="ml-auto">
+            <ServerFilterBar config={DISCOVER_FILTER_CONFIG} />
+          </div>
+        )}
       </div>
 
-      {filterCount > 0 && (
-        <div className="mt-2">
-          <ActiveFilterPills config={DISCOVER_FILTER_CONFIG} />
+      {sort === "recommended" ? (
+        <div className="mt-8">
+          <DiscoverSuggestionsView />
         </div>
-      )}
-
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
-        <button
-          type="button"
-          onClick={() => setHashtag(null)}
-          className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-            !hashtag
-              ? "border-crimson bg-crimson text-ink-inverse"
-              : "border-line bg-paper text-ink-soft hover:border-ink-soft"
-          }`}
-        >
-          All
-        </button>
-        {(trending ?? []).map((t) => (
-          <button
-            key={t.name}
-            type="button"
-            onClick={() => setHashtag(t.name === hashtag ? null : t.name)}
-            className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-              hashtag === t.name
-                ? "border-crimson bg-crimson text-ink-inverse"
-                : "border-line bg-paper text-ink-soft hover:border-ink-soft"
-            }`}
-          >
-            #{t.name} <span className="opacity-70">{formatCount(t.postCount)}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-6">
-        <MasonryFeed
-          posts={posts}
-          isLoading={isLoading}
-          hasNextPage={Boolean(hasNextPage)}
-          isFetchingNextPage={isFetchingNextPage}
-          fetchNextPage={fetchNextPage}
-          onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
-          emptyState={
-            <div className="rounded-xl border border-dashed border-line p-12 text-center">
-              <p className="font-display-serif text-2xl font-semibold">Nothing here yet</p>
-              <p className="mt-2 text-sm text-ink-soft">
-                {hashtag
-                  ? `No posts use #${hashtag} yet — try another, or write the first one.`
-                  : "Aggregated stories land here once sources are fetched."}
-              </p>
+      ) : (
+        <>
+          {filterCount > 0 && (
+            <div className="mt-2">
+              <ActiveFilterPills config={DISCOVER_FILTER_CONFIG} />
             </div>
-          }
-        />
-      </div>
+          )}
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+            <button
+              type="button"
+              onClick={() => setHashtag(null)}
+              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
+                !hashtag
+                  ? "border-crimson bg-crimson text-ink-inverse"
+                  : "border-line bg-paper text-ink-soft hover:border-ink-soft"
+              }`}
+            >
+              All
+            </button>
+            {(trending ?? []).map((t) => (
+              <button
+                key={t.name}
+                type="button"
+                onClick={() => setHashtag(t.name === hashtag ? null : t.name)}
+                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
+                  hashtag === t.name
+                    ? "border-crimson bg-crimson text-ink-inverse"
+                    : "border-line bg-paper text-ink-soft hover:border-ink-soft"
+                }`}
+              >
+                #{t.name} <span className="opacity-70">{formatCount(t.postCount)}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <MasonryFeed
+              posts={posts}
+              isLoading={isLoading}
+              hasNextPage={Boolean(hasNextPage)}
+              isFetchingNextPage={isFetchingNextPage}
+              fetchNextPage={fetchNextPage}
+              onOpenPost={(post: PostCard) => setSelectedSlug(post.slug)}
+              emptyState={
+                <div className="rounded-xl border border-dashed border-line p-12 text-center">
+                  <p className="font-display-serif text-2xl font-semibold">Nothing here yet</p>
+                  <p className="mt-2 text-sm text-ink-soft">
+                    {hashtag
+                      ? `No posts use #${hashtag} yet — try another, or write the first one.`
+                      : "Aggregated stories land here once sources are fetched."}
+                  </p>
+                </div>
+              }
+            />
+          </div>
+        </>
+      )}
       {selectedSlug && (
         <PostDrawer
           slug={selectedSlug}

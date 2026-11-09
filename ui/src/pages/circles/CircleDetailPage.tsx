@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../lib/auth-context";
 import { CircleRulesModal } from "../../components/CircleRulesModal";
+import { SimilarCirclesModal } from "../../components/suggestions/SimilarCirclesModal";
 import { customInstance } from "../../lib/api/http";
 import { savePendingCircleInvite, normalizeCircleSlug } from "../../lib/circleInviteStorage";
 import {
@@ -1094,6 +1095,7 @@ export function CircleDetailPage() {
   const [acceptingInvite, setAcceptingInvite] = useState(false);
 
   const [rulesOpen, setRulesOpen] = useState(false);
+  const [similarModalOpen, setSimilarModalOpen] = useState(false);
   const [circleMenuOpen, setCircleMenuOpen] = useState(false);
   const circleMenuTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -1241,6 +1243,7 @@ export function CircleDetailPage() {
           ? "You've joined this private circle!"
           : `You have joined ${circle?.name || "this circle"}!`;
         showToast(msg);
+        setSimilarModalOpen(true);
         sessionStorage.removeItem("centoire_pending_circle_invite");
         if (inviteToken) {
           const next = new URLSearchParams(searchParams);
@@ -2156,6 +2159,13 @@ export function CircleDetailPage() {
         isOpen={inviteModalOpen}
         onClose={() => setInviteModalOpen(false)}
         onToast={showToast}
+      />
+
+      <SimilarCirclesModal
+        isOpen={similarModalOpen}
+        onClose={() => setSimilarModalOpen(false)}
+        joinedCircleName={circle.name}
+        currentCircleSlug={circle.slug}
       />
 
       {/* Toast Notification Banner */}
