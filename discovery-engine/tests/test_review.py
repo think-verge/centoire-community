@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 from app.models import Source
-from app.review import ReviewBridge, app_source_to_engine, story_payload
+from app.review import PAYLOAD_VERSION, ReviewBridge, app_source_to_engine, story_payload
 
 T0 = datetime(2026, 11, 7, 1, 29, tzinfo=timezone.utc)
 
@@ -81,6 +81,9 @@ class FakeStore:
     async def story_articles(self, sid):
         return ARTICLES
 
+    async def set_story_fields(self, sid, fields):
+        self.stories[sid].update(fields)
+
     async def set_story_review(self, sid, review, merge=False):
         s = self.stories[sid]
         s["review"] = {**s.get("review", {}), **review} if merge else review
@@ -109,11 +112,14 @@ class FakePoller:
 
 async def test_push_sends_new_and_grown_stories_only():
     store = FakeStore([story("big", 3), story("small", 1), story("leak", 1, category="leak"),
-                       story("done", 5, review={"status": "published", "pushed_websites": 2})])
+                       story("done", 5, review={"status": "published", "pushed_websites": 2}),
+                       story("old", 3, review={"status": "pending_review", "pushed_websites": 3})])
     app = FakeApp()
     bridge = ReviewBridge(FakePoller(store), app)
-    assert await bridge.push_stories() == 2
-    assert sorted(p["storyId"] for p in app.posted) == ["big", "leak"]
+    assert await bridge.push_stories() == 3
+    # "old" was sent by an earlier version of the payload, so it is resent once
+    assert sorted(p["storyId"] for p in app.posted) == ["big", "leak", "old"]
+    assert store.stories["old"]["review"]["payload_v"] == PAYLOAD_VERSION
     assert store.stories["big"]["review"]["pushed_websites"] == 3
     assert await bridge.push_stories() == 0  # nothing changed
     store.stories["big"]["website_count"] = 6  # spread further while still pending
@@ -159,3 +165,53 @@ async def test_origin_suggestion_goes_to_the_app():
     assert await bridge.suggest_origin(src, "Credited by 2 publishers", ["SBD: Photos: acgtaiwan"])
     assert app.suggested[0]["kind"] == "instagram" and app.suggested[0]["region"] == "TW"
     assert not await bridge.suggest_origin(src, "again", [])  # once only
+
+
+JAPANESE = [
+    {"url": "https://news.google.com/rss/articles/xyz", "title": "「ビームス」50周年別注の全7型が登場 UOMO",
+     "summary": "【差がつく大人のサロモン】", "published_at": T0, "first_seen_at": T0, "regions": ["JP"], "image_url": None},
+    {"url": "https://www.houyhnhnm.jp/news/1", "title": "ビームス×サロモン", "summary": "全7型",
+     "published_at": T0 + timedelta(hours=1), "first_seen_at": T0, "regions": ["JP"], "image_url": None},
+    {"url": "https://hypebeast.com/beams-salomon", "title": "BEAMS and Salomon Mark 50 Years", "summary": "",
+     "published_at": T0 + timedelta(hours=9), "first_seen_at": T0, "regions": ["US"], "image_url": None},
+]
+
+
+def test_links_english_coverage_and_never_shows_a_foreign_excerpt():
+    s = story(websites=1)
+    p = story_payload(s, JAPANESE)
+    assert p["externalUrl"] == "https://hypebeast.com/beams-salomon"  # English, though 9h later
+    assert p["excerpt"] == s["headline"][:300]  # no English summary yet: the headline, not Japanese
+    s["summary_en"] = "Beams and Salomon release a seven-piece collection for Beams' 50th anniversary."
+    s["names_en"] = {"Site 0": "Sneaker Wars"}
+    p = story_payload(s, JAPANESE[:2])
+    assert p["excerpt"].startswith("Beams and Salomon release a seven-piece")
+    assert p["externalUrl"] == "https://www.houyhnhnm.jp/news/1"  # no English: the outlet's own page, not Google News
+    assert p["discovery"]["firstPublished"]["name"] == "Sneaker Wars"
+
+
+class FakeLLM:
+    def __init__(self):
+        self.calls = 0
+
+    async def generate_json(self, prompt, schema, model=None):
+        self.calls += 1
+        import json as _json
+        rows = [_json.loads(line) for line in prompt.splitlines() if line.startswith("{")]
+        return [{"id": r["id"], "summary": f"English summary of {r['headline']}",
+                 "names": [{"original": o, "english": "Sneaker Wars"} for o in r["outlets"]]} for r in rows]
+
+
+async def test_english_summary_is_written_once_and_refreshed_when_the_story_grows():
+    s = story("s1", 2)
+    s["websites"]["sw"] = {"name": "スニーカーウォーズ", "first_at": T0, "url": "https://x", "title": "t", "articles": 1}
+    store, app, llm = FakeStore([s]), FakeApp(), FakeLLM()
+    bridge = ReviewBridge(FakePoller(store), app, llm=llm)
+    await bridge.push_stories()
+    assert app.posted[0]["excerpt"].startswith("English summary of")
+    assert store.stories["s1"]["names_en"] == {"スニーカーウォーズ": "Sneaker Wars"}
+    store.stories["s1"]["website_count"] = 5
+    await bridge.push_stories()
+    assert llm.calls == 2  # regrown story: summary refreshed
+    await bridge.push_stories()
+    assert llm.calls == 2  # unchanged: no new call

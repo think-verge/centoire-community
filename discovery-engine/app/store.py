@@ -236,6 +236,9 @@ class Store:
         update = {f"review.{k}": v for k, v in review.items()} if merge else {"review": review}
         await self.stories.update_one({"_id": story_id}, {"$set": update})
 
+    async def set_story_fields(self, story_id: str, fields: dict) -> None:
+        await self.stories.update_one({"_id": story_id}, {"$set": fields})
+
     async def website_url(self, key: str) -> str | None:
         """Some URL on a website, to find its feed: a direct article link, or the outlet URL
         Google News gives for its results."""

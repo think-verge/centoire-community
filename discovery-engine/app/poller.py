@@ -80,7 +80,8 @@ class Poller:
         self.review: ReviewBridge | None = None
         if settings.centoire_api_url and settings.centoire_discovery_secret:
             self.review = ReviewBridge(self, CentoireApp(settings.centoire_api_url,
-                                                         settings.centoire_discovery_secret))
+                                                         settings.centoire_discovery_secret),
+                                       llm=self.stories.llm if self.stories else None)
         else:
             log.warning("review queue off: set CENTOIRE_API_URL and CENTOIRE_DISCOVERY_SECRET")
         self._client_live: httpx.AsyncClient | None = None

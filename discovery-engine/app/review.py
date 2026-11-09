@@ -16,6 +16,7 @@ editors approve. An admin approves them on the Sources page; the next sync start
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import re
 from collections import defaultdict
@@ -25,6 +26,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from app.gemini import Gemini, GeminiError
 from app.models import Source
 from app.origins import find_feed
 from app.stories import _utc
@@ -45,6 +47,30 @@ SUGGEST_MIN_FIRSTS = 2
 SUGGEST_MIN_APPROVED = 2
 LOOKBACK_DAYS = 14
 MAX_SUGGESTIONS_PER_PASS = 5
+
+
+# Bump to resend every pending story once (e.g. after changing what the payload contains).
+PAYLOAD_VERSION = 2
+NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
+
+ENGLISH_PROMPT = """For each fashion news story below, write in English:
+- summary: 1-2 factual sentences for a reader: what was announced or released, by whom, and the key
+  details given (date, price, where). Use only facts in the articles; no hype, no speculation.
+- names: an English or romanised name for each outlet listed under "outlets" (e.g. "スニーカーウォーズ"
+  -> "Sneaker Wars"). Keep a brand's own Latin spelling when it has one.
+Stories (one JSON object per line):
+"""
+
+ENGLISH_SCHEMA = {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+    "id": {"type": "STRING"}, "summary": {"type": "STRING"},
+    "names": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+        "original": {"type": "STRING"}, "english": {"type": "STRING"}}, "required": ["original", "english"]}}},
+    "required": ["id", "summary", "names"]}}
+
+
+def is_english(text: str) -> bool:
+    """Good enough to pick a link: no CJK, Cyrillic, Arabic, Thai... characters."""
+    return not NON_LATIN.search(text or "")
 
 
 class AppError(Exception):
@@ -91,11 +117,29 @@ def is_google_news(url: str) -> bool:
     return "news.google.com" in url
 
 
-def story_payload(story: dict, articles: list[dict]) -> dict:
-    """The post an editor reviews: the English headline, linking to the earliest direct article."""
-    articles = sorted(articles, key=lambda a: _utc(a.get("published_at") or a["first_seen_at"]))
+def pick_link(articles: list[dict]) -> dict:
+    """The article "Read post" opens: the earliest English one on the outlet's own site, then any
+    English one, then the earliest on an outlet's own site, then whatever there is. (The first
+    publisher, in any language, is still shown in the evidence.)"""
     direct = [a for a in articles if not is_google_news(a["url"])]
-    lead = (direct or articles)[0]
+    for group in ([a for a in direct if is_english(a["title"])],
+                  [a for a in articles if is_english(a["title"])], direct, articles):
+        if group:
+            return group[0]
+    raise ValueError("story has no articles")
+
+
+def story_payload(story: dict, articles: list[dict]) -> dict:
+    """The post an editor reviews: the English headline and summary, linking to an English article
+    when the story has one."""
+    articles = sorted(articles, key=lambda a: _utc(a.get("published_at") or a["first_seen_at"]))
+    lead = pick_link(articles)
+    names = story.get("names_en") or {}
+
+    def name(n: str) -> str:
+        return names.get(n) or n
+
+    excerpt = story.get("summary_en") or (lead.get("summary") if is_english(lead.get("summary", "")) else "")
     image = next((a["image_url"] for a in articles if a.get("image_url")), None)
     first = story.get("first") or {}
     websites = sorted(story["websites"].values(), key=lambda w: _utc(w["first_at"]))
@@ -103,19 +147,20 @@ def story_payload(story: dict, articles: list[dict]) -> dict:
     payload = {
         "storyId": story["_id"],
         "title": story["headline"].rstrip(". ")[:300],
-        "excerpt": (lead.get("summary") or lead["title"])[:300],
+        "excerpt": (excerpt or story["headline"])[:300],
         "externalUrl": lead["url"],
         "publishedAt": _iso(story["first_at"]),
         "discovery": {
             "category": story.get("category"),
             "websiteCount": story.get("website_count", len(websites)),
             "articleCount": story.get("article_count", len(articles)),
-            "spread": [{"name": w["name"], "url": w.get("url"), "firstAt": _iso(w["first_at"])} for w in websites[:25]],
+            "spread": [{"name": name(w["name"]), "url": w.get("url"), "firstAt": _iso(w["first_at"])}
+                       for w in websites[:25]],
             "markets": [m for m in story.get("markets", []) if m != "GLOBAL"],
         },
     }
     if first:
-        payload["discovery"]["firstPublished"] = {"name": first["name"], "url": first.get("url"),
+        payload["discovery"]["firstPublished"] = {"name": name(first["name"]), "url": first.get("url"),
                                                   "at": _iso(first["at"])}
     if story.get("seen_live_at"):
         payload["discovery"]["engineSawAt"] = _iso(story["seen_live_at"])
@@ -146,10 +191,11 @@ def app_source_to_engine(doc: dict) -> Source | None:
 
 
 class ReviewBridge:
-    def __init__(self, poller: Poller, app: CentoireApp) -> None:
+    def __init__(self, poller: Poller, app: CentoireApp, llm: Gemini | None = None) -> None:
         self.poller = poller
         self.store = poller.store
         self.app = app
+        self.llm = llm  # for English summaries and outlet names; without it the headline is the excerpt
         self.known_feeds: set[str] = set()  # every source the app knows about (watched, suggested, rejected)
 
     # ---------- sources ----------
@@ -175,22 +221,59 @@ class ReviewBridge:
 
     async def push_stories(self) -> int:
         since = datetime.now(timezone.utc) - timedelta(hours=MAX_AGE_HOURS)
-        sent = 0
+        due = []
         for story in await self.store.stories_for_review(since=since, min_websites=MIN_WEBSITES):
             review = story.get("review") or {}
             if review.get("status") not in (None, "pending_review"):
                 continue  # decided: the editor's version stands
-            if review and story.get("website_count", 0) <= review.get("pushed_websites", 0):
+            if (review and story.get("website_count", 0) <= review.get("pushed_websites", 0)
+                    and review.get("payload_v") == PAYLOAD_VERSION):
                 continue  # nothing new since it was sent
             articles = await self.store.story_articles(story["_id"])
-            if not articles:
-                continue
+            if articles:
+                due.append((story, articles))
+        if not due:
+            return 0
+        await self._add_english(due)
+        sent = 0
+        for story, articles in due:
             result = await self.app.post_story(story_payload(story, articles))
             await self.store.set_story_review(story["_id"], {
-                "post_id": result["postId"], "status": result["status"],
+                "post_id": result["postId"], "status": result["status"], "payload_v": PAYLOAD_VERSION,
                 "pushed_websites": story.get("website_count", 0), "pushed_at": datetime.now(timezone.utc)})
             sent += 1
         return sent
+
+    async def _add_english(self, due: list[tuple[dict, list[dict]]]) -> None:
+        """English summary (refreshed as the story grows) and English names for non-Latin outlets."""
+        if not self.llm:
+            return
+        todo = [(s, a) for s, a in due
+                if not s.get("summary_en") or s.get("summary_websites", 0) < s.get("website_count", 0)]
+        for i in range(0, len(todo), 15):
+            batch = todo[i:i + 15]
+            lines = []
+            for n, (story, articles) in enumerate(batch):
+                outlets = sorted({w["name"] for w in story["websites"].values() if not is_english(w["name"])})
+                lines.append(json.dumps({
+                    "id": str(n), "headline": story["headline"], "outlets": outlets,
+                    "articles": [f'{a["title"]} :: {(a.get("summary") or "")[:200]}' for a in articles[:6]],
+                }, ensure_ascii=False))
+            try:
+                rows = await self.llm.generate_json(ENGLISH_PROMPT + "\n".join(lines), ENGLISH_SCHEMA)
+            except GeminiError as exc:
+                log.warning("review: English summaries failed, sending headlines only: %s", exc)
+                return
+            for r in rows:
+                if not str(r.get("id", "")).isdigit() or int(r["id"]) >= len(batch):
+                    continue
+                story = batch[int(r["id"])][0]
+                fields = {"summary_en": (r.get("summary") or "").strip()[:300],
+                          "names_en": {x["original"]: x["english"] for x in r.get("names") or []
+                                       if x.get("original") and x.get("english")},
+                          "summary_websites": story.get("website_count", 0)}
+                story.update(fields)
+                await self.store.set_story_fields(story["_id"], fields)
 
     async def pull_decisions(self) -> int:
         since = await self.store.get_state("decisions_since") or datetime(2000, 1, 1, tzinfo=timezone.utc)
