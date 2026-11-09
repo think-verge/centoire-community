@@ -2,7 +2,8 @@
 #
 # Every entry was checked live on 2026-11-04 and returned items.
 #
-#   type    rss | reddit | shopify
+#   type    rss | reddit | shopify | sitemap | page (sitemap/page: publishers without a feed;
+#           every URL never listed before is a new article, see app/sites.py)
 #   region  ISO-3166 alpha-2 of the audience the source writes for, or GLOBAL
 #   role    publisher  — editorial sites we want to be early against or alongside
 #           benchmark  — the "mainstream" we measure lead time against (BoF, WWD)
@@ -44,6 +45,25 @@ sources:
   - {id: vogue-india,        name: Vogue India,            type: rss, region: IN,     role: publisher, tier: slow,   url: "https://www.vogue.in/feed/rss"}
   - {id: homegrown,          name: Homegrown,              type: rss, region: IN,     role: publisher, tier: slow,   url: "https://homegrown.co.in/feed"}
 
+  # ---------- publishers added 2026-11-09 (checked live that day) ----------
+  # Sneaker blogs that credit their sources feed origin tracing (app/origins.py).
+  - {id: uptodate,           name: Up To Date,             type: rss, region: JP,     role: publisher, tier: fast,   url: "https://uptodate.tokyo/feed/"}
+  - {id: houyhnhnm,          name: Houyhnhnm,              type: rss, region: JP,     role: publisher, tier: normal, url: "https://www.houyhnhnm.jp/feed/"}
+  - {id: lesitedelasneaker,  name: Le Site de la Sneaker,  type: rss, region: FR,     role: publisher, tier: normal, url: "https://www.lesitedelasneaker.com/feed/"}
+  - {id: i-d,                name: i-D,                    type: rss, region: GB,     role: publisher, tier: slow,   url: "https://i-d.co/feed/"}
+  - {id: coolhunting,        name: Cool Hunting,           type: rss, region: US,     role: publisher, tier: slow,   url: "https://coolhunting.com/feed/"}
+  - {id: gq-india,           name: GQ India,               type: rss, region: IN,     role: publisher, tier: slow,   url: "https://www.gqindia.com/feed/rss"}
+  # No feed: watched through their news sitemap or homepage article list.
+  # Sole Retriever blocks its homepage to us but serves its Google News sitemap (last 48h).
+  - {id: soleretriever,      name: Sole Retriever,         type: sitemap, region: US, role: publisher, tier: normal, url: "https://www.soleretriever.com/sitemap-google-news.xml"}
+  - {id: complex-style,      name: Complex Style,          type: sitemap, region: US, role: publisher, tier: normal, url: "https://www.complex.com/sitemap/v3/news.xml", include_url: ['complex\.com/(style|sneakers)/']}
+  # House of Heat keeps one sitemap per year: switch to sitemap-2027.xml in January.
+  - {id: houseofheat,        name: House of Heat,          type: sitemap, region: US, role: publisher, tier: normal, url: "https://houseofheat.co/sitemap/sitemap-2026.xml"}
+  - {id: sneakerjagers,      name: Sneakerjagers,          type: sitemap, region: NL, role: publisher, tier: normal, url: "https://www.sneakerjagers.com/en/sitemap/news/1.xml", include_url: ['/en/n/']}
+  - {id: fashion-press,      name: Fashion Press,          type: sitemap, region: JP, role: publisher, tier: normal, url: "https://www.fashion-press.net/sitemaps/news-latest.xml", include_url: ['/news/\d+']}
+  - {id: sneakerfreaker,     name: Sneaker Freaker,        type: page,    region: AU, role: publisher, tier: normal, url: "https://www.sneakerfreaker.com/", include_url: ['/(releases|news)/[^/]+$']}
+  - {id: grailify,           name: Grailify,               type: page,    region: DE, role: publisher, tier: normal, url: "https://www.grailify.com/en/", include_url: ['/en/sneaker/[^/]+$']}
+
   # ---------- benchmarks: what "mainstream" looks like ----------
   - {id: wwd,                name: WWD,                    type: rss, region: US,     role: benchmark, tier: fast,   url: "https://wwd.com/feed/"}
   # BoF blocks direct feed access; Google News carries its articles with publish times.
@@ -82,3 +102,5 @@ sources:
   - {id: aimeleondore,       name: Aimé Leon Dore,         type: shopify, region: US, role: retailer, tier: slow, url: "https://www.aimeleondore.com"}
   - {id: stussy,             name: Stüssy,                 type: shopify, region: US, role: retailer, tier: slow, url: "https://www.stussy.com"}
   - {id: culturekings,       name: Culture Kings,          type: shopify, region: AU, role: retailer, tier: slow, url: "https://www.culturekings.com.au"}
+  # END. launch calendar: a raffle listing confirms a release date (Shopify collection feed).
+  - {id: end-launches,       name: END. Launches,          type: rss,     region: GB, role: retailer, tier: normal, url: "https://www.endclothing.com/collections/launches.atom"}

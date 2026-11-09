@@ -7,14 +7,19 @@ flags what's breaking, and measures how far ahead of BoF / WWD we were.
 The watchlist is split in three files. Every source has a `region`; items carry `regions`,
 so everything can be filtered by market.
 
-- [`brand_sites.yaml`](brand_sites.yaml): **early, official signals** from brands' own sites:
-  Nike SNKRS launch-page sitemaps for US/JP/GB/KR/IN, Nike landing pages and newsroom,
-  Supreme previews and news, ASICS press, and brand blogs (Stüssy, ALD, Kith, BAPE, Patta,
-  JJJJound). Sitemaps and pages have no feed, so the engine remembers every URL they have
-  ever listed and reports only new ones (`app/sites.py`).
-- [`instagram.yaml`](instagram.yaml): brand, insider and collaborator Instagram accounts.
-- [`sources.yaml`](sources.yaml): publishers, benchmarks (BoF, WWD), Google News searches per
-  market, Reddit, and Shopify store catalogues (release/availability, not early news).
+- [`brand_sites.yaml`](brand_sites.yaml): brands' own channels: Nike SNKRS launch-page
+  sitemaps for US/JP/GB/KR/IN, Nike landing pages and newsroom, Supreme previews and news,
+  ASICS press, and 24 brand blogs (Stüssy, ALD, Kith, BAPE, Patta, JJJJound, Corteiz, Brain
+  Dead, Denim Tears, Noah, WTAPS, sacai, Neighborhood, Bluorng, …). Sitemaps and pages have
+  no feed, so the engine remembers every URL they have ever listed and reports only new ones
+  (`app/sites.py`).
+- [`instagram.yaml`](instagram.yaml): 70 brand, insider, collaborator and shop accounts
+  (170 of 180 calls/hour).
+- [`sources.yaml`](sources.yaml): publishers in 11 markets (feeds, plus news sitemaps or
+  homepage article lists for Sole Retriever, Complex, House of Heat, Sneakerjagers, Fashion
+  Press, Sneaker Freaker and Grailify), benchmarks (BoF, WWD), Google News searches per
+  market, Reddit, Shopify store catalogues and END. launches (release confirmation, not
+  early news).
 - **Discovered sources** (role `discovered`, kept in MongoDB): added automatically by origin
   tracing, below.
 

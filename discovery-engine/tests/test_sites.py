@@ -116,3 +116,23 @@ def test_brand_sites_watchlist_loads():
     assert {s.type for s in sources} == {"sitemap", "page", "rss"}
     assert all(s.role == "brand" for s in sources)
     assert all(s.include_url for s in sources if s.type == "page")
+
+
+async def test_empty_news_sitemap_is_not_an_error():
+    source = snkrs_source(id="soleretriever", url="https://www.soleretriever.com/sitemap-google-news.xml",
+                          include_url=[])
+    async with serve({source.url: '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'}) as client:
+        assert await SiteWatcher(FakeStore()).fetch(client, source, {}) == []
+
+
+async def test_opened_pages_are_read_for_credits():
+    page = "https://www.sneakerfreaker.com/"
+    article = "https://www.sneakerfreaker.com/releases/corteiz-nike-shox-r4"
+    source = Source(id="sneakerfreaker", name="Sneaker Freaker", type="page", region="AU", role="publisher",
+                    url=page, include_url=["/releases/[^/]+$"])
+    watcher = SiteWatcher(FakeStore())
+    watcher.store.urls["sneakerfreaker"] = {"https://www.sneakerfreaker.com/releases/older"}
+    async with serve({page: f'<a href="{article}">Corteiz</a>',
+                      article: "<article><p>Photos: zsneakerheadz</p></article>"}) as client:
+        [item] = await watcher.fetch(client, source, {})
+    assert [(c["name"], c["kind"]) for c in item.extra["citations"]] == [("zsneakerheadz", "credit")]

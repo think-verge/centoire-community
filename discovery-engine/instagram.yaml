@@ -12,8 +12,10 @@
 #           retailer     — shops; sometimes post samples or early pairs
 #   tier    fast = every 10 min (6 calls/h), normal = 30 min (2/h), slow = 60 min (1/h)
 #
-# Budget: 15 fast (90/h) + 25 normal (50/h) + 20 slow (20/h) = 160 calls/hour,
+# Budget: 15 fast (90/h) + 25 normal (50/h) + 30 slow (30/h) = 170 calls/hour,
 # under the 180/hour planning budget (IG_MAX_CALLS_PER_HOUR). Check GET /instagram.
+# That leaves room for ~10 accounts found by origin tracing; to add more, move
+# accounts to slower tiers or drop ones that never post anything new.
 
 accounts:
   # ---------- insiders / leakers (fast) ----------
@@ -89,3 +91,16 @@ accounts:
   - {handle: kawsone,          role: collaborator, region: US, tier: slow}
   - {handle: aleali,           role: collaborator, region: US, tier: slow}
   - {handle: unionlosangeles,  role: retailer, region: US, tier: slow}
+
+  # ---------- streetwear brands without a usable website feed (added 2026-11-09, slow) ----------
+  - {handle: crtz.rtw,         role: brand, region: GB, tier: slow}
+  - {handle: denimtears,       role: brand, region: US, tier: slow}
+  - {handle: carharttwip,      role: brand, region: DE, tier: slow}
+  - {handle: humanmade,        role: brand, region: JP, tier: slow}
+  - {handle: wearebraindead,   role: brand, region: US, tier: slow}
+  - {handle: representclo,     role: brand, region: GB, tier: slow}
+  - {handle: thisisneverthat,  role: brand, region: KR, tier: slow}
+  - {handle: adererror,        role: brand, region: KR, tier: slow}
+  - {handle: stoneisland,      role: brand, region: IT, tier: slow}
+  - {handle: sp5derworldwide,  role: brand, region: US, tier: slow}
+

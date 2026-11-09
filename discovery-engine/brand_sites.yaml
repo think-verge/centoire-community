@@ -18,6 +18,10 @@
 # Checked and not watchable without a browser (blocked or rendered by script):
 # adidas.com / news.adidas.com, New Balance, Vans, Converse, HOKA, Crocs, Puma newsroom,
 # Palace, adidas Group press (times out for our user agent). Follow these on Instagram.
+# Checked 2026-11-09, no usable feed: Palace, Sp5der, Hellstar, Cactus Plant Flea Market,
+# Fear of God (empty blog), Nocta, Aries, Represent/Awake NY/Dime/Reebok (blogs stale for
+# months), Carhartt WIP, Stone Island, Human Made, Kapital, atmos, Ader Error (blocked),
+# thisisneverthat, Wooyoungmi, Andersson Bell, Visvim, Undercover, Our Legacy, Acronym.
 
 sources:
   # ---------- Nike / Jordan / SB: SNKRS launch pages, per market ----------
@@ -56,3 +60,27 @@ sources:
   - {id: patta-blog,         name: Patta News,            type: rss, region: NL, role: brand, tier: normal, url: "https://www.patta.nl/blogs/news.atom"}
   - {id: jjjjound-previews,  name: JJJJound Previews,     type: rss, region: CA, role: brand, tier: normal, url: "https://www.jjjjound.com/blogs/previews.atom"}
   - {id: jjjjound-projects,  name: JJJJound Projects,     type: rss, region: CA, role: brand, tier: normal, url: "https://www.jjjjound.com/blogs/projects.atom"}
+
+  # ---------- streetwear brand blogs (added 2026-11-09; each posted within the last ~6 weeks) ----------
+  # All Shopify: slow tier, because Shopify rate-limits per IP across every store it hosts.
+  - {id: corteiz-blog,       name: Corteiz Archive,       type: rss, region: GB, role: brand, tier: slow, url: "https://www.corteiz.com/blogs/archive.atom"}
+  - {id: braindead-blog,     name: Brain Dead Archive,    type: rss, region: US, role: brand, tier: slow, url: "https://wearebraindead.com/blogs/archive.atom"}
+  - {id: denimtears-blog,    name: Denim Tears Lookbook,  type: rss, region: US, role: brand, tier: slow, url: "https://denimtears.com/blogs/lookbook.atom"}
+  - {id: noah-blog,          name: Noah News,             type: rss, region: US, role: brand, tier: slow, url: "https://noahny.com/blogs/news.atom"}
+  - {id: pleasures-blog,     name: Pleasures Lookbooks,   type: rss, region: US, role: brand, tier: slow, url: "https://pleasuresnow.com/blogs/lookbooks.atom"}
+  - {id: bbc-blog,           name: Billionaire Boys Club, type: rss, region: US, role: brand, tier: slow, url: "https://www.bbcicecream.com/blogs/news.atom"}
+  - {id: union-blog,         name: Union LA Blog,         type: rss, region: US, role: brand, tier: slow, url: "https://store.unionlosangeles.com/blogs/blog.atom"}
+  - {id: placesfaces-blog,   name: Places+Faces News,     type: rss, region: GB, role: brand, tier: slow, url: "https://www.placesplusfaces.com/blogs/news.atom"}
+  - {id: colebuxton-blog,    name: Cole Buxton Media,     type: rss, region: GB, role: brand, tier: slow, url: "https://www.colebuxton.com/blogs/media.atom"}
+  - {id: onlineceramics-blog, name: Online Ceramics,      type: rss, region: US, role: brand, tier: slow, url: "https://onlineceramics.com/feed/"}
+  - {id: wtaps-blog,         name: WTAPS Feature,         type: rss, region: JP, role: brand, tier: slow, url: "https://wtaps.com/blogs/feature.atom"}
+  - {id: sacai-blog,         name: sacai News,            type: rss, region: JP, role: brand, tier: slow, url: "https://www.sacai.jp/blogs/news.atom"}
+  - {id: neighborhood-blog,  name: Neighborhood News,     type: rss, region: JP, role: brand, tier: slow, url: "https://www.neighborhood.jp/blogs/news.atom"}
+  - {id: helas-blog,         name: Hélas News,            type: rss, region: FR, role: brand, tier: slow, url: "https://www.helascaps.com/blogs/news.atom"}
+  - {id: bluorng-blog,       name: Bluorng News,          type: rss, region: IN, role: brand, tier: slow, url: "https://bluorng.com/blogs/news.atom"}
+  - {id: bonkerscorner-blog, name: Bonkers Corner,        type: rss, region: IN, role: brand, tier: slow, url: "https://www.bonkerscorner.com/blogs/bonkers-corner.atom"}
+  - {id: urbanmonkey-blog,   name: Urban Monkey News,     type: rss, region: IN, role: brand, tier: slow, url: "https://www.urbanmonkey.com/blogs/news.atom"}
+
+  # ---------- END. editorial (its launch calendar is in sources.yaml) ----------
+  - {id: end-features,       name: END. Features,         type: rss, region: GB, role: brand,    tier: slow,   url: "https://www.endclothing.com/blogs/features.atom"}
+

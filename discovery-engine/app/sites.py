@@ -15,6 +15,7 @@ from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
 
+from app.citations import article_body, extract_citations
 from app.fetchers import _clean, _get, _parse_iso
 from app.models import FetchedItem, Source
 
@@ -113,6 +114,8 @@ class SiteWatcher:
             self._patterns[source.id] = [re.compile(p, re.I) for p in source.include_url]
         patterns = self._patterns[source.id]
         links = {u: t for u, t in links.items() if not patterns or any(p.search(u) for p in patterns)}
+        if not links and source.type == "sitemap" and "<urlset" in resp.text and "<loc>" not in resp.text:
+            return {}  # an empty Google News sitemap: nothing published in the last 48 hours
         if not links:
             # A listing that used to work and now matches nothing means the site changed or blocked us.
             cache.clear()
@@ -121,6 +124,8 @@ class SiteWatcher:
 
     async def fetch(self, client: httpx.AsyncClient, source: Source, cache: dict) -> list[FetchedItem]:
         listed = await self._listing(client, source, cache)
+        if not listed:
+            return []
         if source.id not in self._seen:
             self._seen[source.id] = await self.store.site_urls(source.id)
         seen = self._seen[source.id]
@@ -144,7 +149,7 @@ class SiteWatcher:
             meta = {}
             if url in enrich:
                 async with sem:
-                    meta = await self._page_meta(client, url)
+                    meta = await self._page_meta(client, url, urlsplit(source.url).netloc)
             title = meta.get("title")
             if not title or title.strip().lower() == source.name.lower():
                 title = listed[url] or title_from_url(url)
@@ -152,6 +157,8 @@ class SiteWatcher:
                 # Supreme preview items share their season's page title; the slug names the product.
                 title = f"{title_from_url(url)} — {title}"
             extra = {"via": source.type, "listing": source.url}
+            if "citations" in meta:  # read for origin tracing (app.origins) while the page was open
+                extra["citations"] = meta["citations"]
             if len(fresh) > len(batch):
                 extra["batch_total"] = len(fresh)
             return FetchedItem(
@@ -163,11 +170,12 @@ class SiteWatcher:
         return list(await asyncio.gather(*(build(u) for u in batch)))
 
     @staticmethod
-    async def _page_meta(client: httpx.AsyncClient, url: str) -> dict:
+    async def _page_meta(client: httpx.AsyncClient, url: str, own_host: str) -> dict:
         try:
             resp = await client.get(url)
             resp.raise_for_status()
-            return page_meta(resp.text)
+            return {**page_meta(resp.text),
+                    "citations": extract_citations(article_body(resp.text), str(resp.url), own_host)}
         except Exception as exc:  # the URL alone still makes a usable item
             log.debug("could not open %s: %s", url, exc)
             return {}
