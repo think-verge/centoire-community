@@ -247,6 +247,12 @@ describe("Ticket #114: Onboarding Profile & Topic-Mix Seeding", () => {
       vi.spyOn(userService, "getFollowedUserIds").mockResolvedValue([]);
       vi.spyOn(userService, "getFollowedSourceIds").mockResolvedValue([]);
       vi.spyOn(userService, "getMembershipCircleIds").mockResolvedValue([]);
+      vi.spyOn(userService, "getBlockedAndMutedUserIds").mockResolvedValue([]);
+      vi.spyOn(Circle, "find").mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([]),
+        }),
+      } as any);
       vi.spyOn(User, "find").mockReturnValue({
         select: vi.fn().mockResolvedValue([]),
       } as any);

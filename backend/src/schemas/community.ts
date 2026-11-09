@@ -201,6 +201,52 @@ export function registerCommunityPaths(): void {
     request: { params: z.object({ id: z.string() }) },
     responses: { 204: { description: "No longer following" } },
   });
+  registry.registerPath({
+    method: "post",
+    path: "/users/{id}/block",
+    tags: ["users"],
+    operationId: "blockUser",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 204: { description: "User blocked" }, 404: errorResponse("User not found") },
+  });
+  registry.registerPath({
+    method: "delete",
+    path: "/users/{id}/block",
+    tags: ["users"],
+    operationId: "unblockUser",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 204: { description: "User unblocked" } },
+  });
+  registry.registerPath({
+    method: "post",
+    path: "/users/{id}/mute",
+    tags: ["users"],
+    operationId: "muteUser",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 204: { description: "User muted" }, 404: errorResponse("User not found") },
+  });
+  registry.registerPath({
+    method: "delete",
+    path: "/users/{id}/mute",
+    tags: ["users"],
+    operationId: "unmuteUser",
+    request: { params: z.object({ id: z.string() }) },
+    responses: { 204: { description: "User unmuted" } },
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/users/me/blocks",
+    tags: ["users"],
+    operationId: "getBlockedUsers",
+    responses: { 200: jsonResponse("List of blocked users", z.array(PublicUserSchema)) },
+  });
+  registry.registerPath({
+    method: "get",
+    path: "/users/me/mutes",
+    tags: ["users"],
+    operationId: "getMutedUsers",
+    responses: { 200: jsonResponse("List of muted users", z.array(PublicUserSchema)) },
+  });
 
   registry.registerPath({
     method: "get",

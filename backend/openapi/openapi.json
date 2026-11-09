@@ -3274,6 +3274,160 @@
         }
       }
     },
+    "/users/{id}/block": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "blockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User blocked"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unblockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unblocked"
+          }
+        }
+      }
+    },
+    "/users/{id}/mute": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "muteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User muted"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unmuteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unmuted"
+          }
+        }
+      }
+    },
+    "/users/me/blocks": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getBlockedUsers",
+        "responses": {
+          "200": {
+            "description": "List of blocked users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/mutes": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getMutedUsers",
+        "responses": {
+          "200": {
+            "description": "List of muted users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/onboarding/suggestions": {
       "get": {
         "tags": [

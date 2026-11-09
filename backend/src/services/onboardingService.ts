@@ -1,7 +1,9 @@
+import { Types } from "mongoose";
 import { Circle, type ICircle } from "../models/Circle.js";
 import { Follow } from "../models/Follow.js";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { User, type IUser } from "../models/User.js";
+import * as userService from "./userService.js";
 
 export interface OnboardingSuggestions {
   creators: IUser[];
@@ -19,6 +21,10 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
   const interests = user?.followedHashtags ?? [];
   const domains = (user?.domains ?? []).map((d) => d.trim()).filter(Boolean);
   const userLocation = user?.location?.trim();
+
+  // Exclude self and any blocked or muted creators
+  const excludedAuthorIds = await userService.getBlockedAndMutedUserIds(userId);
+  const excludedIds = [new Types.ObjectId(userId), ...excludedAuthorIds];
 
   // Normalized keywords from domains (lowercase, stripped of punctuation for hashtag matching)
   const domainKeywords = domains.map((d) => d.toLowerCase());
@@ -44,7 +50,7 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
   let creators: IUser[] = [];
   if (creatorOrConditions.length > 0) {
     const matching = await User.find({
-      _id: { $ne: userId },
+      _id: { $nin: excludedIds },
       role: "creator",
       handle: { $exists: true },
       $or: creatorOrConditions,
@@ -84,8 +90,9 @@ export async function getSuggestions(userId: string): Promise<OnboardingSuggesti
 
   // Fallback: top creators overall if fewer than 6 suggestions
   if (creators.length < 6) {
+    const existingIds = [...excludedIds, ...creators.map((c) => c._id)];
     const fallback = await User.find({
-      _id: { $ne: userId, $nin: creators.map((c) => c._id) },
+      _id: { $nin: existingIds },
       role: "creator",
       handle: { $exists: true },
     })

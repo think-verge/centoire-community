@@ -122,6 +122,10 @@ export interface DomainEventPayloads {
     inviteToken: string;
     circle?: CircleSnapshot;
   };
+  "social.user_blocked": { userId: string; targetUserId: string };
+  "social.user_unblocked": { userId: string; targetUserId: string };
+  "social.user_muted": { userId: string; targetUserId: string };
+  "social.user_unmuted": { userId: string; targetUserId: string };
 }
 
 export type DomainEvent = keyof DomainEventPayloads;

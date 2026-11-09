@@ -35,6 +35,8 @@ export interface IUser extends Document {
   dismissedPosts: Types.ObjectId[];
   active_days?: number;
   lastActiveDate?: string;
+  blockedUsers: Types.ObjectId[];
+  mutedUsers: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -74,12 +76,16 @@ const userSchema = new Schema<IUser>(
     dismissedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
     active_days: { type: Number, default: 0 },
     lastActiveDate: { type: String },
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    mutedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true },
 );
 
 userSchema.index({ handle: "text", displayName: "text", bio: "text" });
 userSchema.index({ role: 1 });
+userSchema.index({ blockedUsers: 1 });
+userSchema.index({ mutedUsers: 1 });
 userSchema.index({ domains: 1 });
 userSchema.index({ location: 1 });
 
