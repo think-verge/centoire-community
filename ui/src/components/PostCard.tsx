@@ -8,18 +8,23 @@ import { PostActions } from "./PostActions";
 import { CATEGORY_LABELS, isPostCategory } from "../lib/categoryTaxonomy";
 import { customInstance } from "../lib/api/http";
 import { readPostUrl } from "../lib/readPost";
+import { useFeedCardObserver } from "../hooks/useFeedCardObserver";
+import { feedEventTracker } from "../lib/feedEventTracker";
 
 export function PostCard({
   post,
   onOpenPost,
   authorPlacement: authorPlacementProp,
   provenancePlacement: provenancePlacementProp,
+  position,
 }: {
   post: PostCardType;
   onOpenPost?: (post: PostCardType) => void;
   authorPlacement?: "bottom" | "top" | "auto";
   provenancePlacement?: "bottom" | "top" | "auto";
+  position?: number;
 }) {
+  const articleRef = useFeedCardObserver({ post, position });
   const navigate = useNavigate();
   const external = post.origin === "aggregated" && post.externalUrl;
   const [imageLoaded, setImageLoaded] = useState(!post.coverImageUrl);
@@ -122,6 +127,7 @@ export function PostCard({
 
   const handleHidePost = () => {
     setDismissed(true);
+    feedEventTracker.trackHide(post.id);
     try {
       const list = JSON.parse(localStorage.getItem("centoire_hidden_posts") || "[]");
       if (Array.isArray(list) && !list.includes(post.id)) {
@@ -247,6 +253,7 @@ export function PostCard({
 
   return (
     <article
+      ref={articleRef as React.Ref<HTMLElement>}
       className={`group relative break-inside-avoid rounded-[16px] bg-white flex flex-col flex-1 min-h-[320px] h-full transition-shadow duration-300 ${
         authorTooltipOpen || provenanceOpen || lastOpened === "options" ? "z-50" : "hover:z-30"
       }`}

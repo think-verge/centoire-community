@@ -1,6 +1,7 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useMemo, type ReactNode } from "react";
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { PostCard } from "./PostCard";
+import { FeedSuggestionCard } from "./FeedSuggestionCard";
 
 interface MasonryFeedProps {
   posts: PostCardType[];
@@ -22,6 +23,25 @@ export function MasonryFeed({
   onOpenPost,
 }: MasonryFeedProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const feedItems = useMemo(() => {
+    const items: Array<
+      | { type: "post"; post: PostCardType; position: number }
+      | { type: "suggestion"; position: number }
+    > = [];
+    let pos = 1;
+    posts.forEach((p, idx) => {
+      if (idx === 7) {
+        items.push({ type: "suggestion", position: 8 });
+      }
+      items.push({ type: "post", post: p, position: pos });
+      pos++;
+    });
+    if (posts.length > 0 && posts.length < 8 && !items.some((it) => it.type === "suggestion")) {
+      items.push({ type: "suggestion", position: posts.length + 1 });
+    }
+    return items;
+  }, [posts]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -55,9 +75,18 @@ export function MasonryFeed({
   return (
     <>
       <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} onOpenPost={onOpenPost} />
-        ))}
+        {feedItems.map((item) =>
+          item.type === "suggestion" ? (
+            <FeedSuggestionCard key="feed-suggestion-card" />
+          ) : (
+            <PostCard
+              key={item.post.id}
+              post={item.post}
+              position={item.position}
+              onOpenPost={onOpenPost}
+            />
+          ),
+        )}
         {isFetchingNextPage &&
           Array.from({ length: 4 }).map((_, i) => (
             <SkeletonCard key={`next-page-skeleton-${i}`} tall={i % 2 === 0} />

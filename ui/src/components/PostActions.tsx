@@ -12,6 +12,7 @@ import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { useAuth } from "../lib/auth-context";
 import { customInstance } from "../lib/api/http";
 import { WhyAmISeeingThisPopover } from "./WhyAmISeeingThisPopover";
+import { feedEventTracker } from "../lib/feedEventTracker";
 
 /**
  * Upvote / comment / bookmark row. Optimistic per-card state: counts flip
@@ -177,6 +178,7 @@ export function PostActions({
     setOptionsOpen(false);
     onOptionsToggle?.(false);
     onHide?.();
+    feedEventTracker.trackHide(post.id);
     void customInstance({ url: `/posts/${post.id}/not-interested`, method: "POST" });
     setToastMessage("Post hidden · Centoire will show less like this");
   }
@@ -219,6 +221,8 @@ export function PostActions({
       navigate("/login");
       return;
     }
+    onHide?.();
+    feedEventTracker.trackReport(post.id);
     if (reported) {
       setToastMessage("You have already reported this post");
       return;

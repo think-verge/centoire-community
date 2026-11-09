@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { PostCard } from "../../components/PostCard";
 import { FeaturedBanner } from "../../components/FeaturedBanner";
+import { FeedSuggestionCard } from "../../components/FeedSuggestionCard";
+import { feedEventTracker } from "../../lib/feedEventTracker";
 import {
   useGetFeedDiscoverInfinite,
   useGetFeedFollowingInfinite,
@@ -101,6 +103,62 @@ export function FeedPage() {
     fetchNextPage,
   } = currentQuery;
 
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleRebuildFeed = useCallback(async () => {
+    setIsRefreshing(true);
+    feedEventTracker.resetSessionTracking();
+    try {
+      await currentQuery.refetch();
+    } finally {
+      setIsRefreshing(false);
+      setPullDistance(0);
+    }
+  }, [currentQuery]);
+
+  // Touch gesture listeners for pull-to-refresh
+  useEffect(() => {
+    const onTouchStart = (e: TouchEvent) => {
+      if (window.scrollY <= 2) {
+        touchStartY.current = e.touches[0].clientY;
+      } else {
+        touchStartY.current = null;
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (touchStartY.current === null || isRefreshing) return;
+      const currentY = e.touches[0].clientY;
+      const diff = currentY - touchStartY.current;
+      if (diff > 0 && window.scrollY <= 2) {
+        // Dampen pull distance (max 85px)
+        const dist = Math.min(diff * 0.45, 85);
+        setPullDistance(dist);
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (pullDistance >= 55 && !isRefreshing) {
+        void handleRebuildFeed();
+      } else {
+        setPullDistance(0);
+      }
+      touchStartY.current = null;
+    };
+
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [pullDistance, isRefreshing, handleRebuildFeed]);
+
   const posts = useMemo(() => {
     const raw = data?.pages.flatMap((page) => page.items) ?? [];
     const seen = new Set<string>();
@@ -111,11 +169,31 @@ export function FeedPage() {
     });
   }, [data?.pages]);
 
+  // Feed items with reserved position 8 for suggestion card
+  const feedItems = useMemo(() => {
+    const items: Array<
+      | { type: "post"; post: PostCardType; position: number }
+      | { type: "suggestion"; position: number }
+    > = [];
+    let pos = 1;
+    posts.forEach((p, idx) => {
+      if (idx === 7) {
+        items.push({ type: "suggestion", position: 8 });
+      }
+      items.push({ type: "post", post: p, position: pos });
+      pos++;
+    });
+    if (posts.length > 0 && posts.length < 8 && !items.some((it) => it.type === "suggestion")) {
+      items.push({ type: "suggestion", position: posts.length + 1 });
+    }
+    return items;
+  }, [posts]);
+
   // Top section displays 2 complete full rows so every row goes all the way till the end
   const topRows = 2;
   const topCount = Math.max(columns * topRows, columns);
-  const topPosts = posts.slice(0, topCount);
-  const remainingPosts = posts.slice(topCount);
+  const topFeedItems = feedItems.slice(0, topCount);
+  const remainingFeedItems = feedItems.slice(topCount);
 
   // Automatically fetch more if initial page doesn't have enough to fill both top and remaining
   useEffect(() => {
@@ -151,6 +229,32 @@ export function FeedPage() {
 
   return (
     <div className="min-h-screen flex flex-col w-full bg-[#EFEFEF]">
+      {/* Pull-to-refresh visual indicator */}
+      {(pullDistance > 0 || isRefreshing) && (
+        <div
+          className="w-full bg-[#EAEAEA] flex items-center justify-center transition-all overflow-hidden border-b border-[#DEDEDE]"
+          style={{ height: isRefreshing ? 48 : pullDistance }}
+        >
+          <div className="flex items-center gap-2 text-xs font-ui font-semibold text-[#333333]">
+            <svg
+              className={`size-4 ${isRefreshing ? "animate-spin text-[#E4572E]" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>
+              {isRefreshing
+                ? "Rebuilding feed..."
+                : pullDistance >= 55
+                ? "Release to refresh feed"
+                : "Pull down to refresh"}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="w-full mx-auto">
         {/* Welcome header */}
         <div className="pt-6 pb-2 flex flex-col gap-1 px-4 sm:px-6">
@@ -220,6 +324,25 @@ export function FeedPage() {
                 )}
               </div>
             </div>
+
+            {/* Desktop Refresh Trigger Button */}
+            <button
+              type="button"
+              disabled={isRefreshing}
+              onClick={() => void handleRebuildFeed()}
+              className="flex items-center gap-1.5 text-xs font-ui font-semibold text-[#555555] hover:text-[#111111] px-3 py-1.5 rounded-full hover:bg-white/80 transition-all border border-transparent hover:border-[#C4C4C4] cursor-pointer"
+              title="Pull-to-refresh rebuilds the feed"
+            >
+              <svg
+                className={`size-3.5 ${isRefreshing ? "animate-spin text-[#E4572E]" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
           </div>
         </div>
 
@@ -233,16 +356,21 @@ export function FeedPage() {
                     <div key={i} className="flex flex-col h-full"><SkeletonCard tall /></div>
                   ))}
                 </div>
-              ) : topPosts.length > 0 ? (
+              ) : topFeedItems.length > 0 ? (
                 <section className="mb-6">
                   <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-                    {topPosts.map((post) => (
-                      <PostCard
-                        key={post.id}
-                        post={post}
-                        onOpenPost={(p) => setSelectedSlug(p.slug)}
-                      />
-                    ))}
+                    {topFeedItems.map((item) =>
+                      item.type === "suggestion" ? (
+                        <FeedSuggestionCard key="feed-suggestion-card" />
+                      ) : (
+                        <PostCard
+                          key={item.post.id}
+                          post={item.post}
+                          position={item.position}
+                          onOpenPost={(p) => setSelectedSlug(p.slug)}
+                        />
+                      ),
+                    )}
                   </div>
                 </section>
               ) : null}
@@ -260,16 +388,21 @@ export function FeedPage() {
 
           {/* Remaining Posts Section (shows every remaining card from backend) */}
           <div className="w-full mx-auto px-4 pt-6 pb-4 sm:px-6">
-            {remainingPosts.length > 0 ? (
+            {remainingFeedItems.length > 0 ? (
               <section className="mb-8">
                 <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-                  {remainingPosts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onOpenPost={(p) => setSelectedSlug(p.slug)}
-                    />
-                  ))}
+                  {remainingFeedItems.map((item) =>
+                    item.type === "suggestion" ? (
+                      <FeedSuggestionCard key="feed-suggestion-card" />
+                    ) : (
+                      <PostCard
+                        key={item.post.id}
+                        post={item.post}
+                        position={item.position}
+                        onOpenPost={(p) => setSelectedSlug(p.slug)}
+                      />
+                    ),
+                  )}
                   {isFetchingNextPage &&
                     Array.from({ length: 4 }).map((_, i) => (
                       <div key={`remaining-skeleton-${i}`} className="flex flex-col h-full"><SkeletonCard /></div>
