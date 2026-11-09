@@ -8,4 +8,4 @@
 import type { PublicUser } from './publicUser';
 import type { CurrentUserAllOf } from './currentUserAllOf';
 
-export type CurrentUser = PublicUser & CurrentUserAllOf;
+export type CurrentUser = PublicUser & CurrentUserAllOf & Required<Pick<PublicUser & CurrentUserAllOf, 'role'>>;

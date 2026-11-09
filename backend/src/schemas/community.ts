@@ -40,7 +40,29 @@ export const UpdateMeInputSchema = registry.register(
       .optional(),
     bio: z.string().max(160).optional(),
     avatarUrl: z.string().url().optional(),
+    location: z.string().max(100).optional(),
+    profileRole: z.string().max(60).optional(),
+    role: z.string().max(60).optional(),
+    domains: z.array(z.string()).optional(),
+    likedCreators: z.array(z.string()).optional(),
   }),
+);
+
+export const CompleteOnboardingInputSchema = registry.register(
+  "CompleteOnboardingInput",
+  z
+    .object({
+      displayName: z.string().min(1).max(60).optional(),
+      handle: z.string().regex(/^[a-z0-9_]{3,24}$/).optional(),
+      bio: z.string().max(160).optional(),
+      avatarUrl: z.string().url().optional(),
+      location: z.string().max(100).optional(),
+      profileRole: z.string().max(60).optional(),
+      role: z.string().max(60).optional(),
+      domains: z.array(z.string()).optional(),
+      likedCreators: z.array(z.string()).optional(),
+    })
+    .optional(),
 );
 
 export const SetInterestsInputSchema = registry.register(
