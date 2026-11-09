@@ -123,7 +123,8 @@ class OriginTracker:
         handles, hosts = self._watched()
         totals = await self.store.citing_totals()
         added = 0
-        for doc in await self.store.origin_candidates(statuses=("new", "pending_instagram", "waiting_budget")):
+        statuses = ("new", "pending_instagram", "waiting_budget")
+        for doc in await self.store.origin_candidates(statuses=statuses):
             doc = drop_boilerplate(doc, totals)
             if not is_eligible(doc):
                 continue
@@ -150,6 +151,11 @@ class OriginTracker:
 
     async def _promote_instagram(self, client: httpx.AsyncClient, doc: dict) -> int:
         ig, settings = self.poller.instagram, self.poller.settings
+        if self.poller.review:  # an admin decides; the account is watched once Instagram is connected
+            source = Source(id=f"ig-{doc['name']}", name=f"@{doc['name']}", type="instagram",
+                            url=f"https://www.instagram.com/{doc['name']}/", region=self._region(doc),
+                            role="discovered", tier="slow")
+            return await self._add(doc, source)
         if not ig.configured:
             if doc["status"] != "pending_instagram":
                 await self.store.set_origin_status(doc["_id"], "pending_instagram",
@@ -184,6 +190,15 @@ class OriginTracker:
         return await self._add(doc, source)
 
     async def _add(self, doc: dict, source: Source) -> int:
+        if self.poller.review:
+            # With the Centoire app connected, an admin approves new sources on its Sources page.
+            lines = [f'{c["publisher"]}: "{c["context"][:120]}" in "{c["title"][:80]}"'
+                     for c in doc.get("citations", [])[-6:]]
+            reason = (f"Credited as a story's origin by {len(doc['publishers'])} publishers "
+                      f"({', '.join(doc['publishers'][:5])})")
+            await self.poller.review.suggest_origin(source, reason, lines)
+            await self.store.set_origin_status(doc["_id"], "suggested", reason="sent to the app for an admin")
+            return 0
         await self.store.add_discovered_source(source, origin_id=doc["_id"])
         await self.store.set_origin_status(doc["_id"], "watching", reason=f"added as {source.id}")
         self.poller.add_source(source)

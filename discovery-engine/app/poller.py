@@ -24,6 +24,7 @@ from app.gemini import Gemini
 from app.instagram import InstagramClient, InstagramSkipped
 from app.models import FetchedItem, Source
 from app.origins import OriginTracker
+from app.review import CentoireApp, ReviewBridge
 from app.sites import SiteWatcher
 from app.sources import ItemFilter, load_blocked_publishers, planned_instagram_calls_per_hour
 from app.stories import StoryBuilder
@@ -76,8 +77,14 @@ class Poller:
                                         match_model=settings.story_match_model)
         else:
             log.warning("stories off: set GEMINI_API_KEY to triage and group articles")
+        self.review: ReviewBridge | None = None
+        if settings.centoire_api_url and settings.centoire_discovery_secret:
+            self.review = ReviewBridge(self, CentoireApp(settings.centoire_api_url,
+                                                         settings.centoire_discovery_secret))
+        else:
+            log.warning("review queue off: set CENTOIRE_API_URL and CENTOIRE_DISCOVERY_SECRET")
         self._client_live: httpx.AsyncClient | None = None
-        self._tasks: set[asyncio.Task] = set()
+        self._tasks: dict[str, asyncio.Task] = {}
 
     def add_source(self, source: Source) -> None:
         """Start watching a source while running (used for discovered primary sources)."""
@@ -92,9 +99,14 @@ class Poller:
         self._http_cache[source.id] = {}
         self._errors[source.id] = 0
         if self._client_live:
-            task = asyncio.create_task(self._loop(self._client_live, source))
-            self._tasks.add(task)
-            task.add_done_callback(self._tasks.discard)
+            self._tasks[source.id] = asyncio.create_task(self._loop(self._client_live, source))
+
+    def remove_source(self, source_id: str) -> None:
+        """Stop watching a source (paused or removed in the app). Its items stay."""
+        self.all_sources = [s for s in self.all_sources if s.id != source_id]
+        self.sources = [s for s in self.sources if s.id != source_id]
+        if task := self._tasks.pop(source_id, None):
+            task.cancel()
 
     def _interval(self, source: Source) -> int:
         return source.interval or self.settings.interval_for(source.type, source.tier)
@@ -194,10 +206,18 @@ class Poller:
     async def run_forever(self) -> None:
         async with self._client() as client:
             self._client_live = client
-            loops = [self._promote_loop(client), *(self._loop(client, s) for s in list(self.sources))]
+            for s in list(self.sources):
+                self._tasks[s.id] = asyncio.create_task(self._loop(client, s))
+            loops = [self._promote_loop(client)]
             if self.stories:
                 loops.append(self._stories_loop())
-            await asyncio.gather(*loops)
+            if self.review:
+                loops.append(self.review.run(client))
+            try:
+                await asyncio.gather(*loops)
+            finally:
+                for task in self._tasks.values():
+                    task.cancel()
 
     async def run_round(self) -> None:
         """Poll every source once (for testing and `--once`)."""

@@ -1,6 +1,7 @@
 """MongoDB storage: items (deduped, with first-seen times) and per-source poll health."""
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -40,6 +41,8 @@ class Store:
         self.discovered = self.db["discovered_sources"]
         # Articles grouped by the event they report (see app.stories).
         self.stories = self.db["stories"]
+        # Small key/value state (e.g. the review bridge's decisions cursor).
+        self.state = self.db["engine_state"]
 
     async def init(self) -> None:
         await self.site_url_docs.create_index([("source_id", ASCENDING), ("url", ASCENDING)], unique=True)
@@ -222,8 +225,41 @@ class Store:
             [("website_count", DESCENDING), ("first_at", DESCENDING)]).limit(limit)
         return await cursor.to_list(length=limit)
 
+    async def stories_for_review(self, *, since: datetime, min_websites: int) -> list[dict]:
+        """Recent stories carried by enough websites, or leaks (which matter before they spread)."""
+        query = {"last_at": {"$gte": since},
+                 "$or": [{"website_count": {"$gte": min_websites}}, {"category": "leak"}]}
+        cursor = self.stories.find(query, {"vectors": 0, "item_keys": 0}).sort("first_at", ASCENDING)
+        return await cursor.to_list(length=None)
+
+    async def set_story_review(self, story_id: str, review: dict, *, merge: bool = False) -> None:
+        update = {f"review.{k}": v for k, v in review.items()} if merge else {"review": review}
+        await self.stories.update_one({"_id": story_id}, {"$set": update})
+
+    async def website_url(self, key: str) -> str | None:
+        """Some URL on a website, to find its feed: a direct article link, or the outlet URL
+        Google News gives for its results."""
+        if not key or not re.fullmatch(r"[\w-]+", key):
+            return None
+        doc = await self.stories.find_one(
+            {f"websites.{key}.url": {"$exists": True, "$not": {"$regex": "news\\.google\\.com"}}},
+            {f"websites.{key}.url": 1})
+        if doc:
+            return doc["websites"][key]["url"]
+        doc = await self.items.find_one(
+            {"extra.publisher_url": {"$regex": f"[/.]{re.escape(key)}\\."}}, {"extra.publisher_url": 1})
+        return doc["extra"]["publisher_url"] if doc else None
+
+    async def get_state(self, key: str):
+        doc = await self.state.find_one({"_id": key})
+        return doc["value"] if doc else None
+
+    async def set_state(self, key: str, value) -> None:
+        await self.state.update_one({"_id": key}, {"$set": {"value": value}}, upsert=True)
+
     async def story_articles(self, story_id: str) -> list[dict]:
         cursor = self.items.find({"story_id": story_id}, {"_id": 0, "engagement": 0, "extra.citations": 0})
+        # (includes "key" and "triage", which story recounts need)
         return await cursor.to_list(length=None)
 
     async def record_poll(

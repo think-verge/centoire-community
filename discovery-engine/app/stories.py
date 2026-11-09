@@ -101,7 +101,9 @@ def _utc(dt: datetime) -> datetime:
 
 
 def _norm(name: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", name.lower())
+    """Lowercase letters and digits only. Non-Latin names (スニーカーウォーズ) keep their letters:
+    stripping them would leave every Japanese or Korean outlet with the same empty key."""
+    return re.sub(r"[^\w]|_", "", name.lower()) or name.strip().lower()
 
 
 def _is_google_news(url: str) -> bool:
@@ -211,6 +213,22 @@ class StoryBuilder:
                 break
             done += len(docs[i:i + BATCH])
         return done
+
+    async def recount(self, story: dict) -> dict:
+        """Rebuild a story's websites, first article and counts from its articles."""
+        docs = sorted(await self.store.story_articles(story["_id"]), key=item_time)
+        fresh = None
+        for d in docs:
+            fresh = self._add(fresh, story["_id"], {**d, "key": d.get("key") or d["url"]},
+                              d.get("triage") or {"headline": story["headline"], "category": story["category"],
+                                                  "entities": []}, [])
+        if fresh is None:
+            return story
+        for keep in ("headline", "category", "entities", "created_at", "vectors", "review"):
+            if keep in story:
+                fresh[keep] = story[keep]
+        await self.store.save_story(fresh)
+        return fresh
 
     async def triage_many(self, docs: list[dict], concurrency: int = 6) -> dict[str, dict]:
         """Triage a large backlog in parallel (each article is judged on its own)."""

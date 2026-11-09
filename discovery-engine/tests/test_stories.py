@@ -38,6 +38,9 @@ def test_website_identity():
     assert w.of(doc("e", "gn-in", "x", 0, publisher="www.auroradesio.it")) == ("auroradesio", "auroradesio.it")
     assert w.of(doc("g", "gn-in", "x", 0, publisher="https://latination.com/")) == ("latination", "latination.com")
     assert w.of(doc("f", "reddit", "x", 0)) == ("reddit", "Reddit")
+    # Non-Latin outlet names stay distinct instead of all collapsing to one empty key
+    sw, ys = w.of(doc("h", "gn-in", "x", 0, publisher="スニーカーウォーズ")), w.of(doc("i", "gn-in", "x", 0, publisher="Yahoo!ニュース"))
+    assert sw[0] and ys[0] and sw[0] != ys[0]
 
 
 def test_item_time_never_later_than_first_seen():

@@ -55,6 +55,10 @@ class Settings:
         self.embed_model: str = os.getenv("EMBED_MODEL", "gemini-embedding-001")
         self.stories_enabled: bool = os.getenv("STORIES_ENABLED", "true").lower() == "true"
 
+        # The Centoire app (review queue + shared source list, see app.review). Off when unset.
+        self.centoire_api_url: str | None = os.getenv("CENTOIRE_API_URL") or None  # e.g. http://localhost:8000/api/v1
+        self.centoire_discovery_secret: str | None = os.getenv("CENTOIRE_DISCOVERY_SECRET") or None
+
     def interval_for(self, source_type: str, tier: str) -> int:
         table = self.ig_intervals if source_type == "instagram" else self.intervals
         return table[tier]

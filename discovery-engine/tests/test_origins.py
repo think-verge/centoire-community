@@ -91,6 +91,7 @@ class FakePoller:
         self.instagram = InstagramClient(self.settings)
         self.all_sources = self.sources = watched
         self.started = []
+        self.review = None  # the Centoire app bridge (tests/test_review.py)
 
     def add_source(self, source):
         self.started.append(source.id)

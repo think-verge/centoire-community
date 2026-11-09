@@ -70,6 +70,27 @@ website, and each outlet behind a Google News result is its own website.
 - `GET /stories/{id}` — the same plus every article
 - `python -m scripts.build_stories` — triage and group the backlog (run with the engine stopped)
 
+## Review queue and shared sources (the Centoire app)
+
+With `CENTOIRE_API_URL` and `CENTOIRE_DISCOVERY_SECRET` set (`app/review.py`), every 2 minutes:
+
+- **Stories → review.** A story goes to the app's content review (`/moderation`) once 2+ websites
+  carry it, or right away if it's a leak, while under 48 hours old. It becomes an aggregated post
+  in `pending_review`, attributed to "Centoire Discovery", with the evidence on the card: websites,
+  who published first, when the engine saw it, the spread. While it's pending, the evidence is
+  refreshed as the story spreads. Editors approve or reject as for any post. Discovery stories
+  always wait for an editor unless the backend sets `DISCOVERY_AUTO_APPROVE=true`.
+- **Decisions → engine.** Approvals and rejections (with reasons) are read back onto
+  `stories.review`; approved stories count toward suggesting the websites that carried them.
+- **Sources, both ways.** The engine watches every active source in the app with
+  `fetchedBy: discovery` (an admin adds one on the Sources page: RSS, sitemap, web page or
+  Instagram), and stops when it's paused or deleted. New sources are never added on their own:
+  origin tracing and story history send them as **suggestions** with their evidence; an admin
+  approves (watched from the next sync) or rejects (never suggested again).
+
+Backend side: `backend/src/services/discoveryService.ts` and `/internal/discovery` routes on the
+`feat/discovery-review` branch.
+
 ## Run
 
 ```bash
@@ -99,6 +120,7 @@ published before we started watching, so they never count toward lead time.
 | 3 Brand websites: sitemap and newsroom diffing, brand blog feeds ([brand_sites.yaml](brand_sites.yaml)) | done, live |
 | 3 Origin tracing: find primary sources from publishers' credits and add them automatically | done, live |
 | 4 Stories: Gemini relevance triage, English headline, grouping by event across languages, websites per story (`/stories`) | done, live |
+| 4+ Review queue in the app, editor decisions back to the engine, shared + suggested sources | done, tested locally |
 | 5 Breaking detection + lead time vs BoF/WWD | |
 | 6 Live page | |
 | 7 Polish + demo | |
