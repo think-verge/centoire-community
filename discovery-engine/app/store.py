@@ -236,6 +236,9 @@ class Store:
         update = {f"review.{k}": v for k, v in review.items()} if merge else {"review": review}
         await self.stories.update_one({"_id": story_id}, {"$set": update})
 
+    async def set_item_fields(self, key: str, fields: dict) -> None:
+        await self.items.update_one({"key": key}, {"$set": fields})
+
     async def set_story_fields(self, story_id: str, fields: dict) -> None:
         await self.stories.update_one({"_id": story_id}, {"$set": fields})
 

@@ -109,6 +109,10 @@ class Poller:
         if task := self._tasks.pop(source_id, None):
             task.cancel()
 
+    def http_client(self) -> httpx.AsyncClient | None:
+        """The shared HTTP client while the poller runs (None before it starts)."""
+        return self._client_live
+
     def _interval(self, source: Source) -> int:
         return source.interval or self.settings.interval_for(source.type, source.tier)
 

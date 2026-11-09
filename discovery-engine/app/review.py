@@ -27,6 +27,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.gemini import Gemini, GeminiError
+from app.gnews import resolve as resolve_google_news
 from app.models import Source
 from app.origins import find_feed
 from app.stories import _utc
@@ -50,7 +51,9 @@ MAX_SUGGESTIONS_PER_PASS = 5
 
 
 # Bump to resend every pending story once (e.g. after changing what the payload contains).
-PAYLOAD_VERSION = 2
+PAYLOAD_VERSION = 3
+# Google News links resolved per pass (each costs a ~600 KB page); the rest wait for the next pass.
+MAX_RESOLVE_PER_PASS = 40
 NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 
 ENGLISH_PROMPT = """For each fashion news story below, write in English:
@@ -117,6 +120,15 @@ def is_google_news(url: str) -> bool:
     return "news.google.com" in url
 
 
+def with_resolved_urls(articles: list[dict]) -> list[dict]:
+    """Google News articles whose publisher URL we know, with that URL in place of the redirect."""
+    out = []
+    for a in articles:
+        real = (a.get("extra") or {}).get("resolved_url")
+        out.append({**a, "url": real, "via_google_news": a["url"]} if real and is_google_news(a["url"]) else a)
+    return out
+
+
 def pick_link(articles: list[dict]) -> dict:
     """The article "Read post" opens: the earliest English one on the outlet's own site, then any
     English one, then the earliest on an outlet's own site, then whatever there is. (The first
@@ -132,8 +144,12 @@ def pick_link(articles: list[dict]) -> dict:
 def story_payload(story: dict, articles: list[dict]) -> dict:
     """The post an editor reviews: the English headline and summary, linking to an English article
     when the story has one."""
-    articles = sorted(articles, key=lambda a: _utc(a.get("published_at") or a["first_seen_at"]))
+    articles = sorted(with_resolved_urls(articles), key=lambda a: _utc(a.get("published_at") or a["first_seen_at"]))
     lead = pick_link(articles)
+    real_url = {a["via_google_news"]: a["url"] for a in articles if a.get("via_google_news")}
+
+    def link(url: str | None) -> str | None:
+        return real_url.get(url, url) if url else url
     names = story.get("names_en") or {}
 
     def name(n: str) -> str:
@@ -154,13 +170,13 @@ def story_payload(story: dict, articles: list[dict]) -> dict:
             "category": story.get("category"),
             "websiteCount": story.get("website_count", len(websites)),
             "articleCount": story.get("article_count", len(articles)),
-            "spread": [{"name": name(w["name"]), "url": w.get("url"), "firstAt": _iso(w["first_at"])}
+            "spread": [{"name": name(w["name"]), "url": link(w.get("url")), "firstAt": _iso(w["first_at"])}
                        for w in websites[:25]],
             "markets": [m for m in story.get("markets", []) if m != "GLOBAL"],
         },
     }
     if first:
-        payload["discovery"]["firstPublished"] = {"name": name(first["name"]), "url": first.get("url"),
+        payload["discovery"]["firstPublished"] = {"name": name(first["name"]), "url": link(first.get("url")),
                                                   "at": _iso(first["at"])}
     if story.get("seen_live_at"):
         payload["discovery"]["engineSawAt"] = _iso(story["seen_live_at"])
@@ -227,22 +243,50 @@ class ReviewBridge:
             if review.get("status") not in (None, "pending_review"):
                 continue  # decided: the editor's version stands
             if (review and story.get("website_count", 0) <= review.get("pushed_websites", 0)
-                    and review.get("payload_v") == PAYLOAD_VERSION):
+                    and review.get("payload_v") == PAYLOAD_VERSION and review.get("links_resolved", True)):
                 continue  # nothing new since it was sent
             articles = await self.store.story_articles(story["_id"])
             if articles:
                 due.append((story, articles))
         if not due:
             return 0
+        await self._resolve_links(due)
         await self._add_english(due)
         sent = 0
         for story, articles in due:
             result = await self.app.post_story(story_payload(story, articles))
+            # Only links the resolution budget skipped count (failures are remembered as "").
+            pending_links = self.poller.http_client() is not None and any(
+                is_google_news(a["url"]) and "resolved_url" not in (a.get("extra") or {}) for a in articles)
             await self.store.set_story_review(story["_id"], {
                 "post_id": result["postId"], "status": result["status"], "payload_v": PAYLOAD_VERSION,
+                # False: some Google News links weren't resolved yet; resend once they are
+                "links_resolved": not pending_links,
                 "pushed_websites": story.get("website_count", 0), "pushed_at": datetime.now(timezone.utc)})
             sent += 1
         return sent
+
+    async def _resolve_links(self, due: list[tuple[dict, list[dict]]]) -> None:
+        """Find the publisher URL behind each Google News article in these stories (remembered on the
+        article). It also tells us the outlet's website, which source suggestions need."""
+        client = self.poller.http_client()
+        if client is None:
+            return
+        budget = MAX_RESOLVE_PER_PASS
+        for _story, articles in due:
+            for a in articles:
+                extra = a.setdefault("extra", {})
+                if not is_google_news(a["url"]) or "resolved_url" in extra or budget <= 0:
+                    continue
+                budget -= 1
+                real = await resolve_google_news(client, a["url"])
+                fields = {"extra.resolved_url": real or ""}
+                extra["resolved_url"] = real or ""
+                if real and not extra.get("publisher_url"):
+                    parts = urlsplit(real)
+                    fields["extra.publisher_url"] = extra["publisher_url"] = f"{parts.scheme}://{parts.netloc}"
+                await self.store.set_item_fields(a["key"], fields)
+                await asyncio.sleep(1)  # be gentle with Google
 
     async def _add_english(self, due: list[tuple[dict, list[dict]]]) -> None:
         """English summary (refreshed as the story grows) and English names for non-Latin outlets."""

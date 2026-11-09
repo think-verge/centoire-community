@@ -81,6 +81,9 @@ class FakeStore:
     async def story_articles(self, sid):
         return ARTICLES
 
+    async def set_item_fields(self, key, fields):
+        self.item_updates = getattr(self, "item_updates", []) + [(key, fields)]
+
     async def set_story_fields(self, sid, fields):
         self.stories[sid].update(fields)
 
@@ -104,6 +107,9 @@ class FakePoller:
     def add_source(self, s):
         self.all_sources.append(s)
         self.added.append(s.id)
+
+    def http_client(self):
+        return getattr(self, "client", None)
 
     def remove_source(self, sid):
         self.all_sources = [s for s in self.all_sources if s.id != sid]
@@ -215,3 +221,48 @@ async def test_english_summary_is_written_once_and_refreshed_when_the_story_grow
     assert llm.calls == 2  # regrown story: summary refreshed
     await bridge.push_stories()
     assert llm.calls == 2  # unchanged: no new call
+
+
+def test_google_news_links_are_replaced_by_the_publisher_url_once_resolved():
+    gn = dict(JAPANESE[0], key="k1", extra={"resolved_url": "https://www.webuomo.jp/sneaker/beams-salomon/"})
+    s = story(websites=1)
+    s["websites"] = {"uomo": {"name": "UOMO", "first_at": T0, "url": gn["url"], "title": "t", "articles": 1}}
+    s["first"] = {"name": "UOMO", "url": gn["url"], "at": T0}
+    p = story_payload(s, [gn])
+    assert p["externalUrl"] == "https://www.webuomo.jp/sneaker/beams-salomon/"
+    assert p["discovery"]["firstPublished"]["url"] == "https://www.webuomo.jp/sneaker/beams-salomon/"
+    assert p["discovery"]["spread"][0]["url"] == "https://www.webuomo.jp/sneaker/beams-salomon/"
+
+
+async def test_push_resolves_google_news_links_and_resends_when_some_were_left(monkeypatch):
+    import app.review as review
+    gn = [dict(JAPANESE[0], key=f"k{i}", url=f"https://news.google.com/rss/articles/A{i}", extra={}) for i in range(3)]
+
+    async def fake_resolve(client, url):
+        return "https://www.webuomo.jp/" + url.rsplit("/", 1)[-1]
+
+    async def no_sleep(_):
+        return None
+
+    monkeypatch.setattr(review, "resolve_google_news", fake_resolve)
+    monkeypatch.setattr(review.asyncio, "sleep", no_sleep)
+    monkeypatch.setattr(review, "MAX_RESOLVE_PER_PASS", 2)
+    store = FakeStore([story("s1", 3)])
+    store.story_articles = lambda sid: _articles(gn)
+    poller = FakePoller(store)
+    poller.client = object()
+    app = FakeApp()
+    bridge = ReviewBridge(poller, app)
+    await bridge.push_stories()
+    assert app.posted[-1]["externalUrl"] == "https://www.webuomo.jp/A0"
+    assert store.stories["s1"]["review"]["links_resolved"] is False  # one link left for the next pass
+    await bridge.push_stories()
+    assert store.stories["s1"]["review"]["links_resolved"] is True and len(app.posted) == 2
+    assert ("k0", {"extra.resolved_url": "https://www.webuomo.jp/A0",
+                   "extra.publisher_url": "https://www.webuomo.jp"}) in store.item_updates
+    await bridge.push_stories()
+    assert len(app.posted) == 2  # nothing new
+
+
+async def _articles(items):
+    return items
