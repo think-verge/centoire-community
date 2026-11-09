@@ -12,7 +12,7 @@ import {
   useUpdateSource,
 } from "../../lib/api/generated/admin/admin";
 import { HashtagInput } from "../../components/HashtagInput";
-import type { Source } from "../../lib/api/generated/model";
+import type { CreateSourceInputKind, Source } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
 import { CATEGORY_LABELS, CATEGORY_SUBCATEGORIES, POST_CATEGORIES, type PostCategoryValue } from "../../lib/categoryTaxonomy";
 
@@ -44,7 +44,8 @@ export function AdminSourcesPage() {
           <p className="kicker mb-1">Admin</p>
           <h1 className="font-display-serif text-3xl font-semibold">Content sources</h1>
           <p className="mt-1 text-sm text-ink-soft">
-            RSS feeds the ingestion worker pulls into the aggregated feed every 30 minutes.
+            RSS feeds the ingestion worker pulls into the aggregated feed every 30 minutes, and the
+            sites, sitemaps and Instagram accounts the discovery engine watches.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -62,15 +63,105 @@ export function AdminSourcesPage() {
 
       {isLoading && <p className="mt-8 text-ink-faint">Loading…</p>}
 
+      <SuggestedSources sources={(sources ?? []).filter((s) => s.review === "suggested")} />
+
       <div className="mt-6 space-y-3">
-        {(sources ?? []).map((source) => (
-          <SourceRow key={source.id} source={source} onEdit={() => setEditing(source)} />
-        ))}
+        {(sources ?? [])
+          .filter((s) => s.review !== "suggested" && s.review !== "rejected" && s.kind !== "discovery")
+          .map((source) => (
+            <SourceRow key={source.id} source={source} onEdit={() => setEditing(source)} />
+          ))}
       </div>
 
       {adding && <SourceFormDialog onClose={() => setAdding(false)} />}
       {editing && <SourceFormDialog source={editing} onClose={() => setEditing(null)} />}
     </div>
+  );
+}
+
+const KIND_LABELS: Record<CreateSourceInputKind, string> = {
+  rss: "RSS / Atom feed",
+  sitemap: "Sitemap",
+  page: "Web page (newsroom, blog index)",
+  instagram: "Instagram account",
+};
+
+const FEED_URL_HINTS: Record<CreateSourceInputKind, { label: string; placeholder: string }> = {
+  rss: { label: "Feed URL", placeholder: "https://…/rss" },
+  sitemap: { label: "Sitemap URL", placeholder: "https://…/sitemap.xml" },
+  page: { label: "Page URL", placeholder: "https://brand.com/newsroom" },
+  instagram: { label: "Instagram profile URL", placeholder: "https://www.instagram.com/handle/" },
+};
+
+/** Sources the discovery engine found (credited by several publishers, or often first with a story). */
+function SuggestedSources({ sources }: { sources: Source[] }) {
+  const queryClient = useQueryClient();
+  const updateSource = useUpdateSource({
+    mutation: { onSuccess: () => void queryClient.invalidateQueries({ queryKey: getListSourcesQueryKey() }) },
+  });
+  if (sources.length === 0) return null;
+  return (
+    <section className="mt-6 rounded-xl border border-gold/40 bg-gold-tint/40 p-4">
+      <p className="kicker mb-1">Suggested by the discovery engine</p>
+      <p className="text-sm text-ink-soft">
+        Approving starts watching the source within a few minutes. Rejected ones are never suggested again.
+      </p>
+      <div className="mt-3 space-y-3">
+        {sources.map((source) => (
+          <div key={source.id} className="rounded-lg border border-line bg-paper p-3">
+            <div className="flex flex-wrap items-start gap-3">
+              {source.faviconUrl && <img src={source.faviconUrl} alt="" className="size-7 rounded" />}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">
+                  {source.name}{" "}
+                  <span className="text-xs font-normal text-ink-faint">
+                    · {KIND_LABELS[source.kind as CreateSourceInputKind] ?? source.kind}
+                    {source.region && ` · ${source.region}`}
+                  </span>
+                </p>
+                <a
+                  href={source.siteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate text-xs text-ink-faint underline decoration-line underline-offset-2"
+                >
+                  {source.feedUrl}
+                </a>
+                {source.suggestion && (
+                  <>
+                    <p className="mt-1 text-sm text-ink">{source.suggestion.reason}</p>
+                    {source.suggestion.evidence.length > 0 && (
+                      <ul className="mt-1 list-disc pl-4 text-xs text-ink-soft">
+                        {source.suggestion.evidence.slice(0, 4).map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  className="!px-3 !py-1.5 text-xs"
+                  loading={updateSource.isPending && updateSource.variables?.id === source.id}
+                  onClick={() => updateSource.mutate({ id: source.id, data: { review: "approved" } })}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="!px-2 !py-1.5 text-xs !text-crimson"
+                  onClick={() => updateSource.mutate({ id: source.id, data: { review: "rejected" } })}
+                >
+                  Reject
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -119,6 +210,19 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
                 error
               </span>
             )}
+            {source.kind !== "rss" && (
+              <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-soft">
+                {source.kind}
+              </span>
+            )}
+            {source.fetchedBy === "discovery" && (
+              <span
+                className="rounded-full bg-gold-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gold"
+                title="Watched by the discovery engine"
+              >
+                engine
+              </span>
+            )}
             {!source.active && (
               <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
                 paused
@@ -136,14 +240,16 @@ function SourceRow({ source, onEdit }: { source: Source; onEdit: () => void }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            className="!px-3 !py-1.5 text-xs"
-            loading={fetchNow.isPending}
-            onClick={() => fetchNow.mutate({ id: source.id })}
-          >
-            Fetch now
-          </Button>
+          {source.fetchedBy !== "discovery" && (
+            <Button
+              variant="secondary"
+              className="!px-3 !py-1.5 text-xs"
+              loading={fetchNow.isPending}
+              onClick={() => fetchNow.mutate({ id: source.id })}
+            >
+              Fetch now
+            </Button>
+          )}
           <Button variant="ghost" className="!px-2 !py-1.5 text-xs" onClick={onEdit}>
             Edit
           </Button>
@@ -179,6 +285,11 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
     siteUrl: source?.siteUrl ?? "",
     feedUrl: source?.feedUrl ?? "",
   });
+  const [kind, setKind] = useState<CreateSourceInputKind>(
+    (source?.kind && source.kind !== "discovery" ? source.kind : "rss") as CreateSourceInputKind,
+  );
+  const [byEngine, setByEngine] = useState(source?.fetchedBy === "discovery");
+  const [region, setRegion] = useState(source?.region ?? "");
   const [hashtags, setHashtags] = useState<string[]>(source?.hashtags ?? []);
   const [category, setCategory] = useState<PostCategoryValue | "">(source?.category ?? "");
   const [subcategory, setSubcategory] = useState(source?.subcategory ?? "");
@@ -195,6 +306,10 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
     e.preventDefault();
     const data = {
       ...form,
+      kind,
+      // Only RSS can be fetched by the app's importer; everything else is the engine's.
+      fetchedBy: (kind !== "rss" || byEngine ? "discovery" : "app") as "app" | "discovery",
+      region: region.trim().toUpperCase() || null,
       hashtags,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       category: (category || null) as any,
@@ -221,7 +336,7 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
       >
         <p className="kicker mb-1">{isEdit ? "Edit source" : "New source"}</p>
         <h2 className="font-display-serif text-2xl font-semibold">
-          {isEdit ? "Edit RSS source" : "Add an RSS source"}
+          {isEdit ? "Edit source" : "Add a source"}
         </h2>
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           <Field
@@ -239,13 +354,50 @@ function SourceFormDialog({ source, onClose }: { source?: Source; onClose: () =>
             onChange={(e) => setForm({ ...form, siteUrl: e.target.value })}
             required
           />
+          <div>
+            <label htmlFor="source-kind" className="mb-1.5 block text-sm font-medium text-ink">
+              Type
+            </label>
+            <select
+              id="source-kind"
+              value={kind}
+              onChange={(e) => setKind(e.target.value as CreateSourceInputKind)}
+              className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-crimson focus:outline-none"
+            >
+              {(Object.keys(KIND_LABELS) as CreateSourceInputKind[]).map((k) => (
+                <option key={k} value={k}>
+                  {KIND_LABELS[k]}
+                </option>
+              ))}
+            </select>
+            {kind === "rss" ? (
+              <label className="mt-2 flex items-center gap-2 text-xs text-ink-soft">
+                <input
+                  type="checkbox"
+                  checked={byEngine}
+                  onChange={(e) => setByEngine(e.target.checked)}
+                  className="h-4 w-4 accent-crimson"
+                />
+                Let the discovery engine watch it (grouped into stories) instead of importing every article
+              </label>
+            ) : (
+              <p className="mt-1 text-xs text-ink-faint">Watched by the discovery engine.</p>
+            )}
+          </div>
           <Field
-            label="Feed URL"
+            label={FEED_URL_HINTS[kind].label}
             type="url"
-            placeholder="https://…/rss"
+            placeholder={FEED_URL_HINTS[kind].placeholder}
             value={form.feedUrl}
             onChange={(e) => setForm({ ...form, feedUrl: e.target.value })}
             required
+          />
+          <Field
+            label="Market (optional)"
+            placeholder="ISO country code, e.g. JP, or GLOBAL"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            maxLength={6}
           />
           <div className="grid grid-cols-2 gap-3">
             <div>

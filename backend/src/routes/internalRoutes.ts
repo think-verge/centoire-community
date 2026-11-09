@@ -121,7 +121,8 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
         clickbaitDetected: updated.clickbaitDetected,
       });
 
-      if (outcome === "auto_approve") {
+      // Discovery-engine stories wait for an editor unless DISCOVERY_AUTO_APPROVE is on.
+      if (outcome === "auto_approve" && (!updated.discovery || env.DISCOVERY_AUTO_APPROVE)) {
         await finalizePublish(updated);
       } else if (outcome === "auto_reject") {
         updated.status = "rejected";

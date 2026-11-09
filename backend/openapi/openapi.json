@@ -114,6 +114,88 @@
           "bookmarked"
         ]
       },
+      "PostDiscovery": {
+        "type": "object",
+        "properties": {
+          "storyId": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "websiteCount": {
+            "type": "number"
+          },
+          "articleCount": {
+            "type": "number"
+          },
+          "firstPublished": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "nullable": true
+              },
+              "at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "url",
+              "at"
+            ]
+          },
+          "engineSawAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "spread": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "url",
+                "firstAt"
+              ]
+            }
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "storyId",
+          "category",
+          "websiteCount",
+          "articleCount",
+          "firstPublished",
+          "engineSawAt",
+          "spread",
+          "markets"
+        ]
+      },
       "PostCard": {
         "type": "object",
         "properties": {
@@ -277,6 +359,16 @@
           },
           "authorIsCreator": {
             "type": "boolean"
+          },
+          "discovery": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostDiscovery"
+              },
+              {
+                "nullable": true
+              }
+            ]
           }
         },
         "required": [
@@ -2231,6 +2323,65 @@
           "active": {
             "type": "boolean"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram",
+              "discovery"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true
+          },
+          "review": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "suggested",
+              "approved",
+              "rejected"
+            ]
+          },
+          "suggestion": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "score": {
+                "type": "number",
+                "nullable": true
+              },
+              "suggestedAt": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "reason",
+              "evidence",
+              "score",
+              "suggestedAt"
+            ]
+          },
           "lastFetchedAt": {
             "type": "string",
             "nullable": true
@@ -2258,6 +2409,11 @@
           "category",
           "subcategory",
           "active",
+          "kind",
+          "fetchedBy",
+          "region",
+          "review",
+          "suggestion",
           "lastFetchedAt",
           "lastStatus",
           "lastError"
@@ -2311,6 +2467,27 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 6
           }
         },
         "required": [
@@ -2367,6 +2544,34 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 6
+          },
+          "review": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
           }
         }
       },

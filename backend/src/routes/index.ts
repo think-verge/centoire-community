@@ -11,6 +11,7 @@ import {
 } from "./engagementRoutes.js";
 import { eventRouter } from "./eventRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
+import { discoveryRouter } from "./discoveryRoutes.js";
 import { internalRouter } from "./internalRoutes.js";
 import { platformSyncRouter } from "./platformSyncRoutes.js";
 import { inviteRouter } from "./inviteRoutes.js";
@@ -58,6 +59,8 @@ apiRouter.use("/r", redirectRouter);
 apiRouter.use("/search", searchRouter);
 apiRouter.use("/agent", agentRouter);
 apiRouter.use("/internal/sync", platformSyncRouter);
+// Before /internal: the discovery engine has its own secret, not the AI agent's.
+apiRouter.use("/internal/discovery", discoveryRouter);
 apiRouter.use("/internal", internalRouter);
 
 apiRouter.get("/health", (_req, res) => {

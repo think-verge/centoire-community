@@ -36,6 +36,11 @@ export const env = {
   NATS_URL: process.env.NATS_URL ?? "",
   // Shared by platform services calling core's /internal/sync feed (distinct from AI_INTERNAL_SECRET).
   INTERNAL_SECRET: process.env.INTERNAL_SECRET ?? "dev-internal-secret",
+  // The discovery engine's calls to /internal/discovery (story candidates, sources, decisions).
+  DISCOVERY_INTERNAL_SECRET: process.env.DISCOVERY_INTERNAL_SECRET ?? "dev-discovery-secret",
+  // false = discovery stories always wait for an editor, even when an auto-approve policy matches
+  // (e.g. the seeded "auto-approve AI-analyzed non-spam content"). Auto-reject still applies.
+  DISCOVERY_AUTO_APPROVE: process.env.DISCOVERY_AUTO_APPROVE === "true",
   ANNOUNCE_ADDRESS: process.env.ANNOUNCE_ADDRESS ?? "",
   // true = the notifications service owns /notifications and the event listeners.
   NOTIFICATIONS_EXTERNAL: process.env.NOTIFICATIONS_EXTERNAL === "true",

@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { PostDrawer } from "../../components/PostDrawer";
+import { DiscoveryEvidence } from "../../components/DiscoveryEvidence";
 import { Switch } from "../../components/Switch";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "../../components/Table";
 import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
@@ -551,6 +552,7 @@ function QueueItem({
               )}
               <span>· {post.origin}</span>
             </div>
+            {post.discovery && <DiscoveryEvidence discovery={post.discovery} />}
           </div>
           {!isRejecting && (
             <div

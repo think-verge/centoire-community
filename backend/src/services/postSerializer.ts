@@ -68,6 +68,28 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
     updatedAt: post.updatedAt.toISOString(),
     viewer: viewer ?? { voted: null, bookmarked: false },
     authorIsCreator: (author?.role as string) === "creator" || (author?.role as string) === "admin",
+    discovery: post.discovery
+      ? {
+          storyId: post.discovery.storyId,
+          category: post.discovery.category ?? null,
+          websiteCount: post.discovery.websiteCount,
+          articleCount: post.discovery.articleCount,
+          firstPublished: post.discovery.firstPublished
+            ? {
+                name: post.discovery.firstPublished.name,
+                url: post.discovery.firstPublished.url ?? null,
+                at: post.discovery.firstPublished.at.toISOString(),
+              }
+            : null,
+          engineSawAt: post.discovery.engineSawAt?.toISOString() ?? null,
+          spread: (post.discovery.spread ?? []).map((s) => ({
+            name: s.name,
+            url: s.url ?? null,
+            firstAt: s.firstAt.toISOString(),
+          })),
+          markets: post.discovery.markets ?? [],
+        }
+      : null,
   };
 }
 

@@ -174,7 +174,8 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
 
 
 export async function fetchAllActiveSources(): Promise<FetchStats[]> {
-  const sources = await Source.find({ active: true });
+  // Sources the discovery engine watches (sitemaps, pages, Instagram, or RSS it was given) are not ours to fetch.
+  const sources = await Source.find({ active: true, fetchedBy: { $ne: "discovery" } });
   const results: FetchStats[] = [];
   for (const source of sources) {
     const stats = await fetchSource(source);

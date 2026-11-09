@@ -16,6 +16,18 @@ function serializeSource(source: ISource) {
     category: source.category ?? null,
     subcategory: source.subcategory ?? null,
     active: source.active,
+    kind: source.kind ?? "rss",
+    fetchedBy: source.fetchedBy ?? "app",
+    region: source.region ?? null,
+    review: source.review ?? null,
+    suggestion: source.suggestion
+      ? {
+          reason: source.suggestion.reason ?? "",
+          evidence: source.suggestion.evidence ?? [],
+          score: source.suggestion.score ?? null,
+          suggestedAt: source.suggestion.suggestedAt?.toISOString() ?? null,
+        }
+      : null,
     lastFetchedAt: source.lastFetchedAt?.toISOString() ?? null,
     lastStatus: source.lastStatus ?? null,
     lastError: source.lastError ?? null,
@@ -49,7 +61,8 @@ export async function create(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   const source = await Source.findById(req.params.id);
   if (!source) throw new ApiError(404, "Source not found");
-  const { name, siteUrl, feedUrl, active, hashtags, category, subcategory } = req.body;
+  const { name, siteUrl, feedUrl, active, hashtags, category, subcategory, kind, fetchedBy, region, review } =
+    req.body;
   if (name !== undefined) source.name = name;
   if (siteUrl !== undefined) source.siteUrl = siteUrl;
   if (feedUrl !== undefined) source.feedUrl = feedUrl;
@@ -62,6 +75,14 @@ export async function update(req: Request, res: Response): Promise<void> {
   }
   if (category !== undefined) source.category = category ?? undefined;
   if (subcategory !== undefined) source.subcategory = subcategory ?? undefined;
+  if (kind !== undefined) source.kind = kind;
+  if (fetchedBy !== undefined) source.fetchedBy = fetchedBy;
+  if (region !== undefined) source.region = region ?? undefined;
+  if (review !== undefined) {
+    if (!source.review) throw new ApiError(400, "Only sources the discovery engine suggested can be reviewed");
+    source.review = review;
+    source.active = review === "approved";
+  }
   await source.save();
   await source;
   res.json(serializeSource(source));
@@ -76,6 +97,9 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function fetchNow(req: Request, res: Response): Promise<void> {
   const source = await Source.findById(req.params.id);
   if (!source) throw new ApiError(404, "Source not found");
+  if (source.fetchedBy === "discovery") {
+    throw new ApiError(400, "The discovery engine watches this source; it can't be fetched from here");
+  }
   const stats = await ingestionService.fetchSource(source);
   res.json(stats);
 }
