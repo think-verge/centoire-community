@@ -11,6 +11,7 @@ import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
+import { fireEmbedding } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 import { MAX_POST_HASHTAGS, diffHashtags, normalizeHashtags } from "../utils/hashtag.js";
@@ -127,7 +128,17 @@ export async function finalizePublish(post: IPost): Promise<void> {
   post.status = "published";
   post.publishedAt = post.publishedAt ?? new Date();
   post.reviewedAt = post.reviewedAt ?? new Date();
+  post.embeddingStatus = "pending";
   await post.save();
+  // Fire embedding job (non-blocking)
+  void fireEmbedding(post._id.toString(), {
+    title: post.title,
+    excerpt: post.excerpt,
+    aiSummary: post.aiSummary,
+    hashtags: post.hashtags,
+    origin: post.origin,
+    contentText: post.contentText,
+  });
 
   if (firstPublish) {
     if (post.authorId) {
