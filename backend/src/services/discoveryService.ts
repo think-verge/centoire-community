@@ -97,8 +97,17 @@ export async function upsertStory(input: StoryCandidateInput): Promise<StoryCand
     if (existing.status === "pending_review") {
       // Still undecided: the editor should see the story as it is now.
       existing.title = title;
-      if (excerpt) existing.excerpt = excerpt;
+      if (excerpt) {
+        existing.excerpt = excerpt;
+        existing.contentText = excerpt;
+      }
       if (!existing.coverImageUrl && input.coverImageUrl) existing.coverImageUrl = input.coverImageUrl;
+      // The engine may pick a better article to link (e.g. an English one) as the story spreads.
+      const newHash = canonicalUrlHash(input.externalUrl);
+      if (newHash !== existing.canonicalUrlHash && !(await Post.exists({ canonicalUrlHash: newHash }))) {
+        existing.externalUrl = input.externalUrl;
+        existing.canonicalUrlHash = newHash;
+      }
     }
     await existing.save();
     return { postId: existing._id.toString(), status: existing.status, created: false };

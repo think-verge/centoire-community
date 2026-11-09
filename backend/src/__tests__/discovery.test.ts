@@ -65,11 +65,16 @@ describe("discovery engine integration", () => {
     expect(aiService.fireAiProcessing).toHaveBeenCalledOnce();
   });
 
-  it("refreshes a pending story's evidence and title but never a decided one's title", async () => {
-    const pending = fakeDoc({ status: "pending_review", title: "old", excerpt: "old", discovery: undefined as unknown });
+  it("refreshes a pending story's evidence, title and link but never a decided one's", async () => {
+    const pending = fakeDoc({
+      status: "pending_review", title: "old", excerpt: "old", discovery: undefined as unknown,
+      externalUrl: "https://www.houyhnhnm.jp/news/1", canonicalUrlHash: "old-hash",
+    });
     vi.spyOn(Post, "findOne").mockResolvedValueOnce(pending as never);
+    vi.spyOn(Post, "exists").mockResolvedValueOnce(null);
     await upsertStory({ ...story, discovery: { ...story.discovery, websiteCount: 9 } });
     expect(pending.title).toBe(story.title);
+    expect(pending.externalUrl).toBe(story.externalUrl);
     expect((pending.discovery as { websiteCount: number }).websiteCount).toBe(9);
 
     const published = fakeDoc({ status: "published", title: "Editor's title", excerpt: "e", discovery: undefined as unknown });
