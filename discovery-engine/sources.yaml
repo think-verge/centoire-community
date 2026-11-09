@@ -31,7 +31,8 @@ sources:
   - {id: justfreshkicks,     name: Just Fresh Kicks,       type: rss, region: US,     role: publisher, tier: normal, url: "https://www.justfreshkicks.com/feed/"}
   - {id: footwearnews,       name: Footwear News,          type: rss, region: US,     role: publisher, tier: normal, fetch_article: true, url: "https://footwearnews.com/feed/"}
   - {id: thehundreds,        name: The Hundreds,           type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.thehundreds.com/blogs/content.atom"}
-  - {id: vogue,              name: Vogue,                  type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.vogue.com/feed/rss"}
+  - {id: vogue,              name: Vogue,                  type: rss, region: US,     role: publisher, tier: slow,   url: "https://www.vogue.com/feed/rss",
+     exclude_title: ['horoscope', 'star sign', 'astrolog']}
 
   # ---------- publishers: regional ----------
   - {id: dazed,              name: Dazed,                  type: rss, region: GB,     role: publisher, tier: normal, url: "https://www.dazeddigital.com/rss"}
@@ -42,7 +43,8 @@ sources:
   - {id: hypebeast-kr,       name: Hypebeast Korea,        type: rss, region: KR,     role: publisher, tier: normal, url: "https://www.hypebeast.kr/feed"}
   - {id: hypebeast-cn,       name: Hypebeast China,        type: rss, region: CN,     role: publisher, tier: normal, url: "https://hypebeast.cn/feed"}
   - {id: hypebeast-hk,       name: Hypebeast (Traditional Chinese), type: rss, region: HK, role: publisher, tier: normal, url: "https://hypebeast.com/zh/feed"}
-  - {id: vogue-india,        name: Vogue India,            type: rss, region: IN,     role: publisher, tier: slow,   url: "https://www.vogue.in/feed/rss"}
+  - {id: vogue-india,        name: Vogue India,            type: rss, region: IN,     role: publisher, tier: slow,   url: "https://www.vogue.in/feed/rss",
+     exclude_title: ['horoscope', 'star sign', 'astrolog']}
   - {id: homegrown,          name: Homegrown,              type: rss, region: IN,     role: publisher, tier: slow,   url: "https://homegrown.co.in/feed"}
 
   # ---------- publishers added 2026-11-09 (checked live that day) ----------
@@ -68,7 +70,7 @@ sources:
   - {id: wwd,                name: WWD,                    type: rss, region: US,     role: benchmark, tier: fast,   url: "https://wwd.com/feed/"}
   # BoF blocks direct feed access; Google News carries its articles with publish times.
   - {id: bof,                name: The Business of Fashion, type: rss, region: GLOBAL, role: benchmark, tier: fast,  url: "https://news.google.com/rss/search?q=site:businessoffashion.com+when:2d&hl=en-US&gl=US&ceid=US:en",
-     exclude_title: ['\bjob with\b']}  # BoF Careers listings
+     exclude_title: ['\bjob with\b', '\bjobs( in\b|$)', 'BoF Careers', 'Masterclass']}  # BoF Careers listings, course ads
 
   # ---------- aggregators: Google News searches per market ----------
   - {id: gn-us-sneaker-collab,   name: "Google News US: sneaker collab",   type: rss, region: US, role: aggregator, tier: normal, url: "https://news.google.com/rss/search?q=sneaker+collab+when:1d&hl=en-US&gl=US&ceid=US:en"}
