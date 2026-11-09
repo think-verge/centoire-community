@@ -1,3 +1,4 @@
+import { recordServerEvent } from "./eventService.js";
 import { randomBytes } from "node:crypto";
 import { Types } from "mongoose";
 import { Circle, type ICircle } from "../models/Circle.js";
@@ -330,6 +331,8 @@ export async function joinCircle(
     throw err;
   }
   await Circle.updateOne({ _id: circleId }, { $inc: { memberCount: 1 } });
+  emitDomainEvent("circle.joined", { actorId: userId, circleId });
+  void recordServerEvent({ userId, action: "circle_join", targetType: "circle", targetId: circleId });
 }
 
 export async function leaveCircle(circleId: string, userId: string): Promise<void> {

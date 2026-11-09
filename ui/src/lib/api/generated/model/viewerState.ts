@@ -10,4 +10,5 @@ import type { ViewerStateVoted } from './viewerStateVoted';
 export interface ViewerState {
   voted: ViewerStateVoted;
   bookmarked: boolean;
+  authorFollowed?: boolean;
 }

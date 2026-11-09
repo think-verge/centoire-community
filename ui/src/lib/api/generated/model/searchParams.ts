@@ -9,9 +9,8 @@ import type { SearchType } from './searchType';
 
 export type SearchParams = {
 /**
- * @minLength 1
  * @maxLength 100
  */
-q: string;
+q?: string;
 type?: SearchType;
 };

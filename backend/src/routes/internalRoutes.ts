@@ -1,10 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { env } from "../config/env.js";
 import { Post } from "../models/Post.js";
+import { Cluster } from "../models/Cluster.js";
 import { evaluate } from "../services/policyService.js";
 import { finalizePublish } from "../services/postService.js";
 import * as hashtagService from "../services/hashtagService.js";
 import { MAX_POST_HASHTAGS, diffHashtags } from "../utils/hashtag.js";
+import { emitPostLifecycleEvent } from "../services/postLifecycleService.js";
 
 export const internalRouter = Router();
 
@@ -114,7 +116,105 @@ internalRouter.patch("/posts/:id/ai-result", async (req: Request, res: Response)
       }
     }
 
+    // If the post was already published before this AI analysis arrived:
+    // - External posts wait for AI enrichment to emit post.created
+    // - Native posts re-emit post.updated to attach the newly enriched aiSummary
+    if (current?.status === "published") {
+      const refreshed = await Post.findById(id);
+      if (refreshed && refreshed.status === "published") {
+        const event = refreshed.origin === "aggregated" ? "post.created" : "post.updated";
+        void emitPostLifecycleEvent(event, refreshed).catch((err) => {
+          console.error(`[internalRoutes] Failed to emit ${event} for ${refreshed._id}:`, err);
+        });
+      }
+    }
+
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Returns all cluster documents so the embedding service can find the nearest cluster. */
+internalRouter.get("/clusters", async (_req: Request, res: Response) => {
+  try {
+    const clusters = await Cluster.find({}).select("clusterId centre version").lean();
+    const result = clusters.map((c) => ({
+      cluster_id: c.clusterId,
+      centre: c.centre,
+      version: c.version,
+    }));
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/** Updates a post's embedding fields after the AI agent generates an embedding. */
+internalRouter.patch("/posts/:id/embedding", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      embedding,
+      clusterId,
+      modelName,
+      modelVersion,
+      embeddingStatus,
+    } = req.body as {
+      embedding?: number[];
+      clusterId?: number;
+      modelName?: string;
+      modelVersion?: string;
+      embeddingStatus: "pending" | "completed" | "failed";
+    };
+
+    if (embeddingStatus === "failed") {
+      await Post.updateOne({ _id: id }, { $set: { embeddingStatus: "failed" } });
+      res.json({ ok: true });
+      return;
+    }
+
+    if (embeddingStatus === "completed") {
+      const update: Record<string, unknown> = { embeddingStatus: "completed" };
+      if (embedding !== undefined) update.embedding = embedding;
+      if (clusterId !== undefined) update.clusterId = clusterId;
+      if (modelName !== undefined) update.embeddingModel = modelName;
+      if (modelVersion !== undefined) update.embeddingVersion = modelVersion;
+      await Post.updateOne({ _id: id }, { $set: update });
+      res.json({ ok: true });
+      return;
+    }
+
+    res.status(400).json({ error: "Invalid embeddingStatus" });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * Returns posts that have no embedding or embeddingStatus != "completed".
+ * Used by the backfill script.
+ */
+internalRouter.get("/posts/without-embedding", async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(Number(req.query["limit"] ?? 50), 200);
+    const offset = Number(req.query["offset"] ?? 0);
+
+    const posts = await Post.find({
+      $or: [
+        { embeddingStatus: { $exists: false } },
+        { embeddingStatus: { $ne: "completed" } },
+      ],
+    })
+      .select(
+        "_id title excerpt aiSummary hashtags circleName authorHandle origin contentText embeddingStatus",
+      )
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .lean();
+
+    res.json(posts);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
