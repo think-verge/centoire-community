@@ -7,6 +7,7 @@ import { Vote, type VoteTargetType } from "../models/Vote.js";
 import { ApiError } from "../utils/api-error.js";
 import * as reputationService from "./reputationService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
+import { recordServerEvent } from "./eventService.js";
 
 const REP_BY_TARGET: Record<VoteTargetType, { type: "post_upvoted" | "comment_upvoted"; amount: number }> = {
   post: { type: "post_upvoted", amount: 10 },
@@ -63,6 +64,7 @@ export async function setVote(
 
   // Cancel expiry when a post receives its first upvote
   if (targetType === "post" && value === 1 && !existing) {
+    void recordServerEvent({ userId, action: "upvote", postId: targetId });
     void Post.updateOne(
       { _id: targetId, origin: "aggregated", expiresAt: { $exists: true } },
       { $unset: { expiresAt: "" } },
@@ -135,6 +137,8 @@ export async function setBookmark(
   if (!existing) {
     await Bookmark.create({ userId, postId, folderId: folderId ?? null });
     await Post.updateOne({ _id: postId }, { $inc: { bookmarkCount: 1 } });
+    emitDomainEvent("post.saved", { actorId: userId, postId, folderId: folderId ?? undefined });
+    void recordServerEvent({ userId, action: "save", postId });
     // Cancel expiry when a post is bookmarked for the first time
     void Post.updateOne(
       { _id: postId, origin: "aggregated", expiresAt: { $exists: true } },
@@ -147,6 +151,7 @@ export async function removeBookmark(userId: string, postId: string): Promise<vo
   const deleted = await Bookmark.findOneAndDelete({ userId, postId });
   if (deleted) {
     await Post.updateOne({ _id: postId }, { $inc: { bookmarkCount: -1 } });
+    emitDomainEvent("post.unsaved", { actorId: userId, postId });
   }
 }
 
@@ -249,6 +254,7 @@ export async function createComment(
   }
 
   const commentId = comment._id.toString();
+  void recordServerEvent({ userId, action: "comment", postId });
   if (post.authorId) {
     emitDomainEvent("comment.created", {
       actorId: userId,
