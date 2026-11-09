@@ -16,6 +16,7 @@ import { registerNotificationPaths } from "./notifications.js";
 import { registerPostPaths } from "./posts.js";
 import { registerSearchPaths } from "./search.js";
 import { registerSourcePaths } from "./sources.js";
+import { registerSuggestionPaths } from "./suggestions.js";
 
 export { registry } from "./registry.js";
 
@@ -32,6 +33,7 @@ export function registerPaths(): void {
   registerCircleContentPaths();
   registerSourcePaths();
   registerSearchPaths();
+  registerSuggestionPaths();
   registerUserContentPaths();
   registerModerationPaths();
   registerNotificationPaths();
