@@ -32,7 +32,7 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
     filter.status = params.status ?? "pending_review";
   }
 
-  if (params.sort === "momentum") return listByMomentum(filter, params);
+  if ((params.sort ?? "momentum") === "momentum") return listByMomentum(filter, params);
 
   // Cursor-based pagination
   if (params.cursor) {
@@ -78,7 +78,9 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
   return { items, nextCursor };
 }
 
-/** Breaking → rising → early → steady → settled → everything without a tag, newest first within each.
+/** Breaking → rising → early → posts without a tag (user posts, RSS imports) → steady → settled.
+ *  Within a tag the most widely covered story comes first, then the newest. The engine's ranks are
+ *  0-4 (breaking..settled); untagged posts sit at 2.5 so they're never buried under quiet stories.
  *  The order isn't monotonic in _id, so this pages by offset. */
 async function listByMomentum(filter: Record<string, unknown>, params: QueueParams): Promise<QueuePage> {
   const offset = params.cursor
@@ -86,8 +88,13 @@ async function listByMomentum(filter: Record<string, unknown>, params: QueuePara
     : 0;
   const rows = await Post.aggregate<{ _id: Types.ObjectId }>([
     { $match: filter },
-    { $addFields: { _rank: { $ifNull: ["$discovery.momentum.rank", 9] } } },
-    { $sort: { _rank: 1, createdAt: -1, _id: -1 } },
+    {
+      $addFields: {
+        _rank: { $ifNull: ["$discovery.momentum.rank", 2.5] },
+        _websites: { $ifNull: ["$discovery.websiteCount", 0] },
+      },
+    },
+    { $sort: { _rank: 1, _websites: -1, createdAt: -1, _id: -1 } },
     { $skip: offset },
     { $limit: QUEUE_PAGE_SIZE + 1 },
     { $project: { _id: 1 } },

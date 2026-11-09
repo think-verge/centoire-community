@@ -11,6 +11,6 @@ export type GetModerationQueueSort = typeof GetModerationQueueSort[keyof typeof 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const GetModerationQueueSort = {
-  oldest: 'oldest',
   momentum: 'momentum',
+  oldest: 'oldest',
 } as const;

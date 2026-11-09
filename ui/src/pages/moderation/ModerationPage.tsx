@@ -45,7 +45,7 @@ const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
     label: "Sort",
     type: "single",
     options: [
-      { value: "momentum", label: "Momentum (breaking first)" },
+      { value: "momentum", label: "Momentum: breaking first (default)" },
       { value: "oldest", label: "Oldest first" },
     ],
   },

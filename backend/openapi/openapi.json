@@ -6026,10 +6026,10 @@
             "schema": {
               "type": "string",
               "enum": [
-                "oldest",
-                "momentum"
+                "momentum",
+                "oldest"
               ],
-              "default": "oldest"
+              "default": "momentum"
             },
             "required": false,
             "name": "sort",
