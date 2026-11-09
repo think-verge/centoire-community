@@ -17,4 +17,12 @@ export interface UpdateMeInput {
   /** @maxLength 160 */
   bio?: string;
   avatarUrl?: string;
+  /** @maxLength 100 */
+  location?: string;
+  /** @maxLength 60 */
+  profileRole?: string;
+  /** @maxLength 60 */
+  role?: string;
+  domains?: string[];
+  likedCreators?: string[];
 }

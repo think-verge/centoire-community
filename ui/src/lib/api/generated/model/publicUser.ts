@@ -5,6 +5,7 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
+import type { PublicUserRole } from './publicUserRole';
 
 export interface PublicUser {
   id: string;
@@ -15,6 +16,12 @@ export interface PublicUser {
   avatarUrl: string | null;
   /** @nullable */
   bio: string | null;
+  role?: PublicUserRole;
+  /** @nullable */
+  profileRole?: string | null;
+  /** @nullable */
+  location?: string | null;
+  domains?: string[];
   reputation: number;
   followerCount: number;
   followingCount: number;

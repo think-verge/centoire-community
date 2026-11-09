@@ -54,7 +54,7 @@ export async function setInterests(req: Request, res: Response): Promise<void> {
 }
 
 export async function completeOnboarding(req: Request, res: Response): Promise<void> {
-  const user = await userService.completeOnboarding(req.user!.userId);
+  const user = await userService.completeOnboarding(req.user!.userId, req.body);
   res.json(serializeUser(user, { private: true }));
 }
 
