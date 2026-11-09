@@ -8,3 +8,5 @@ export const adminPostRouter = Router();
 adminPostRouter.use(requireAuth, requireAdmin);
 
 adminPostRouter.post("/backfill-categories", asyncHandler(adminPostController.backfillCategories));
+adminPostRouter.patch("/:id/curate", asyncHandler(adminPostController.toggleCurated));
+adminPostRouter.patch("/:id/curated", asyncHandler(adminPostController.toggleCurated));

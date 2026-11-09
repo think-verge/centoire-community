@@ -1,8 +1,12 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.v1.posts import router as posts_router
+from .api.v1.embed import router as embed_router
 from .api.v1.clusters import router as clusters_router
 from .api.v1.topic_mix import router as topic_mix_router
 from .api.v1.feed import router as feed_router
@@ -28,6 +32,7 @@ app.add_middleware(
 )
 
 app.include_router(posts_router)
+app.include_router(embed_router)
 app.include_router(clusters_router)
 app.include_router(topic_mix_router)
 app.include_router(feed_router)

@@ -52,6 +52,55 @@ backend console (`[mail] …`) — click them from there in development.
 With Cloudinary env vars set, uploads go to Cloudinary; otherwise files land in
 `backend/uploads/` and are served at `/uploads` (dev fallback).
 
+### Topic clustering (Recommendation Engine)
+
+Topic clustering groups posts into ~40 semantic interest clusters using Gemini embeddings (768-d unit-normalized) and K-Means.
+
+#### Prerequisites
+1. Ensure post embeddings are generated in the database:
+   ```bash
+   cd backend && npx tsx scripts/backfill-post-embeddings.ts
+   ```
+2. Install Python dependencies:
+   ```bash
+   cd ai-agent && pip install -r requirements.txt
+   ```
+
+#### 1. Initial clustering bootstrap (Version 1)
+Run once on the curated post library before launch:
+```bash
+cd ai-agent
+
+# Dry-run preview (checks cluster counts without saving):
+python -m scripts.cluster_posts --dry-run
+
+# Run initial clustering and activate version 1:
+python -m scripts.cluster_posts --clusters 40
+```
+Workflow:
+- Fetches all posts with embeddings from the backend (`GET /internal/posts/with-embedding`).
+- Fits K-Means (~40 clusters, configurable 30–50 via `TOPIC_N_CLUSTERS`).
+- L2-normalizes centres so dot product equals cosine similarity.
+- Stages clusters in MongoDB (`POST /internal/clusters/bulk`).
+- Executes atomic cutover to activate version 1 (`POST /internal/clusters/cutover`).
+
+#### 2. Weekly reclustering (Orchestrator)
+Runs periodically to update cluster centres on newly published content while preserving topic ID stability via Hungarian matching (`scipy.optimize.linear_sum_assignment`) and proportionally remapping user/circle/creator mixes:
+```bash
+cd ai-agent
+
+# Dry-run preview:
+python -m scripts.weekly_recluster --dry-run
+
+# Full weekly reclustering job:
+python -m scripts.weekly_recluster
+```
+
+#### 3. Publish-time assignment & verification
+- **Fast nearest-cluster lookup (< 0.1 ms):** `POST /v1/clusters/assign` on `ai-agent` (`port 8001`).
+- **Inspect active clusters:** `curl http://localhost:8001/v1/clusters`.
+- **Run clustering test suite:** `pytest ai-agent/app/tests/test_clustering.py -v`.
+
 ## Platform mode (gateway + services)
 
 Besides the single-process monolith above, the backend can run as an Acuvity-style set of
@@ -143,6 +192,9 @@ Done when a fresh Windows machine with Node, a `MONGODB_URI`, and no tmux/make/b
 | ui | `npm run dev` | Vite dev server with /api proxy |
 | ui | `npm run api:refresh` | regenerate orval client from backend spec |
 | ui | `npm run build` | typecheck + production build |
+| ai-agent | `python -m scripts.cluster_posts --dry-run` | preview initial 40-cluster bootstrap |
+| ai-agent | `python -m scripts.weekly_recluster --dry-run` | test weekly reclustering orchestrator & mix remap |
+| ai-agent | `pytest app/tests/test_clustering.py` | unit tests for clustering & ID stability |
 
 ## Production deployment
 

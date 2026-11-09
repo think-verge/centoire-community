@@ -18,3 +18,32 @@ export async function fireAiProcessing(
     // fire-and-forget â€” failures are non-critical
   }
 }
+
+export async function fireEmbedding(
+  postId: string,
+  opts: {
+    title: string;
+    excerpt: string;
+    aiSummary?: string;
+    hashtags?: string[];
+    circleName?: string;
+    authorHandle?: string;
+    origin: string;
+    contentText?: string;
+  },
+): Promise<void> {
+  if (!env.ENABLE_AI_PROCESSING) {
+    console.log(`[embed-trigger] AI processing disabled — skipping embed for post ${postId}`);
+    return;
+  }
+  try {
+    await fetch(`${env.AI_SERVICE_URL}/v1/embed-post`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, ...opts }),
+    });
+  } catch (err) {
+    // fire-and-forget — failures are non-critical
+    console.error(`[embed-trigger] failed to fire embedding for post ${postId}:`, err);
+  }
+}

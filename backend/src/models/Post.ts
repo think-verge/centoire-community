@@ -8,6 +8,7 @@ export interface IPost extends Document {
   _id: Types.ObjectId;
   origin: PostOrigin;
   status: PostStatus;
+  curated?: boolean;
   authorId?: Types.ObjectId;
   sourceId?: Types.ObjectId;
   title: string;
@@ -48,6 +49,13 @@ export interface IPost extends Document {
   aiIsSpam?: boolean;
   aiSummary?: string;
   clickbaitDetected?: boolean;
+  // Embedding fields
+  embedding?: number[];
+  embeddingModel?: string;
+  embeddingVersion?: string;
+  embeddingStatus?: "pending" | "completed" | "failed";
+  clusterId?: number;
+  clusterVersion?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -60,6 +68,7 @@ const postSchema = new Schema<IPost>(
       enum: ["draft", "pending_review", "published", "rejected", "removed"],
       default: "draft",
     },
+    curated: { type: Boolean, default: false, index: true },
     authorId: { type: Schema.Types.ObjectId, ref: "User" },
     sourceId: { type: Schema.Types.ObjectId, ref: "Source" },
     title: { type: String, required: true, trim: true, maxlength: 200 },
@@ -97,11 +106,19 @@ const postSchema = new Schema<IPost>(
     aiIsSpam: { type: Boolean },
     aiSummary: { type: String },
     clickbaitDetected: { type: Boolean },
+    // Embedding fields
+    embedding: { type: [Number] },
+    embeddingModel: { type: String },
+    embeddingVersion: { type: String },
+    embeddingStatus: { type: String, enum: ["pending", "completed", "failed"] },
+    clusterId: { type: Number },
+    clusterVersion: { type: Number },
   },
   { timestamps: true },
 );
 
 postSchema.index({ status: 1, publishedAt: -1 });
+postSchema.index({ status: 1, curated: 1, publishedAt: -1 });
 postSchema.index({ status: 1, createdAt: -1 }); // for moderation queue ordering
 postSchema.index({ status: 1, hashtags: 1, publishedAt: -1 });
 postSchema.index({ status: 1, circleId: 1, publishedAt: -1 });
@@ -110,6 +127,8 @@ postSchema.index({ status: 1, category: 1, publishedAt: -1 });
 postSchema.index({ status: 1, category: 1, subcategory: 1, publishedAt: -1 });
 postSchema.index({ status: 1, country: 1, publishedAt: -1 });
 postSchema.index({ title: "text", contentText: "text", excerpt: "text" });
+postSchema.index({ embeddingStatus: 1, createdAt: -1 });
+postSchema.index({ clusterId: 1, createdAt: -1 }, { sparse: true });
 
 postSchema.pre("validate", function (next) {
   if (this.subcategory && !this.category) {

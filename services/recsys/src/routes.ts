@@ -1,11 +1,19 @@
 import { Router, type Request, type Response } from "express";
 
+interface AuthRequest extends Request {
+  user?: {
+    userId: string;
+    email: string;
+    role: string;
+  };
+}
+
 export const forYouRouter = Router();
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8001";
 
 forYouRouter.get("/", async (req: Request, res: Response) => {
-  const user = req.user;
+  const user = (req as AuthRequest).user;
   const userId = user?.userId || (req.headers && req.headers["x-user-id"] ? (req.headers["x-user-id"] as string) : undefined);
   const cursor = req.query?.cursor as string | undefined;
   const limit = req.query?.limit as string | undefined;
@@ -53,7 +61,7 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
         status: "ok",
         service: "recsys",
         authenticated: true,
-        user,
+        user: user ?? null,
         items: data.items || [],
         cursor: data.cursor || null,
         hasMore: !!data.hasMore,
@@ -69,7 +77,7 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
   res.json({
     status: "ok",
     service: "recsys",
-    authenticated: true,
+    authenticated: !!user,
     user: user ?? null,
     items: [],
     cursor: null,
@@ -80,7 +88,7 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
 export const suggestionsRouter = Router();
 
 suggestionsRouter.get("/", (req: Request, res: Response) => {
-  const user = req.user;
+  const user = (req as AuthRequest).user;
   res.json({
     status: "ok",
     service: "recsys",
@@ -98,5 +106,16 @@ internalRecsysRouter.get("/status", (_req: Request, res: Response) => {
     status: "healthy",
     service: "recsys",
     mode: "node-bahamut",
+  });
+});
+
+internalRecsysRouter.post("/topic-mix/:userId/seed", (req: Request, res: Response) => {
+  const { userId } = req.params;
+  const { domains } = req.body as { domains?: string[] };
+  res.json({
+    status: "ok",
+    service: "recsys",
+    userId,
+    domains: domains ?? [],
   });
 });

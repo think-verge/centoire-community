@@ -17,6 +17,14 @@ export interface IUser extends Document {
   avatarUrl?: string;
   bio?: string;
   role: UserRole;
+  /** Professional/fashion ecosystem role (e.g. Designer, Stylist, Student). */
+  profileRole?: string;
+  /** Geographic location (e.g. Paris, New York). */
+  location?: string;
+  /** Domains of work / interest (e.g. Streetwear, Runway, Luxury). */
+  domains: string[];
+  /** Creators/artists the user likes or endorsed during onboarding. */
+  likedCreators: Types.ObjectId[];
   /** Hashtags the user follows; drive For You ranking. */
   followedHashtags: string[];
   onboardingCompletedAt?: Date;
@@ -53,6 +61,10 @@ const userSchema = new Schema<IUser>(
     avatarUrl: { type: String },
     bio: { type: String, maxlength: 160 },
     role: { type: String, enum: ["member", "creator", "editor", "admin"], default: "member" },
+    profileRole: { type: String, trim: true, maxlength: 60 },
+    location: { type: String, trim: true, maxlength: 100 },
+    domains: { type: [String], default: [] },
+    likedCreators: [{ type: Schema.Types.ObjectId, ref: "User" }],
     followedHashtags: { type: [String], default: [] },
     onboardingCompletedAt: { type: Date },
     reputation: { type: Number, default: 0 },
@@ -70,5 +82,7 @@ userSchema.index({ handle: "text", displayName: "text", bio: "text" });
 userSchema.index({ role: 1 });
 userSchema.index({ blockedUsers: 1 });
 userSchema.index({ mutedUsers: 1 });
+userSchema.index({ domains: 1 });
+userSchema.index({ location: 1 });
 
 export const User = mongoose.model<IUser>("User", userSchema);

@@ -29,7 +29,7 @@ describe("recsys routes", () => {
     const layer = forYouRouter.stack.find((s) => s.route?.path === "/");
     expect(layer).toBeDefined();
 
-    await layer!.route.stack[0].handle(req, res, () => {});
+    await layer!.route!.stack[0].handle(req, res, () => {});
     expect(state.data).toMatchObject({
       status: "ok",
       service: "recsys",
@@ -48,7 +48,7 @@ describe("recsys routes", () => {
     const layer = suggestionsRouter.stack.find((s) => s.route?.path === "/");
     expect(layer).toBeDefined();
 
-    layer!.route.stack[0].handle(req, res, () => {});
+    layer!.route!.stack[0].handle(req, res, () => {});
     expect(state.data).toEqual({
       status: "ok",
       service: "recsys",
@@ -66,11 +66,30 @@ describe("recsys routes", () => {
     const layer = internalRecsysRouter.stack.find((s) => s.route?.path === "/status");
     expect(layer).toBeDefined();
 
-    layer!.route.stack[0].handle(req, res, () => {});
+    layer!.route!.stack[0].handle(req, res, () => {});
     expect(state.data).toEqual({
       status: "healthy",
       service: "recsys",
       mode: "node-bahamut",
+    });
+  });
+
+  it("internalRecsysRouter seeds topic mix for user", () => {
+    const { res, state } = mockRes();
+    const req = {
+      params: { userId: "usr_123" },
+      body: { domains: ["streetwear", "runway"] },
+    } as unknown as Request;
+
+    const layer = internalRecsysRouter.stack.find((s) => s.route?.path === "/topic-mix/:userId/seed");
+    expect(layer).toBeDefined();
+
+    layer!.route!.stack[0].handle(req, res, () => {});
+    expect(state.data).toEqual({
+      status: "ok",
+      service: "recsys",
+      userId: "usr_123",
+      domains: ["streetwear", "runway"],
     });
   });
 });

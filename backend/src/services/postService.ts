@@ -11,10 +11,12 @@ import type { PostCategory } from "../config/categoryTaxonomy.js";
 import * as reputationService from "./reputationService.js";
 import { evaluate as evaluatePolicy } from "./policyService.js";
 import { fireAiProcessing } from "./aiService.js";
+import { fireEmbedding } from "./aiService.js";
 import { inferCountry } from "./regionService.js";
 import { emitDomainEvent } from "../events/eventBus.js";
 import { MAX_POST_HASHTAGS, diffHashtags, normalizeHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
+import { emitPostLifecycleEvent } from "./postLifecycleService.js";
 
 interface PostInput {
   title: string;
@@ -101,6 +103,13 @@ export async function updatePost(
   }
   deriveTextFields(post);
   await post.save();
+
+  if (post.status === "published") {
+    void emitPostLifecycleEvent("post.updated", post).catch((err) => {
+      console.error(`[postService] Failed to emit post.updated for ${post._id}:`, err);
+    });
+  }
+
   return post;
 }
 
@@ -119,7 +128,17 @@ export async function finalizePublish(post: IPost): Promise<void> {
   post.status = "published";
   post.publishedAt = post.publishedAt ?? new Date();
   post.reviewedAt = post.reviewedAt ?? new Date();
+  post.embeddingStatus = "pending";
   await post.save();
+  // Fire embedding job (non-blocking)
+  void fireEmbedding(post._id.toString(), {
+    title: post.title,
+    excerpt: post.excerpt,
+    aiSummary: post.aiSummary,
+    hashtags: post.hashtags,
+    origin: post.origin,
+    contentText: post.contentText,
+  });
 
   if (firstPublish) {
     if (post.authorId) {
@@ -139,6 +158,15 @@ export async function finalizePublish(post: IPost): Promise<void> {
       });
       emitDomainEvent("post.approved", { postId: post._id.toString(), recipientId: post.authorId.toString() });
     }
+  }
+
+  // Post lifecycle hooks for embedding:
+  // Native posts emit on publish; external posts emit after ingestion/AI enrichment completes
+  // (or on approval if AI enrichment is already complete).
+  if (post.origin === "native" || (post.origin === "aggregated" && post.aiProcessed)) {
+    void emitPostLifecycleEvent("post.created", post).catch((err) => {
+      console.error(`[postService] Failed to emit post.created for ${post._id}:`, err);
+    });
   }
 }
 
@@ -229,7 +257,10 @@ export async function getBySlug(
   viewerId?: string,
   viewerRole?: UserRole,
 ): Promise<IPost> {
-  const post = await Post.findOne({ slug })
+  const query = Types.ObjectId.isValid(slug)
+    ? { $or: [{ _id: new Types.ObjectId(slug) }, { slug }] }
+    : { slug };
+  const post = await Post.findOne(query)
     .populate("authorId", "handle displayName avatarUrl reputation role followerCount")
     .populate("sourceId", "name siteUrl faviconUrl")
     .populate("circleId", "name slug");
