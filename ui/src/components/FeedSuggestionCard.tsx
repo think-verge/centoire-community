@@ -342,7 +342,7 @@ export function FeedSuggestionCard({ onDismiss }: { onDismiss?: () => void }) {
       {/* Footer Explore Link */}
       <div className="pt-2 border-t border-[#F0F0F0] mt-auto text-center">
         <Link
-          to={activeTab === "circles" ? "/circles" : "/discover"}
+          to={activeTab === "circles" ? "/circles" : "/discover?sort=recommended"}
           className="font-ui text-[11px] font-semibold text-[#E4572E] hover:underline inline-flex items-center gap-1"
         >
           Explore more {activeTab === "circles" ? "circles" : "creators"} &rarr;
