@@ -19,4 +19,5 @@ import "./SourceFollow.js";
 import "./PostReport.js";
 import "./Cluster.js";
 import "./Event.js";
+import "./SuggestionFeedback.js";
 import "./UserTopicMix.js";
