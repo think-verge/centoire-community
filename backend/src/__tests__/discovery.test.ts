@@ -7,6 +7,7 @@ import * as policyService from "../services/policyService.js";
 import * as aiService from "../services/aiService.js";
 import * as postService from "../services/postService.js";
 import { listDecisions, suggestSource, upsertStory, type StoryCandidateInput } from "../services/discoveryService.js";
+import { listQueue } from "../services/moderationService.js";
 import { SourceSuggestionSchema, StoryCandidateSchema } from "../routes/discoveryRoutes.js";
 
 const story: StoryCandidateInput = {
@@ -160,5 +161,21 @@ describe("discovery engine integration", () => {
       ["s1", "published", true, null],
       ["s2", "rejected", false, "Not fashion"],
     ]);
+  });
+
+  it("sorts the queue by momentum, untagged posts last, and pages by offset", async () => {
+    const ids = [new Types.ObjectId(), new Types.ObjectId(), new Types.ObjectId()];
+    const aggregate = vi.spyOn(Post, "aggregate").mockResolvedValue(ids.map((_id) => ({ _id })) as never);
+    const docs = [...ids].reverse().map((_id) => ({ _id }));
+    const populated = { populate: () => populated, then: (r: (v: unknown) => unknown) => r(docs) };
+    vi.spyOn(Post, "find").mockReturnValue(populated as never);
+
+    const page = await listQueue({ sort: "momentum" });
+
+    const pipeline = aggregate.mock.calls[0]![0] as unknown as Array<Record<string, unknown>>;
+    expect(pipeline[1]).toEqual({ $addFields: { _rank: { $ifNull: ["$discovery.momentum.rank", 9] } } });
+    expect(pipeline[2]).toEqual({ $sort: { _rank: 1, createdAt: -1, _id: -1 } });
+    expect(page.items.map((p) => p._id)).toEqual(ids); // kept in aggregate order, not find order
+    expect(page.nextCursor).toBeNull();
   });
 });

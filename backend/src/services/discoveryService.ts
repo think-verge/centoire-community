@@ -39,6 +39,7 @@ export interface StoryCandidateInput {
     engineSawAt?: string;
     spread: Array<{ name: string; url?: string; firstAt: string }>;
     markets: string[];
+    momentum?: { tag: "breaking" | "rising" | "early" | "steady" | "settled"; reason: string; rank: number; computedAt: string };
   };
 }
 
@@ -81,6 +82,7 @@ function toDiscovery(input: StoryCandidateInput["discovery"], storyId: string): 
     engineSawAt: input.engineSawAt ? new Date(input.engineSawAt) : undefined,
     spread: input.spread.slice(0, MAX_SPREAD).map((s) => ({ ...s, firstAt: new Date(s.firstAt) })),
     markets: input.markets,
+    momentum: input.momentum ? { ...input.momentum, computedAt: new Date(input.momentum.computedAt) } : undefined,
     updatedAt: new Date(),
   };
 }

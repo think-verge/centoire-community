@@ -88,6 +88,13 @@ export function serializePostCard(post: IPost, viewer?: ViewerState) {
             firstAt: s.firstAt.toISOString(),
           })),
           markets: post.discovery.markets ?? [],
+          momentum: post.discovery.momentum?.tag
+            ? {
+                tag: post.discovery.momentum.tag,
+                reason: post.discovery.momentum.reason ?? "",
+                computedAt: post.discovery.momentum.computedAt?.toISOString() ?? null,
+              }
+            : null,
         }
       : null,
   };

@@ -183,6 +183,34 @@
             "items": {
               "type": "string"
             }
+          },
+          "momentum": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "tag": {
+                "type": "string",
+                "enum": [
+                  "breaking",
+                  "rising",
+                  "early",
+                  "steady",
+                  "settled"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "computedAt": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "tag",
+              "reason",
+              "computedAt"
+            ]
           }
         },
         "required": [
@@ -5422,6 +5450,19 @@
             },
             "required": false,
             "name": "author",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "oldest",
+                "momentum"
+              ],
+              "default": "oldest"
+            },
+            "required": false,
+            "name": "sort",
             "in": "query"
           }
         ],

@@ -7,6 +7,7 @@
  */
 import type { PostDiscoveryFirstPublished } from './postDiscoveryFirstPublished';
 import type { PostDiscoverySpreadItem } from './postDiscoverySpreadItem';
+import type { PostDiscoveryMomentum } from './postDiscoveryMomentum';
 
 export interface PostDiscovery {
   storyId: string;
@@ -20,4 +21,6 @@ export interface PostDiscovery {
   engineSawAt: string | null;
   spread: PostDiscoverySpreadItem[];
   markets: string[];
+  /** @nullable */
+  momentum?: PostDiscoveryMomentum;
 }

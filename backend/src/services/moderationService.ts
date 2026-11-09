@@ -19,6 +19,7 @@ export interface QueueParams {
   source?: string;
   hashtag?: string;
   author?: string;
+  sort?: "oldest" | "momentum";
 }
 
 export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
@@ -30,6 +31,8 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
   } else {
     filter.status = params.status ?? "pending_review";
   }
+
+  if (params.sort === "momentum") return listByMomentum(filter, params);
 
   // Cursor-based pagination
   if (params.cursor) {
@@ -72,6 +75,34 @@ export async function listQueue(params: QueueParams = {}): Promise<QueuePage> {
     ? Buffer.from(JSON.stringify({ id: items[items.length - 1]._id.toString() })).toString("base64url")
     : null;
 
+  return { items, nextCursor };
+}
+
+/** Breaking → rising → early → steady → settled → everything without a tag, newest first within each.
+ *  The order isn't monotonic in _id, so this pages by offset. */
+async function listByMomentum(filter: Record<string, unknown>, params: QueueParams): Promise<QueuePage> {
+  const offset = params.cursor
+    ? Number(JSON.parse(Buffer.from(params.cursor, "base64url").toString()).offset ?? 0)
+    : 0;
+  const rows = await Post.aggregate<{ _id: Types.ObjectId }>([
+    { $match: filter },
+    { $addFields: { _rank: { $ifNull: ["$discovery.momentum.rank", 9] } } },
+    { $sort: { _rank: 1, createdAt: -1, _id: -1 } },
+    { $skip: offset },
+    { $limit: QUEUE_PAGE_SIZE + 1 },
+    { $project: { _id: 1 } },
+  ]);
+  const hasMore = rows.length > QUEUE_PAGE_SIZE;
+  const ids = rows.slice(0, QUEUE_PAGE_SIZE).map((r) => r._id);
+  const docs = await Post.find({ _id: { $in: ids } })
+    .populate("authorId", "handle displayName avatarUrl role")
+    .populate("sourceId", "name siteUrl faviconUrl")
+    .populate("circleId", "name slug");
+  const byId = new Map(docs.map((d) => [d._id.toString(), d]));
+  const items = ids.map((id) => byId.get(id.toString())).filter((d): d is NonNullable<typeof d> => Boolean(d));
+  const nextCursor = hasMore
+    ? Buffer.from(JSON.stringify({ offset: offset + QUEUE_PAGE_SIZE })).toString("base64url")
+    : null;
   return { items, nextCursor };
 }
 

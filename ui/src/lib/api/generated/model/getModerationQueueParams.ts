@@ -7,6 +7,7 @@
  */
 import type { GetModerationQueueStatus } from './getModerationQueueStatus';
 import type { GetModerationQueueOrigin } from './getModerationQueueOrigin';
+import type { GetModerationQueueSort } from './getModerationQueueSort';
 
 export type GetModerationQueueParams = {
 cursor?: string;
@@ -15,4 +16,5 @@ origin?: GetModerationQueueOrigin;
 source?: string;
 hashtag?: string;
 author?: string;
+sort?: GetModerationQueueSort;
 };

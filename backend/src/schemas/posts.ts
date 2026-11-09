@@ -45,6 +45,14 @@ const PostDiscoverySchema = registry.register(
     engineSawAt: z.string().nullable(),
     spread: z.array(z.object({ name: z.string(), url: z.string().nullable(), firstAt: z.string() })),
     markets: z.array(z.string()),
+    momentum: z
+      .object({
+        tag: z.enum(["breaking", "rising", "early", "steady", "settled"]),
+        reason: z.string(),
+        computedAt: z.string().nullable(),
+      })
+      .nullable()
+      .optional(),
   }),
 );
 

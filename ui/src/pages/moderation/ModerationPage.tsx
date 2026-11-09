@@ -41,6 +41,15 @@ import { hasPermission } from "../../lib/permissions";
 
 const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
   {
+    key: "sort",
+    label: "Sort",
+    type: "single",
+    options: [
+      { value: "momentum", label: "Momentum (breaking first)" },
+      { value: "oldest", label: "Oldest first" },
+    ],
+  },
+  {
     key: "status",
     label: "Status",
     type: "single",
@@ -250,6 +259,7 @@ function QueueTab() {
     source: activeFilters.source?.[0],
     hashtag: activeFilters.hashtag?.[0],
     author: activeFilters.author?.[0],
+    sort: activeFilters.sort?.[0] as "oldest" | "momentum" | undefined,
   });
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");

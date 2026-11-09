@@ -34,6 +34,14 @@ export const StoryCandidateSchema = z.object({
     engineSawAt: isoDate.optional(),
     spread: z.array(z.object({ name: z.string().max(200), url: z.string().optional(), firstAt: isoDate })).max(200),
     markets: z.array(z.string().max(10)).max(50),
+    momentum: z
+      .object({
+        tag: z.enum(["breaking", "rising", "early", "steady", "settled"]),
+        reason: z.string().max(300),
+        rank: z.number().int().min(0).max(9),
+        computedAt: isoDate,
+      })
+      .optional(),
   }),
 });
 
