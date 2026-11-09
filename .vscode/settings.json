@@ -1,5 +1,0 @@
-{
-  "python.analysis.extraPaths": ["./ai-agent"],
-  "python.autoComplete.extraPaths": ["./ai-agent"]
-}
-
