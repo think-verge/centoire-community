@@ -27,16 +27,70 @@ export interface CircleSnapshot {
   avatarUrl?: string;
 }
 
+export interface PostLifecycleEventPayload {
+  postId: string;
+  title: string;
+  excerpt: string;
+  aiSummary?: string;
+  hashtags: string[];
+  authorId?: string;
+  circleId?: string;
+  curated: boolean;
+  origin: "native" | "aggregated";
+  isCirclePrivate: boolean;
+  contentText?: string;
+  post?: PostSnapshot;
+  circle?: CircleSnapshot;
+}
+
 interface NotificationEventBase {
   actorId: string;
   recipientId: string;
   actor?: UserSnapshot;
 }
 
+export interface BehaviorEventItem {
+  userId?: string;
+  sessionId?: string;
+  action:
+    | "impression"
+    | "read"
+    | "dwell"
+    | "hide"
+    | "report"
+    | "suggestion_impression"
+    | "suggestion_dismiss"
+    | "upvote"
+    | "save"
+    | "comment"
+    | "share"
+    | "follow"
+    | "circle_join";
+  postId?: string;
+  targetType?: "post" | "creator" | "circle";
+  targetId?: string;
+  position?: number;
+  source?: string;
+  score?: number;
+  dwellMs?: number;
+  idempotencyKey?: string;
+  at: string | Date;
+  metadata?: Record<string, unknown>;
+}
+
 export interface DomainEventPayloads {
+  "post.created": PostLifecycleEventPayload;
+  "post.updated": PostLifecycleEventPayload;
   "user.deleted": { userId: string };
   "user.followed": { followerId: string; followeeId: string; actor?: UserSnapshot };
   "post.upvoted": NotificationEventBase & { postId: string; post?: PostSnapshot };
+  "post.saved": { actorId: string; postId: string; folderId?: string; post?: PostSnapshot };
+  "post.unsaved": { actorId: string; postId: string };
+  "post.shared": { actorId: string; postId: string; platform?: string; post?: PostSnapshot };
+  "circle.joined": { actorId: string; circleId: string; circle?: CircleSnapshot };
+  "behavior.batch": {
+    events: BehaviorEventItem[];
+  };
   "comment.upvoted": NotificationEventBase & {
     commentId: string;
     postId: string;

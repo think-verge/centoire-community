@@ -8,6 +8,7 @@ import {
 import { registerHashtagPaths } from "./hashtags.js";
 import { registerHealthPaths } from "./health.js";
 import { registerEngagementPaths } from "./engagement.js";
+import { registerEventPaths } from "./events.js";
 import { registerFeedPaths } from "./feed.js";
 import { registerInvitePaths } from "./invites.js";
 import { registerModerationPaths } from "./moderation.js";
@@ -27,6 +28,7 @@ export function registerPaths(): void {
   registerPostPaths();
   registerFeedPaths();
   registerEngagementPaths();
+  registerEventPaths();
   registerCircleContentPaths();
   registerSourcePaths();
   registerSearchPaths();

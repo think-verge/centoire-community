@@ -140,6 +140,9 @@
               "removed"
             ]
           },
+          "curated": {
+            "type": "boolean"
+          },
           "title": {
             "type": "string"
           },
@@ -493,6 +496,33 @@
           "updated"
         ]
       },
+      "CuratePostInput": {
+        "type": "object",
+        "properties": {
+          "curated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CuratePostResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "curated": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "curated",
+          "status"
+        ]
+      },
       "UploadedImage": {
         "type": "object",
         "properties": {
@@ -584,6 +614,29 @@
             "type": "string",
             "nullable": true
           },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "creator",
+              "editor",
+              "admin"
+            ]
+          },
+          "profileRole": {
+            "type": "string",
+            "nullable": true
+          },
+          "location": {
+            "type": "string",
+            "nullable": true
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "reputation": {
             "type": "number"
           },
@@ -624,15 +677,6 @@
               "email": {
                 "type": "string"
               },
-              "role": {
-                "type": "string",
-                "enum": [
-                  "member",
-                  "creator",
-                  "editor",
-                  "admin"
-                ]
-              },
               "emailVerified": {
                 "type": "boolean"
               },
@@ -644,11 +688,17 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "likedCreators": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
               }
             },
             "required": [
-              "email",
               "role",
+              "email",
               "emailVerified",
               "onboardingCompleted",
               "followedHashtags"
@@ -921,6 +971,76 @@
           "avatarUrl": {
             "type": "string",
             "format": "uri"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "profileRole": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "likedCreators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CompleteOnboardingInput": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "handle": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{3,24}$"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "avatarUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "profileRole": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "likedCreators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -1326,6 +1446,117 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "EventItemInput": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "impression",
+              "read",
+              "dwell",
+              "hide",
+              "report",
+              "suggestion_impression",
+              "suggestion_dismiss",
+              "upvote",
+              "save",
+              "comment",
+              "share",
+              "follow",
+              "circle_join"
+            ]
+          },
+          "postId": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "post",
+              "creator",
+              "circle"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "score": {
+            "type": "number"
+          },
+          "dwellMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "sessionId": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            }
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "EventBatchInput": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventItemInput"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "EventBatchResponse": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "number"
+          },
+          "duplicates": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "accepted",
+          "duplicates"
         ]
       },
       "InvitePreview": {
@@ -3732,6 +3963,55 @@
         }
       }
     },
+    "/admin/posts/{id}/curate": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "curatePost",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuratePostInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post curated status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuratePostResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/uploads/image": {
       "post": {
         "tags": [
@@ -4442,6 +4722,56 @@
         "responses": {
           "204": {
             "description": "Comment deleted"
+          }
+        }
+      }
+    },
+    "/events": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "operationId": "ingestEvents",
+        "summary": "Ingest client behavioural events in batches",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Batch accepted and queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid batch or empty events array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         }
       }

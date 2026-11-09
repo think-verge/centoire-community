@@ -9,6 +9,7 @@ import {
   commentRouter,
   postEngagementRouter,
 } from "./engagementRoutes.js";
+import { eventRouter } from "./eventRoutes.js";
 import { feedRouter } from "./feedRoutes.js";
 import { internalRouter } from "./internalRoutes.js";
 import { platformSyncRouter } from "./platformSyncRoutes.js";
@@ -34,6 +35,7 @@ apiRouter.use("/users", userRouter);
 apiRouter.use("/onboarding", onboardingRouter);
 apiRouter.use("/circles", circleRouter);
 apiRouter.use("/feed", feedRouter);
+apiRouter.use("/events", eventRouter);
 apiRouter.use("/posts", postEngagementRouter);
 apiRouter.use("/posts", postRouter);
 apiRouter.use("/comments", commentRouter);

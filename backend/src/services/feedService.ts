@@ -224,13 +224,23 @@ async function getCreatorIds(): Promise<Types.ObjectId[]> {
 }
 
 export async function forYou(userId: string, cursor?: string): Promise<FeedPage> {
-  const user = await User.findById(userId).select("followedHashtags");
-  const interests = user?.followedHashtags ?? [];
+  const user = await User.findById(userId).select("followedHashtags domains likedCreators");
+  const followedHashtags = user?.followedHashtags ?? [];
+  const domains = (user?.domains ?? []).map((d) => d.toLowerCase().trim()).filter(Boolean);
+  const domainTags = domains.map((d) => d.replace(/[^a-z0-9]/g, ""));
+  const interests = [...new Set([...followedHashtags, ...domains, ...domainTags])];
+
   const [followedIds, circleIds, creatorIds] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
     getCreatorIds(),
   ]);
+
+  const likedCreators = user?.likedCreators ?? [];
+  const allFollowedIds = [
+    ...followedIds,
+    ...likedCreators.filter((id) => !followedIds.some((f) => f.equals(id))),
+  ];
 
   const since = new Date(Date.now() - FOR_YOU_WINDOW_DAYS * 24 * 60 * 60 * 1000);
   const match: Record<string, unknown> = {
@@ -240,11 +250,11 @@ export async function forYou(userId: string, cursor?: string): Promise<FeedPage>
   const orConditions: Record<string, unknown>[] = [];
   if (interests.length > 0) orConditions.push({ hashtags: { $in: interests } });
   if (circleIds.length > 0) orConditions.push({ circleId: { $in: circleIds } });
-  if (followedIds.length > 0) orConditions.push({ authorId: { $in: followedIds } });
+  if (allFollowedIds.length > 0) orConditions.push({ authorId: { $in: allFollowedIds } });
   if (orConditions.length > 0) {
     match.$or = orConditions;
   }
-  return rankedFeed(match, interests, followedIds, circleIds, creatorIds, cursor, userId);
+  return rankedFeed(match, interests, allFollowedIds, circleIds, creatorIds, cursor, userId);
 }
 
 /** Shared "new"-sort pagination: keyset cursor on (publishedAt, _id). Used by

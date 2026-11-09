@@ -6,13 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CurrentUserAllOfRole = typeof CurrentUserAllOfRole[keyof typeof CurrentUserAllOfRole];
+export type EventItemInputTargetType = typeof EventItemInputTargetType[keyof typeof EventItemInputTargetType];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CurrentUserAllOfRole = {
-  member: 'member',
+export const EventItemInputTargetType = {
+  post: 'post',
   creator: 'creator',
-  editor: 'editor',
-  admin: 'admin',
+  circle: 'circle',
 } as const;

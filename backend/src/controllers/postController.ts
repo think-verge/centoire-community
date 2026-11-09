@@ -3,9 +3,13 @@ import * as postService from "../services/postService.js";
 import { serializePostCard, serializePostDetail } from "../services/postSerializer.js";
 import { getViewerState } from "../services/voteService.js";
 import { isFollowing } from "../services/userService.js";
+import type { UserRole } from "../models/User.js";
 
 export async function create(req: Request, res: Response): Promise<void> {
-  const post = await postService.createPost(req.user!.userId, { ...req.body, role: req.user!.role });
+  const post = await postService.createPost(req.user!.userId, {
+    ...req.body,
+    role: req.user!.role as UserRole,
+  });
   await post.populate([
     { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "circleId", select: "name slug" },
@@ -23,7 +27,11 @@ export async function update(req: Request, res: Response): Promise<void> {
 }
 
 export async function publish(req: Request, res: Response): Promise<void> {
-  const post = await postService.publishPost(req.user!.userId, req.params.id as string, req.user!.role);
+  const post = await postService.publishPost(
+    req.user!.userId,
+    req.params.id as string,
+    req.user!.role as UserRole,
+  );
   await post.populate([
     { path: "authorId", select: "handle displayName avatarUrl role" },
     { path: "circleId", select: "name slug" },
@@ -32,12 +40,16 @@ export async function publish(req: Request, res: Response): Promise<void> {
 }
 
 export async function remove(req: Request, res: Response): Promise<void> {
-  await postService.deletePost(req.user!.userId, req.user!.role, req.params.id as string);
+  await postService.deletePost(req.user!.userId, req.user!.role as UserRole, req.params.id as string);
   res.status(204).end();
 }
 
 export async function getBySlug(req: Request, res: Response): Promise<void> {
-  const post = await postService.getBySlug(req.params.slug as string, req.user?.userId, req.user?.role);
+  const post = await postService.getBySlug(
+    req.params.slug as string,
+    req.user?.userId,
+    req.user?.role as UserRole | undefined,
+  );
   if (post.status === "published") {
     void postService.incrementViews(post._id);
   }
@@ -58,7 +70,7 @@ export async function getFullContent(req: Request, res: Response): Promise<void>
   const result = await postService.getFullContent(
     req.params.slug as string,
     req.user?.userId,
-    req.user?.role,
+    req.user?.role as UserRole | undefined,
   );
   res.json(result);
 }
