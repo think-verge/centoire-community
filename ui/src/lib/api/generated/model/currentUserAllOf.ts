@@ -5,12 +5,11 @@
  * Centoire community platform API
  * OpenAPI spec version: 0.1.0
  */
-import type { CurrentUserAllOfRole } from './currentUserAllOfRole';
 
 export type CurrentUserAllOf = {
   email: string;
-  role: CurrentUserAllOfRole;
   emailVerified: boolean;
   onboardingCompleted: boolean;
   followedHashtags: string[];
+  likedCreators?: string[];
 };

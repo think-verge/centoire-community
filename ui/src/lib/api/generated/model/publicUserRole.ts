@@ -6,11 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type CurrentUserAllOfRole = typeof CurrentUserAllOfRole[keyof typeof CurrentUserAllOfRole];
+export type PublicUserRole = typeof PublicUserRole[keyof typeof PublicUserRole];
 
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-export const CurrentUserAllOfRole = {
+export const PublicUserRole = {
   member: 'member',
   creator: 'creator',
   editor: 'editor',
