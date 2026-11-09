@@ -48,6 +48,13 @@ class Settings:
             "slow": int(os.getenv("IG_INTERVAL_SLOW", "3600")),
         }
 
+        # Stories (app.stories): Gemini triages every article and groups them by event.
+        self.gemini_api_key: str | None = os.getenv("GEMINI_API_KEY") or None
+        self.story_triage_model: str = os.getenv("STORY_TRIAGE_MODEL", "gemini-3.5-flash-lite")
+        self.story_match_model: str = os.getenv("STORY_MATCH_MODEL", "gemini-3.5-flash")
+        self.embed_model: str = os.getenv("EMBED_MODEL", "gemini-embedding-001")
+        self.stories_enabled: bool = os.getenv("STORIES_ENABLED", "true").lower() == "true"
+
     def interval_for(self, source_type: str, tier: str) -> int:
         table = self.ig_intervals if source_type == "instagram" else self.intervals
         return table[tier]

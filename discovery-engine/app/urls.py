@@ -27,3 +27,14 @@ def item_key(url: str, *, publisher: str | None = None, title: str | None = None
     else:
         basis = canonical_url(url)
     return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:32]
+
+
+def site_key(url_or_host: str) -> str:
+    """The website behind a URL, with editions folded together: hypebeast.com,
+    hypebeast.com/footwear, hypebeast.cn and hypebeast.kr are all "hypebeast";
+    example.co.uk is "example"."""
+    host = urlsplit(url_or_host).netloc if "//" in url_or_host else url_or_host.split("/")[0]
+    labels = host.lower().removeprefix("www.").split(".")
+    if len(labels) >= 3 and len(labels[-2]) <= 3 and labels[-2] in ("co", "com", "ne", "or"):
+        return labels[-3]
+    return labels[-2] if len(labels) >= 2 else labels[0]

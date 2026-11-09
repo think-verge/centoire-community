@@ -23,6 +23,7 @@ from app.citations import article_body, extract_citations
 from app.instagram import InstagramError, InstagramSkipped
 from app.models import FetchedItem, Source
 from app.sources import planned_instagram_calls_per_hour
+from app.urls import site_key
 
 if TYPE_CHECKING:
     from app.poller import Poller
@@ -45,14 +46,10 @@ MAX_ARTICLES_PER_POLL = 10
 
 
 def publisher_key(source: Source) -> str:
-    """Who is doing the crediting. Editions of one outlet count once: hypebeast.com,
-    hypebeast.com/footwear, hypebeast.cn and hypebeast.kr are all "hypebeast"."""
+    """Who is doing the crediting. Editions of one outlet count once (see app.urls.site_key)."""
     if source.type == "instagram":
         return source.id
-    labels = urlsplit(source.url).netloc.lower().removeprefix("www.").split(".")
-    # example.com -> example; example.co.uk -> example
-    return labels[-3] if len(labels) >= 3 and len(labels[-2]) <= 3 and labels[-2] in ("co", "com", "ne", "or") \
-        else labels[-2] if len(labels) >= 2 else labels[0]
+    return site_key(source.url)
 
 
 def is_eligible(doc: dict) -> bool:

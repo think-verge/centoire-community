@@ -84,12 +84,15 @@ def parse_feed(body: bytes) -> list[FetchedItem]:
         title = _clean(entry.get("title"), 300)
         if not url or not title:
             continue
-        publisher = (entry.get("source") or {}).get("title")
+        source_tag = entry.get("source") or {}
+        publisher = source_tag.get("title")
         # Google News appends " - Publisher" to every title.
         if publisher and title.endswith(f" - {publisher}"):
             title = title[: -len(publisher) - 3].rstrip()
         published = _struct_to_dt(entry.get("published_parsed") or entry.get("updated_parsed"))
         extra = {}
+        if publisher and source_tag.get("href"):
+            extra["publisher_url"] = source_tag["href"]  # Google News: the outlet's own site
         if author := entry.get("author"):
             extra["author"] = author
         tags = entry.get("tags") or []

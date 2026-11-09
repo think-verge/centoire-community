@@ -10,6 +10,7 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
@@ -49,6 +50,8 @@ async def lifespan(app: FastAPI):
     finally:
         if task:
             task.cancel()
+        if app.state.poller and app.state.poller.stories:
+            await app.state.poller.stories.llm.close()
         store.client.close()
 
 
@@ -137,3 +140,54 @@ async def reject_origin(origin_id: str) -> dict:
         raise HTTPException(404, "unknown origin")
     await app.state.store.set_origin_status(origin_id, "rejected", reason="rejected by a person")
     return {"id": origin_id, "status": "rejected"}
+
+
+def _story_view(s: dict) -> dict:
+    """A story as people read it: who had it first, and how it spread site by site."""
+    websites = sorted(s.get("websites", {}).values(), key=lambda w: w["first_at"])
+    first = s.get("first") or {}
+    return {
+        "id": s["_id"],
+        "headline": s["headline"],
+        "category": s["category"],
+        "entities": s.get("entities", []),
+        "websites": s.get("website_count", len(websites)),
+        "articles": s.get("article_count", 0),
+        "first_published": {"website": first.get("name"), "title": first.get("title"),
+                            "url": first.get("url"), "at": first.get("at")},
+        # Null when every article was already out before the engine watched its source.
+        "engine_saw_it_at": s.get("seen_live_at"),
+        "spread": [{"website": w["name"], "first_at": w["first_at"], "articles": w["articles"],
+                    "title": w["title"], "url": w["url"]} for w in websites],
+        # Markets of the feeds that carried it (a Google News India search counts as IN).
+        "seen_in_markets": s.get("markets", []),
+        "last_at": s.get("last_at"),
+    }
+
+
+@app.get("/stories")
+async def stories(
+    hours: int = Query(48, ge=1, le=24 * 30, description="stories with an article in the last N hours"),
+    min_websites: int = Query(1, ge=1),
+    category: str | None = Query(None, description="release | collab | leak | business | runway | "
+                                                   "campaign | retail | art | culture"),
+    limit: int = Query(100, le=500),
+) -> list[dict]:
+    """Relevant articles grouped by the event they report, most widely covered first."""
+    since = datetime.now(timezone.utc) - timedelta(hours=hours)
+    rows = await app.state.store.list_stories(since=since, min_websites=min_websites, category=category,
+                                              limit=limit)
+    return [_story_view(s) for s in rows]
+
+
+@app.get("/stories/{story_id}")
+async def story(story_id: str) -> dict:
+    s = await app.state.store.get_story(story_id)
+    if not s:
+        raise HTTPException(404, "unknown story")
+    articles = await app.state.store.story_articles(story_id)
+    articles.sort(key=lambda a: a.get("published_at") or a["first_seen_at"])
+    return {**_story_view(s), "all_articles": [
+        {"title": a["title"], "url": a["url"], "publisher": a.get("publisher"), "source_id": a["source_id"],
+         "published_at": a.get("published_at"), "first_seen_at": a["first_seen_at"],
+         "headline_en": (a.get("triage") or {}).get("headline")} for a in articles]}

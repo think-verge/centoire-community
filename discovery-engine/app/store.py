@@ -38,6 +38,8 @@ class Store:
         self.origins = self.db["origin_candidates"]
         self.citing = self.db["citing_publishers"]
         self.discovered = self.db["discovered_sources"]
+        # Articles grouped by the event they report (see app.stories).
+        self.stories = self.db["stories"]
 
     async def init(self) -> None:
         await self.site_url_docs.create_index([("source_id", ASCENDING), ("url", ASCENDING)], unique=True)
@@ -45,6 +47,9 @@ class Store:
         await self.items.create_index([("first_seen_at", DESCENDING)])
         await self.items.create_index([("regions", ASCENDING), ("first_seen_at", DESCENDING)])
         await self.items.create_index([("source_id", ASCENDING), ("first_seen_at", DESCENDING)])
+        await self.items.create_index("story_id", sparse=True)
+        await self.stories.create_index([("last_at", DESCENDING)])
+        await self.stories.create_index([("first_at", DESCENDING)])
 
     async def has_polled(self, source_id: str) -> bool:
         doc = await self.source_status.find_one({"_id": source_id}, {"last_ok_at": 1})
@@ -187,6 +192,39 @@ class Store:
             {"$limit": limit},
         ]).to_list(length=limit)
         return [{"handle": r.pop("_id"), **r} for r in rows]
+
+    # ---------- stories (app.stories) ----------
+
+    async def untriaged_items(self, limit: int) -> list[dict]:
+        cursor = self.items.find({"triage": {"$exists": False}},
+                                 {"_id": 0, "engagement": 0}).sort("first_seen_at", ASCENDING).limit(limit)
+        return await cursor.to_list(length=limit)
+
+    async def set_item_story(self, key: str, triage: dict, story_id: str | None) -> None:
+        await self.items.update_one({"key": key}, {"$set": {"triage": triage, "story_id": story_id}})
+
+    async def get_story(self, story_id: str) -> dict | None:
+        return await self.stories.find_one({"_id": story_id})
+
+    async def save_story(self, story: dict) -> None:
+        await self.stories.replace_one({"_id": story["_id"]}, story, upsert=True)
+
+    async def stories_since(self, since: datetime) -> list[dict]:
+        cursor = self.stories.find({"last_at": {"$gte": since}}, {"headline": 1, "last_at": 1, "vectors": 1})
+        return await cursor.to_list(length=None)
+
+    async def list_stories(self, *, since: datetime, min_websites: int = 1, category: str | None = None,
+                           limit: int = 100) -> list[dict]:
+        query: dict[str, Any] = {"last_at": {"$gte": since}, "website_count": {"$gte": min_websites}}
+        if category:
+            query["category"] = category
+        cursor = self.stories.find(query, {"vectors": 0, "item_keys": 0}).sort(
+            [("website_count", DESCENDING), ("first_at", DESCENDING)]).limit(limit)
+        return await cursor.to_list(length=limit)
+
+    async def story_articles(self, story_id: str) -> list[dict]:
+        cursor = self.items.find({"story_id": story_id}, {"_id": 0, "engagement": 0, "extra.citations": 0})
+        return await cursor.to_list(length=None)
 
     async def record_poll(
         self, source: Source, *, ok: bool, fetched: int = 0, new: int = 0, error: str | None = None

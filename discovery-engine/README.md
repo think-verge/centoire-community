@@ -47,6 +47,29 @@ outlet (hypebeast.com/.cn/.kr) count once, and names a publisher puts on most of
 - `POST /origins/{id}/reject` — never add this one (e.g. `instagram:size`)
 - `python -m scripts.trace_origins` — read every feed's current articles and run one promotion pass
 
+## Stories: one event, every site that reported it
+
+Articles are grouped by the event they report (`app/stories.py`, MongoDB `stories`). Every
+minute, new articles go through Gemini in batches of 40:
+
+1. **Triage** (`STORY_TRIAGE_MODEL`, default gemini-3.5-flash-lite): is it fashion / streetwear /
+   sneaker / art news? Deals, listings, job ads, personal Reddit posts and off-topic news are
+   dropped (kept in `items`, with `triage.relevant: false`). Relevant ones get a category and
+   one neutral English headline, so a Japanese, Korean and English write-up read alike.
+2. **Candidates**: the headline is embedded (`EMBED_MODEL`, gemini-embedding-001); stories from
+   the last 14 days with close headlines are candidates.
+3. **Match** (`STORY_MATCH_MODEL`, default gemini-3.5-flash): which candidate story each article
+   belongs to, or which new story it starts. Follow-ups (leak → reveal → release date) join;
+   other colourways or other collabs of the same brand don't.
+
+A story counts **websites**, not feeds: Hypebeast's English, Korean and Chinese editions are one
+website, and each outlet behind a Google News result is its own website.
+
+- `GET /stories?hours=48&min_websites=3` — stories, most widely covered first: who published
+  first, when the engine saw it, and the spread (each website with its first time)
+- `GET /stories/{id}` — the same plus every article
+- `python -m scripts.build_stories` — triage and group the backlog (run with the engine stopped)
+
 ## Run
 
 ```bash
@@ -75,7 +98,7 @@ published before we started watching, so they never count toward lead time.
 | 3 Instagram connector: 60-account watchlist ([instagram.yaml](instagram.yaml)), call budget + auto back-off, engagement snapshots, tagged-account candidates (`/instagram`, `/instagram/candidates`) | built; waiting for Meta credentials — see [docs/instagram-setup.md](docs/instagram-setup.md) |
 | 3 Brand websites: sitemap and newsroom diffing, brand blog feeds ([brand_sites.yaml](brand_sites.yaml)) | done, live |
 | 3 Origin tracing: find primary sources from publishers' credits and add them automatically | done, live |
-| 4 Story grouping (embeddings) + Gemini summary, tags, countries, relevance filter | |
+| 4 Stories: Gemini relevance triage, English headline, grouping by event across languages, websites per story (`/stories`) | done, live |
 | 5 Breaking detection + lead time vs BoF/WWD | |
 | 6 Live page | |
 | 7 Polish + demo | |

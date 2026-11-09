@@ -6,7 +6,8 @@ Instagram sources share one call budget (see app.instagram) and only start once
 IG_USER_ID and IG_ACCESS_TOKEN are set. Brand sitemaps and pages are diffed
 against every URL they have listed before (see app.sites). New items are read for
 the sources they credit, and credited primary sources are added as they qualify
-(see app.origins).
+(see app.origins). Every new article is triaged and grouped into stories by Gemini
+(see app.stories) once GEMINI_API_KEY is set.
 """
 from __future__ import annotations
 
@@ -19,11 +20,13 @@ import httpx
 
 from app.config import Settings
 from app.fetchers import NotModified, fetch
+from app.gemini import Gemini
 from app.instagram import InstagramClient, InstagramSkipped
 from app.models import FetchedItem, Source
 from app.origins import OriginTracker
 from app.sites import SiteWatcher
 from app.sources import ItemFilter, load_blocked_publishers, planned_instagram_calls_per_hour
+from app.stories import StoryBuilder
 from app.store import Store
 
 log = logging.getLogger("discovery.poller")
@@ -34,6 +37,8 @@ ERROR_BACKOFF_AFTER = 3
 ERROR_BACKOFF_SECONDS = 6 * 3600
 # How often credited origins are checked and, if they qualify, added to the watchlist.
 PROMOTE_EVERY_SECONDS = 1800
+# How often new articles are triaged and grouped into stories.
+STORIES_EVERY_SECONDS = 60
 
 
 class Poller:
@@ -63,6 +68,14 @@ class Poller:
         self._filter = ItemFilter(load_blocked_publishers(settings.sources_file))
         self.sites = SiteWatcher(store)
         self.origins = OriginTracker(self)
+        self.stories: StoryBuilder | None = None
+        if settings.stories_enabled and settings.gemini_api_key:
+            llm = Gemini(settings.gemini_api_key, text_model=settings.story_triage_model,
+                         embed_model=settings.embed_model)
+            self.stories = StoryBuilder(store, llm, self.all_sources, triage_model=settings.story_triage_model,
+                                        match_model=settings.story_match_model)
+        else:
+            log.warning("stories off: set GEMINI_API_KEY to triage and group articles")
         self._client_live: httpx.AsyncClient | None = None
         self._tasks: set[asyncio.Task] = set()
 
@@ -71,6 +84,8 @@ class Poller:
         if any(s.id == source.id for s in self.all_sources):
             return
         self.all_sources.append(source)
+        if self.stories:
+            self.stories.add_source(source)
         if source.type == "instagram" and not self.instagram.configured:
             return
         self.sources.append(source)
@@ -166,10 +181,23 @@ class Poller:
                 log.exception("origin promotion failed")
             await asyncio.sleep(PROMOTE_EVERY_SECONDS)
 
+    async def _stories_loop(self) -> None:
+        while True:
+            try:
+                done = await self.stories.run_pass()
+                if done:
+                    log.info("stories: triaged and grouped %d articles", done)
+            except Exception:
+                log.exception("story grouping failed")
+            await asyncio.sleep(STORIES_EVERY_SECONDS)
+
     async def run_forever(self) -> None:
         async with self._client() as client:
             self._client_live = client
-            await asyncio.gather(self._promote_loop(client), *(self._loop(client, s) for s in list(self.sources)))
+            loops = [self._promote_loop(client), *(self._loop(client, s) for s in list(self.sources))]
+            if self.stories:
+                loops.append(self._stories_loop())
+            await asyncio.gather(*loops)
 
     async def run_round(self) -> None:
         """Poll every source once (for testing and `--once`)."""
