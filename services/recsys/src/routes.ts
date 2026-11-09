@@ -17,7 +17,6 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
   const userId = user?.userId || (req.headers && req.headers["x-user-id"] ? (req.headers["x-user-id"] as string) : undefined);
   const cursor = req.query?.cursor as string | undefined;
   const limit = req.query?.limit as string | undefined;
-  const rebuild = req.query?.rebuild === "true";
 
   if (!userId) {
     res.json({
@@ -26,6 +25,7 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
       authenticated: false,
       user: null,
       items: [],
+      nextCursor: null,
       cursor: null,
       hasMore: false,
     });
@@ -33,44 +33,43 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
   }
 
   try {
-    const url = new URL(`${AI_SERVICE_URL}/v1/feed/for-you/${userId}`);
-    if (cursor) url.searchParams.set("cursor", cursor);
-    if (limit) url.searchParams.set("limit", limit);
-    if (rebuild) url.searchParams.set("rebuild", "true");
+    const q = new URLSearchParams();
+    if (cursor) q.set("cursor", cursor);
+    if (limit) q.set("limit", limit);
 
+    const coreUrl = `${CORE_BACKEND_URL}/api/v1/feed/for-you${q.toString() ? `?${q.toString()}` : ""}`;
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 2000); // 2s timeout budget
+    const timer = setTimeout(() => controller.abort(), 3000);
 
-    const response = await fetch(url.toString(), {
+    const resp = await fetch(coreUrl, {
       signal: controller.signal,
       headers: {
-        "Content-Type": "application/json",
+        "x-user-id": userId,
+        "x-user-role": user?.role ?? "user",
+        "x-user-email": user?.email ?? "",
+        "x-internal-secret": process.env.INTERNAL_SECRET || "dev-internal-secret",
+        "x-gateway-secret": process.env.INTERNAL_SECRET || "dev-internal-secret",
+        cookie: req.headers.cookie ?? "",
       },
     });
     clearTimeout(timer);
 
-    if (response.ok) {
-      const data = (await response.json()) as {
-        items?: Array<{ id: string; [key: string]: unknown }>;
-        cursor?: string | null;
-        hasMore?: boolean;
-        cached?: boolean;
-      };
-
+    if (resp.ok) {
+      const data = (await resp.json()) as { items?: unknown[]; nextCursor?: string | null };
       res.json({
         status: "ok",
         service: "recsys",
         authenticated: true,
         user: user ?? null,
         items: data.items || [],
-        cursor: data.cursor || null,
-        hasMore: !!data.hasMore,
-        cached: !!data.cached,
+        nextCursor: data.nextCursor || null,
+        cursor: data.nextCursor || null,
+        hasMore: !!data.nextCursor,
       });
       return;
     }
   } catch (err) {
-    console.warn(`[recsys] AI agent feed call failed: ${(err as Error).message}`);
+    console.warn(`[recsys] core backend feed call failed: ${(err as Error).message}`);
   }
 
   // Graceful fallback response
@@ -80,6 +79,7 @@ forYouRouter.get("/", async (req: Request, res: Response) => {
     authenticated: !!user,
     user: user ?? null,
     items: [],
+    nextCursor: null,
     cursor: null,
     hasMore: false,
   });
@@ -153,6 +153,34 @@ suggestionsRouter.get("/creators", async (req: Request, res: Response) => {
     // fallback
   }
   res.json({ items: [], count: 0 });
+});
+
+suggestionsRouter.post("/dismiss", async (req: Request, res: Response) => {
+  const user = req.user;
+  if (!user?.userId) {
+    res.status(401).json({ detail: "Authentication required" });
+    return;
+  }
+  try {
+    const resp = await fetch(`${CORE_BACKEND_URL}/api/v1/suggestions/dismiss`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-user-id": user.userId,
+        "x-user-role": user.role ?? "member",
+        "x-user-email": user.email ?? "",
+        "x-internal-secret": process.env.INTERNAL_SECRET || "dev-internal-secret",
+        "x-gateway-secret": process.env.INTERNAL_SECRET || "dev-internal-secret",
+        cookie: req.headers.cookie ?? "",
+      },
+      body: JSON.stringify(req.body),
+    });
+    const data = await resp.json();
+    res.status(resp.status).json(data);
+    return;
+  } catch (err) {
+    res.status(502).json({ detail: (err as Error).message });
+  }
 });
 
 export const internalRecsysRouter = Router();
