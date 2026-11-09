@@ -4,7 +4,7 @@ import { ApiError } from "../utils/api-error.js";
 
 export async function uploadImage(req: Request, res: Response): Promise<void> {
   const file = req.file;
-  if (!file) throw new ApiError(422, "Attach an image file");
+  if (!file) throw new ApiError(422, "Attach a file");
   const result = await uploadService.uploadImage(
     file.buffer,
     file.mimetype,

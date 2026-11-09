@@ -21,12 +21,17 @@ export async function uploadImage(
   mimetype: string,
   userId: string,
 ): Promise<UploadedImage> {
+  const isVideo = mimetype.startsWith("video/");
+
   if (cloudinaryEnabled) {
     const result = await new Promise<{ secure_url: string; width: number; height: number }>(
       (resolve, reject) => {
         cloudinary.uploader
           .upload_stream(
-            { folder: `centoire/${userId}`, resource_type: "image" },
+            {
+              folder: `centoire/${userId}`,
+              resource_type: isVideo ? "video" : "image",
+            },
             (error, uploaded) => {
               if (error || !uploaded) reject(error ?? new Error("Upload failed"));
               else resolve(uploaded);
@@ -38,7 +43,16 @@ export async function uploadImage(
     return { url: result.secure_url, width: result.width, height: result.height };
   }
 
-  const ext = mimetype === "image/png" ? "png" : mimetype === "image/webp" ? "webp" : "jpg";
+  const extMap: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/quicktime": "mov",
+  };
+  const ext = extMap[mimetype] || (isVideo ? "mp4" : "jpg");
   const name = `${userId}-${randomBytes(8).toString("hex")}.${ext}`;
   mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
   writeFileSync(join(LOCAL_UPLOAD_DIR, name), buffer);
