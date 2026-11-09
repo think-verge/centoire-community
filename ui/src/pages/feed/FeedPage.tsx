@@ -9,6 +9,7 @@ import { feedEventTracker } from "../../lib/feedEventTracker";
 import {
   useGetFeedDiscoverInfinite,
   useGetFeedFollowingInfinite,
+  useGetFeedForYouInfinite,
 } from "../../lib/api/generated/feed/feed";
 import type { GetFeedDiscoverParams } from "../../lib/api/generated/model";
 import { useAuth } from "../../lib/auth-context";
@@ -75,12 +76,21 @@ export function FeedPage() {
     };
   }, [isAll]);
 
+  // Personalized For You query for logged-in users on ALL tab
+  const forYouQuery = useGetFeedForYouInfinite(undefined, {
+    query: {
+      enabled: isAll && Boolean(user),
+      initialPageParam: undefined,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    },
+  });
+
   // Discover feed params for respective tab
   const discoverParams = tabToDiscoverParams(activeTab);
 
   const discoverQuery = useGetFeedDiscoverInfinite(discoverParams, {
     query: {
-      enabled: !isFollowingTab,
+      enabled: (!isAll || !user) && !isFollowingTab,
       initialPageParam: undefined,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     },
@@ -94,7 +104,11 @@ export function FeedPage() {
     },
   });
 
-  const currentQuery = isFollowingTab ? followingQuery : discoverQuery;
+  const currentQuery = isFollowingTab
+    ? followingQuery
+    : isAll && Boolean(user)
+    ? forYouQuery
+    : discoverQuery;
   const {
     data,
     isLoading,
