@@ -17,3 +17,6 @@ import "./ModerationPolicy.js";
 import "./Notification.js";
 import "./SourceFollow.js";
 import "./PostReport.js";
+import "./Cluster.js";
+import "./Event.js";
+import "./UserTopicMix.js";

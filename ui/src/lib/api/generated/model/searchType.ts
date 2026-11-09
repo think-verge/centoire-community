@@ -16,4 +16,5 @@ export const SearchType = {
   people: 'people',
   circles: 'circles',
   hashtags: 'hashtags',
+  tags: 'tags',
 } as const;

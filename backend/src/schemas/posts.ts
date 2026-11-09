@@ -41,6 +41,7 @@ export const PostCardSchema = registry.register(
     slug: z.string(),
     origin: z.enum(["native", "aggregated"]),
     status: z.enum(["draft", "pending_review", "published", "rejected", "removed"]),
+    curated: z.boolean().optional(),
     title: z.string(),
     excerpt: z.string(),
     coverImageUrl: z.string().nullable(),
@@ -108,6 +109,22 @@ export const BackfillCategoriesResultSchema = registry.register(
   z.object({
     scanned: z.number(),
     updated: z.number(),
+  }),
+);
+
+export const CuratePostInputSchema = registry.register(
+  "CuratePostInput",
+  z.object({
+    curated: z.boolean().optional(),
+  }),
+);
+
+export const CuratePostResponseSchema = registry.register(
+  "CuratePostResponse",
+  z.object({
+    id: z.string(),
+    curated: z.boolean(),
+    status: z.string(),
   }),
 );
 
@@ -200,6 +217,20 @@ export function registerPostPaths(): void {
     tags: ["admin"],
     operationId: "backfillPostCategories",
     responses: { 200: jsonResponse("Backfill result", BackfillCategoriesResultSchema) },
+  });
+  registry.registerPath({
+    method: "patch",
+    path: "/admin/posts/{id}/curate",
+    tags: ["admin"],
+    operationId: "curatePost",
+    request: {
+      params: z.object({ id: z.string() }),
+      body: jsonBody(CuratePostInputSchema),
+    },
+    responses: {
+      200: jsonResponse("Post curated status updated", CuratePostResponseSchema),
+      404: errorResponse("Post not found"),
+    },
   });
   registry.registerPath({
     method: "post",

@@ -11,6 +11,7 @@ import {
 import type { PostCard as PostCardType } from "../lib/api/generated/model";
 import { useAuth } from "../lib/auth-context";
 import { customInstance } from "../lib/api/http";
+import { WhyAmISeeingThisPopover } from "./WhyAmISeeingThisPopover";
 
 /**
  * Upvote / comment / bookmark row. Optimistic per-card state: counts flip
@@ -42,6 +43,7 @@ export function PostActions({
   const [upvotes, setUpvotes] = useState(post.upvoteCount);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [explainerOpen, setExplainerOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
 
@@ -93,8 +95,12 @@ export function PostActions({
         setOptionsOpen(false);
         onOptionsToggle?.(false);
       }
+      if (explainerOpen) {
+        setExplainerOpen(false);
+        onOptionsToggle?.(false);
+      }
     }
-    if (pickerOpen || optionsOpen) {
+    if (pickerOpen || optionsOpen || explainerOpen) {
       document.addEventListener("mousedown", onOutsideClick);
       document.addEventListener("scroll", onScroll, { passive: true, capture: true });
     }
@@ -102,7 +108,7 @@ export function PostActions({
       document.removeEventListener("mousedown", onOutsideClick);
       document.removeEventListener("scroll", onScroll, { capture: true });
     };
-  }, [pickerOpen, optionsOpen, onOptionsToggle]);
+  }, [pickerOpen, optionsOpen, explainerOpen, onOptionsToggle]);
 
   const canEngage = Boolean(user?.emailVerified);
 
@@ -279,11 +285,30 @@ export function PostActions({
       </div>
 
       <div className="relative ml-auto flex items-center gap-2 text-[#111111]/60">
-        <div className="relative" ref={optionsRef}>
+        <div className="relative flex items-center gap-1.5" ref={optionsRef}>
+          <button
+            type="button"
+            aria-label="Why am I seeing this post?"
+            title="Why am I seeing this?"
+            onClick={() => {
+              const next = !explainerOpen;
+              setExplainerOpen(next);
+              if (next) setOptionsOpen(false);
+              onOptionsToggle?.(next);
+            }}
+            className={`size-6 rounded-full flex items-center justify-center text-[#737373] hover:text-[#111111] hover:bg-black/5 transition-colors cursor-pointer ${
+              explainerOpen ? "text-[#E5552D] bg-black/5" : ""
+            }`}
+          >
+            <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
           <svg
             onClick={() => {
               const next = !optionsOpen;
               setOptionsOpen(next);
+              if (next) setExplainerOpen(false);
               onOptionsToggle?.(next);
             }}
             className="size-4 cursor-pointer hover:text-[#111111] transition-colors"
@@ -301,6 +326,20 @@ export function PostActions({
               {/* Tooltip Tail */}
               <div className="absolute -top-[12px] right-[21px] size-[24px] bg-white border-t border-l border-[#EAEAEA] rotate-45 pointer-events-none"></div>
               <div className="flex flex-col w-full bg-white rounded-[16px] overflow-hidden relative z-10 px-3 py-[3px] [&>button]:h-[38px] [&>button]:py-0 [&>button]:px-0">
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA] cursor-pointer"
+                  onClick={() => {
+                    setOptionsOpen(false);
+                    setExplainerOpen(true);
+                    onOptionsToggle?.(true);
+                  }}
+                >
+                  <svg className="size-[18px] text-[#737373]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Why am I seeing this?
+                </button>
                 <button
                   type="button"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-black/5 font-ui text-[13px] font-medium text-[#111111] transition-colors border-b border-[#EAEAEA] cursor-pointer"
@@ -363,6 +402,16 @@ export function PostActions({
               </div>
             </div>
           )}
+          <WhyAmISeeingThisPopover
+            post={post}
+            isOpen={explainerOpen}
+            onClose={() => {
+              setExplainerOpen(false);
+              onOptionsToggle?.(false);
+            }}
+            onNotInterested={handleNotInterested}
+            zIndex={optionsZIndex ? optionsZIndex + 10 : 70}
+          />
         </div>
         <div className="border border-[#EAEAEA] rounded-[8px] p-1 cursor-pointer hover:bg-black/5 transition-colors" ref={pickerRef}>
           <button
