@@ -12,6 +12,11 @@ import { asyncHandler } from "../utils/async-handler.js";
 
 export const feedRouter = Router();
 
+feedRouter.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  next();
+});
+
 feedRouter.get(
   "/for-you",
   requireAuth,
