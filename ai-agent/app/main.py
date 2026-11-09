@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.v1.posts import router as posts_router
+from .api.v1.suggestions import router as suggestions_router
 
 
 @asynccontextmanager
@@ -25,3 +26,4 @@ app.add_middleware(
 )
 
 app.include_router(posts_router)
+app.include_router(suggestions_router)
