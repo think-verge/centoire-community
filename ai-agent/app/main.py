@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api.v1.posts import router as posts_router
 from .api.v1.embed import router as embed_router
+from .api.v1.clusters import router as clusters_router
 
 
 @asynccontextmanager
@@ -30,3 +31,4 @@ app.add_middleware(
 
 app.include_router(posts_router)
 app.include_router(embed_router)
+app.include_router(clusters_router)
