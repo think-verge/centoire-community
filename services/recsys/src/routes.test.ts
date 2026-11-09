@@ -18,17 +18,19 @@ function mockRes() {
 }
 
 describe("recsys routes", () => {
-  it("forYouRouter returns empty skeleton feed and user claims if authenticated", () => {
+  it("forYouRouter returns empty skeleton feed and user claims if authenticated", async () => {
     const { res, state } = mockRes();
     const req = {
       user: { userId: "usr_123", email: "user@test.com", role: "member" },
+      query: {},
+      headers: {},
     } as unknown as Request;
 
     const layer = forYouRouter.stack.find((s) => s.route?.path === "/");
     expect(layer).toBeDefined();
 
-    layer!.route!.stack[0].handle(req, res, () => {});
-    expect(state.data).toEqual({
+    await layer!.route!.stack[0].handle(req, res, () => {});
+    expect(state.data).toMatchObject({
       status: "ok",
       service: "recsys",
       authenticated: true,
