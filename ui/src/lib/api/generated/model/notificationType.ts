@@ -19,4 +19,5 @@ export const NotificationType = {
   commentmentioned: 'comment.mentioned',
   postapproved: 'post.approved',
   postrejected: 'post.rejected',
+  circleinvite: 'circle.invite',
 } as const;

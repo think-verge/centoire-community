@@ -8,6 +8,7 @@
 import type { NotificationType } from './notificationType';
 import type { NotificationActor } from './notificationActor';
 import type { NotificationTargetPost } from './notificationTargetPost';
+import type { NotificationTargetCircle } from './notificationTargetCircle';
 
 export interface Notification {
   id: string;
@@ -16,6 +17,10 @@ export interface Notification {
   actor: NotificationActor;
   /** @nullable */
   targetPost: NotificationTargetPost;
+  /** @nullable */
+  targetCircle?: NotificationTargetCircle;
+  /** @nullable */
+  targetInviteToken?: string | null;
   /** @nullable */
   readAt: string | null;
   createdAt: string;

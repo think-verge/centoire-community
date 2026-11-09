@@ -32,7 +32,7 @@ import type { ErrorType } from '../../http';
 
 
 export const search = (
-    params: SearchParams,
+    params?: SearchParams,
  signal?: AbortSignal
 ) => {
       
@@ -54,7 +54,7 @@ export const getSearchQueryKey = (params?: SearchParams,) => {
     }
 
     
-export const getSearchQueryOptions = <TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(params: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
+export const getSearchQueryOptions = <TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(params?: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -77,7 +77,7 @@ export type SearchQueryError = ErrorType<unknown>
 
 
 export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(
- params: SearchParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>> & Pick<
+ params: undefined |  SearchParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof search>>,
           TError,
@@ -87,7 +87,7 @@ export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = E
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(
- params: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>> & Pick<
+ params?: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof search>>,
           TError,
@@ -97,12 +97,12 @@ export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = E
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(
- params: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
+ params?: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useSearch<TData = Awaited<ReturnType<typeof search>>, TError = ErrorType<unknown>>(
- params: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
+ params?: SearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof search>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
