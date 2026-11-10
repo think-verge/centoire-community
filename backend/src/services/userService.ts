@@ -1,5 +1,5 @@
 import { recordServerEvent } from "./eventService.js";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Circle } from "../models/Circle.js";
 import { CircleMembership } from "../models/CircleMembership.js";
 import { Follow } from "../models/Follow.js";
@@ -11,6 +11,7 @@ import { Vote } from "../models/Vote.js";
 import { Notification } from "../models/Notification.js";
 import { CircleInvite } from "../models/CircleInvite.js";
 import { UserTopicMix } from "../models/UserTopicMix.js";
+import { Event } from "../models/Event.js";
 import { diffHashtags } from "../utils/hashtag.js";
 import * as hashtagService from "./hashtagService.js";
 import { User, type IUser, type UserRole } from "../models/User.js";
@@ -500,8 +501,140 @@ export async function deleteAccount(userId: string): Promise<void> {
     { $pull: { blockedUsers: userId, mutedUsers: userId } },
   );
 
+  // Clean up recommendation engine / behavioral data (Ticket #117)
+  await Event.deleteMany({ userId });
+  await UserTopicMix.deleteMany({ userId });
+  if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+    try {
+      await mongoose.connection.db.collection("suggestionfeedbacks").deleteMany({
+        $or: [
+          { userId },
+          ...(Types.ObjectId.isValid(userId) ? [{ userId: new Types.ObjectId(userId) }] : []),
+        ],
+      });
+    } catch {
+      // ignore
+    }
+  }
+
   // Finally delete the user document from the DB
   await User.findByIdAndDelete(userId);
   // Other services own their own data about this user and clean it up on this event.
   emitDomainEvent("user.deleted", { userId });
+}
+
+export async function getPrivacySettings(userId: string) {
+  const user = await User.findById(userId).select("privacyConsent").lean();
+  if (!user) throw new ApiError(404, "User not found");
+  return (
+    (user as any).privacyConsent ?? {
+      behavioralTracking: true,
+      personalizedRecommendations: true,
+      consentedAt: new Date(),
+    }
+  );
+}
+
+export async function updatePrivacySettings(
+  userId: string,
+  input: { behavioralTracking?: boolean; personalizedRecommendations?: boolean },
+) {
+  const user = await User.findById(userId);
+  if (!user) throw new ApiError(404, "User not found");
+
+  const existing = (user as any).privacyConsent ?? {
+    behavioralTracking: true,
+    personalizedRecommendations: true,
+  };
+
+  user.set("privacyConsent", {
+    behavioralTracking:
+      typeof input.behavioralTracking === "boolean"
+        ? input.behavioralTracking
+        : existing.behavioralTracking,
+    personalizedRecommendations:
+      typeof input.personalizedRecommendations === "boolean"
+        ? input.personalizedRecommendations
+        : existing.personalizedRecommendations,
+    consentedAt: new Date(),
+  });
+
+  await user.save();
+  return (user as any).privacyConsent;
+}
+
+export async function exportUserData(userId: string) {
+  const userOid = new Types.ObjectId(userId);
+  const [user, topicMix, events] = await Promise.all([
+    User.findById(userOid)
+      .select("-passwordHash -verifyToken -resetToken -verifyTokenExpires -resetTokenExpires")
+      .lean(),
+    UserTopicMix.findOne({ userId: userOid }).lean(),
+    Event.find({ userId: userOid }).sort({ at: -1 }).limit(1000).lean(),
+  ]);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  let feedback: Array<Record<string, any>> = [];
+  if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+    try {
+      feedback = (await mongoose.connection.db
+        .collection("suggestionfeedbacks")
+        .find({ $or: [{ userId: userOid }, { userId }] })
+        .toArray()) as any[];
+    } catch {
+      // ignore
+    }
+  }
+
+  return {
+    exportedAt: new Date().toISOString(),
+    complianceStandard: "India DPDP Act 2023 / GDPR",
+    user: {
+      id: user._id.toString(),
+      email: user.email,
+      handle: user.handle,
+      displayName: user.displayName,
+      profileRole: user.profileRole,
+      location: user.location,
+      domains: user.domains,
+      followedHashtags: user.followedHashtags,
+      privacyConsent: (user as any).privacyConsent ?? {
+        behavioralTracking: true,
+        personalizedRecommendations: true,
+      },
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+    topicMix: topicMix
+      ? {
+          activeDays: topicMix.activeDays,
+          lastActiveDate: topicMix.lastActiveDate,
+          mix: topicMix.mix,
+          rawPoints: topicMix.rawPoints,
+          dailyEarned: topicMix.dailyEarned,
+          hiddenPostIds: topicMix.hiddenPostIds,
+          updatedAt: topicMix.updatedAt,
+        }
+      : null,
+    suggestionFeedback: feedback.map((f) => ({
+      targetType: f.targetType,
+      targetId: f.targetId ? f.targetId.toString() : null,
+      dismissedUntil: f.dismissedUntil,
+      ignoreCount: f.ignoreCount,
+      updatedAt: f.updatedAt,
+    })),
+    events: events.map((e) => ({
+      id: e._id.toString(),
+      action: e.action,
+      postId: e.postId ? e.postId.toString() : null,
+      targetType: e.targetType,
+      targetId: e.targetId,
+      dwellMs: e.dwellMs,
+      source: e.source,
+      at: e.at,
+    })),
+  };
 }

@@ -1,6 +1,7 @@
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { emitDomainEvent } from "../events/eventBus.js";
 import { Event, type EventAction, type EventTargetType } from "../models/Event.js";
+import { User } from "../models/User.js";
 import type { BehaviorEventItem } from "@centoire/contracts";
 
 export interface IngestItemInput {
@@ -31,6 +32,25 @@ export async function ingestEventBatch(
     return { accepted: 0, duplicates: 0 };
   }
 
+  let resolvedUserId = authenticatedUserId;
+  if (resolvedUserId && Types.ObjectId.isValid(resolvedUserId)) {
+    try {
+      const isMock =
+        typeof (User.findById as any)?.getMockImplementation === "function" ||
+        Boolean((User.findById as any)?._isMockFunction) ||
+        Boolean((User.findById as any)?.mock);
+      if (mongoose.connection.readyState === 1 || isMock) {
+        const user = await User.findById(resolvedUserId).select("privacyConsent").lean();
+        if (user && (user as any).privacyConsent?.behavioralTracking === false) {
+          // User opted out of behavioral tracking; anonymize events by not linking userId
+          resolvedUserId = undefined;
+        }
+      }
+    } catch {
+      // Continue with provided userId if lookup fails
+    }
+  }
+
   const normalizedDocs = items.map((item) => {
     let atDate: Date;
     if (item.at instanceof Date) {
@@ -51,7 +71,6 @@ export async function ingestEventBatch(
       updatedAt: atDate,
     };
 
-    const resolvedUserId = authenticatedUserId || undefined;
     if (resolvedUserId && Types.ObjectId.isValid(resolvedUserId)) {
       doc.userId = new Types.ObjectId(resolvedUserId);
     }

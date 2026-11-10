@@ -37,6 +37,11 @@ export interface IUser extends Document {
   lastActiveDate?: string;
   blockedUsers: Types.ObjectId[];
   mutedUsers: Types.ObjectId[];
+  privacyConsent?: {
+    behavioralTracking: boolean;
+    personalizedRecommendations: boolean;
+    consentedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +83,11 @@ const userSchema = new Schema<IUser>(
     lastActiveDate: { type: String },
     blockedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
     mutedUsers: [{ type: Schema.Types.ObjectId, ref: "User" }],
+    privacyConsent: {
+      behavioralTracking: { type: Boolean, default: true },
+      personalizedRecommendations: { type: Boolean, default: true },
+      consentedAt: { type: Date, default: Date.now },
+    },
   },
   { timestamps: true },
 );

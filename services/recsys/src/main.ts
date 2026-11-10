@@ -20,6 +20,33 @@ const bus = config.natsUrl
   ? await createBus<DomainEventPayloads>({ service: config.name, url: config.natsUrl })
   : undefined;
 
+if (bus) {
+  // Ticket #117: Consume user.deleted to ensure recsys stores purge user data
+  await bus.on("user.deleted", async ({ userId }) => {
+    console.log(`[recsys] received user.deleted for ${userId}`);
+    if (mongoose.connection.readyState === 1 && mongoose.connection.db) {
+      try {
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        for (const col of collections) {
+          try {
+            const filter: Record<string, unknown>[] = [{ userId }, { user_id: userId }];
+            if (mongoose.Types.ObjectId.isValid(userId)) {
+              filter.push({ _id: new mongoose.Types.ObjectId(userId) });
+            }
+            await mongoose.connection.db.collection(col.name).deleteMany({
+              $or: filter as any,
+            });
+          } catch {
+            // ignore non-matching collection schema errors
+          }
+        }
+      } catch (err) {
+        console.warn(`[recsys] error cleaning up data for user.deleted: ${(err as Error).message}`);
+      }
+    }
+  });
+}
+
 const server = createServer({ config, bus });
 
 server.mount("/feed/for-you", forYouRouter);
