@@ -33,6 +33,11 @@ export interface IUser extends Document {
   followingCount: number;
   postCount: number;
   dismissedPosts: Types.ObjectId[];
+  privacyConsent?: {
+    behavioralTracking: boolean;
+    personalizedRecommendations: boolean;
+    consentedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +75,11 @@ const userSchema = new Schema<IUser>(
     followingCount: { type: Number, default: 0 },
     postCount: { type: Number, default: 0 },
     dismissedPosts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
+    privacyConsent: {
+      behavioralTracking: { type: Boolean, default: true },
+      personalizedRecommendations: { type: Boolean, default: true },
+      consentedAt: { type: Date, default: Date.now },
+    },
   },
   { timestamps: true },
 );

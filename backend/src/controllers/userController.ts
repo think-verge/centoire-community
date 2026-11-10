@@ -48,6 +48,21 @@ export async function deleteMe(req: Request, res: Response): Promise<void> {
   res.status(204).end();
 }
 
+export async function getPrivacySettings(req: Request, res: Response): Promise<void> {
+  const result = await userService.getPrivacySettings(req.user!.userId);
+  res.json(result);
+}
+
+export async function updatePrivacySettings(req: Request, res: Response): Promise<void> {
+  const result = await userService.updatePrivacySettings(req.user!.userId, req.body ?? {});
+  res.json(result);
+}
+
+export async function exportUserData(req: Request, res: Response): Promise<void> {
+  const result = await userService.exportUserData(req.user!.userId);
+  res.json(result);
+}
+
 export async function setInterests(req: Request, res: Response): Promise<void> {
   const user = await userService.setInterests(req.user!.userId, req.body.hashtags);
   res.json(serializeUser(user, { private: true }));

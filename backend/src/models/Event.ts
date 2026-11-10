@@ -91,7 +91,8 @@ eventSchema.index({ sessionId: 1, at: -1 }, { sparse: true });
 // 3. Unique sparse idempotency key index to silently discard duplicate client flushes
 eventSchema.index({ idempotencyKey: 1 }, { unique: true, sparse: true });
 
-// 4. Time index for retention policy and window aggregations
+// 4. Time index for window aggregations and 30-day retention TTL (2,592,000 seconds)
 eventSchema.index({ at: -1 });
+eventSchema.index({ at: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 export const Event = mongoose.model<IEvent>("Event", eventSchema);

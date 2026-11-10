@@ -18,6 +18,21 @@ userRouter.delete(
   requireAuth,
   asyncHandler(userController.deleteMe),
 );
+userRouter.get(
+  "/me/export",
+  requireAuth,
+  asyncHandler(userController.exportUserData),
+);
+userRouter.get(
+  "/me/privacy",
+  requireAuth,
+  asyncHandler(userController.getPrivacySettings),
+);
+userRouter.put(
+  "/me/privacy",
+  requireAuth,
+  asyncHandler(userController.updatePrivacySettings),
+);
 userRouter.put(
   "/me/interests",
   requireAuth,
