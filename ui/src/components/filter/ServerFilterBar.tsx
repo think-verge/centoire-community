@@ -18,6 +18,7 @@ export function ServerFilterBar({ config, className = "" }: Props) {
   const [pending, setPending] = useState<Record<string, string[]>>({});
   const [optionsCache, setOptionsCache] = useState<Record<string, FilterOption[]>>({});
   const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+  const [optionSearch, setOptionSearch] = useState("");
 
   // Committed filters from URL
   const activeFilters: Record<string, string[]> = {};
@@ -30,8 +31,11 @@ export function ServerFilterBar({ config, className = "" }: Props) {
   function openPanel() {
     setPending({ ...activeFilters });
     setActiveKey(config[0]?.key ?? "");
+    setOptionSearch("");
     setPanelOpen(true);
-    if (config[0]) void maybeLoadOptions(config[0]);
+    for (const field of config) {
+      if (field.loadOptions) void maybeLoadOptions(field);
+    }
   }
 
   function closePanel() {
@@ -44,6 +48,8 @@ export function ServerFilterBar({ config, className = "" }: Props) {
     try {
       const options = await field.loadOptions();
       setOptionsCache((prev) => ({ ...prev, [field.key]: options }));
+    } catch (err) {
+      console.error(`[ServerFilterBar] Failed to load options for ${field.key}:`, err);
     } finally {
       setLoadingKeys((prev) => {
         const next = new Set(prev);
@@ -55,6 +61,7 @@ export function ServerFilterBar({ config, className = "" }: Props) {
 
   function selectField(field: FilterFieldDef) {
     setActiveKey(field.key);
+    setOptionSearch("");
     void maybeLoadOptions(field);
   }
 
@@ -111,7 +118,14 @@ export function ServerFilterBar({ config, className = "" }: Props) {
 
   const activeField = config.find((f) => f.key === activeKey);
   const pendingValues = pending[activeKey] ?? [];
-  const options = activeField ? getOptions(activeField) : [];
+  const rawOptions = activeField ? getOptions(activeField) : [];
+  const options = optionSearch.trim()
+    ? rawOptions.filter(
+        (opt) =>
+          opt.label.toLowerCase().includes(optionSearch.trim().toLowerCase()) ||
+          opt.value.toLowerCase().includes(optionSearch.trim().toLowerCase())
+      )
+    : rawOptions;
   const isLoading = loadingKeys.has(activeKey);
 
   return (
@@ -187,58 +201,120 @@ export function ServerFilterBar({ config, className = "" }: Props) {
               {/* Right: options for active field */}
               <div className="flex-1 overflow-y-auto p-4">
                 {activeField?.type === "text" && (
-                  <input
-                    type="text"
-                    placeholder={activeField.placeholder ?? `Filter by ${activeField.label.toLowerCase()}`}
-                    value={pendingValues[0] ?? ""}
-                    onChange={(e) => setTextValue(activeKey, e.target.value)}
-                    className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder-ink-faint focus:border-crimson focus:outline-none"
-                    autoFocus
-                  />
+                  <div>
+                    <input
+                      type="text"
+                      placeholder={activeField.placeholder ?? `Filter by ${activeField.label.toLowerCase()}`}
+                      value={pendingValues[0] ?? ""}
+                      onChange={(e) => setTextValue(activeKey, e.target.value)}
+                      className="w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-sm text-ink placeholder-ink-faint focus:border-crimson focus:outline-none"
+                      autoFocus
+                    />
+                    {rawOptions.length > 0 && (
+                      <div className="mt-3">
+                        <p className="mb-2 text-xs font-semibold text-ink-faint">Suggestions:</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {rawOptions
+                            .filter(
+                              (opt) =>
+                                !pendingValues[0] ||
+                                opt.label.toLowerCase().includes(pendingValues[0].toLowerCase()) ||
+                                opt.value.toLowerCase().includes(pendingValues[0].toLowerCase())
+                            )
+                            .slice(0, 15)
+                            .map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => setTextValue(activeKey, opt.value)}
+                                className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                                  pendingValues[0] === opt.value
+                                    ? "border-crimson bg-crimson/5 font-semibold text-crimson"
+                                    : "border-line bg-white text-ink-soft hover:border-ink-soft hover:text-ink"
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {(activeField?.type === "single" || activeField?.type === "multi") && (
-                  <div className="space-y-0.5">
-                    {isLoading && (
-                      <p className="py-4 text-center text-sm text-ink-faint">Loading…</p>
+                  <div className="space-y-2">
+                    {(rawOptions.length > 4 || activeField.loadOptions) && (
+                      <input
+                        type="text"
+                        placeholder={`Search ${activeField.label.toLowerCase()}…`}
+                        value={optionSearch}
+                        onChange={(e) => setOptionSearch(e.target.value)}
+                        className="mb-2 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink placeholder-ink-faint focus:border-crimson focus:outline-none"
+                        autoFocus
+                      />
                     )}
-                    {!isLoading && options.length === 0 && (
-                      <p className="py-4 text-center text-sm text-ink-faint">No options found.</p>
-                    )}
-                    {options.map((opt) => {
-                      const selected = pendingValues.includes(opt.value);
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => toggleValue(activeKey, opt.value, activeField.type)}
-                          className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                            selected
-                              ? "bg-crimson/5 text-ink"
-                              : "text-ink-soft hover:bg-cream hover:text-ink"
-                          }`}
-                        >
-                          {activeField.type === "multi" ? (
-                            <span
-                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                                selected ? "border-crimson bg-crimson text-white" : "border-line"
-                              }`}
-                            >
-                              {selected && <span className="text-[10px] leading-none">✓</span>}
-                            </span>
-                          ) : (
-                            <span
-                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
-                                selected ? "border-crimson" : "border-line"
-                              }`}
-                            >
-                              {selected && <span className="h-2 w-2 rounded-full bg-crimson" />}
-                            </span>
-                          )}
-                          {opt.label}
-                        </button>
-                      );
-                    })}
+                    <div className="space-y-0.5">
+                      {isLoading && (
+                        <p className="py-4 text-center text-sm text-ink-faint">Loading…</p>
+                      )}
+                      {!isLoading && options.length === 0 && (
+                        <p className="py-4 text-center text-sm text-ink-faint">
+                          {optionSearch.trim() ? `No matches for "${optionSearch}".` : "No options found."}
+                        </p>
+                      )}
+                      {optionSearch.trim() &&
+                        !rawOptions.some(
+                          (o) =>
+                            o.value.toLowerCase() === optionSearch.trim().toLowerCase() ||
+                            o.value.toLowerCase() === optionSearch.trim().replace(/^#/, "").toLowerCase()
+                        ) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const cleanVal = optionSearch.trim().replace(/^#/, "");
+                              toggleValue(activeKey, cleanVal, activeField.type);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-crimson hover:bg-cream"
+                          >
+                            + Select "{optionSearch.trim()}"
+                          </button>
+                        )}
+                      {options.map((opt) => {
+                        const selected = pendingValues.includes(opt.value);
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => toggleValue(activeKey, opt.value, activeField.type)}
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                              selected
+                                ? "bg-crimson/5 font-medium text-ink"
+                                : "text-ink-soft hover:bg-cream hover:text-ink"
+                            }`}
+                          >
+                            {activeField.type === "multi" ? (
+                              <span
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                  selected ? "border-crimson bg-crimson text-white" : "border-line"
+                                }`}
+                              >
+                                {selected && <span className="text-[10px] leading-none">✓</span>}
+                              </span>
+                            ) : (
+                              <span
+                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                                  selected ? "border-crimson" : "border-line"
+                                }`}
+                              >
+                                {selected && <span className="h-2 w-2 rounded-full bg-crimson" />}
+                              </span>
+                            )}
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

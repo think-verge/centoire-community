@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useGetTrendingHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { useGetFeedDiscover } from "../../lib/api/generated/feed/feed";
@@ -81,14 +81,54 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
     { query: { staleTime: 5 * 60_000 } },
   );
 
-  const [activeHashtag, setActiveHashtag] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  // Sync active hashtag with URL (/hashtag/:name) if present, otherwise activeHashtag, otherwise first hashtag (matching Figma default)
-  const hashtagFromUrl = location.pathname.match(/^\/hashtag\/([^/]+)$/)?.[1]?.toLowerCase();
-  const matchedHashtagFromUrl = hashtagFromUrl
-    ? hashtags.find((h) => h.name.toLowerCase() === hashtagFromUrl)?.name
-    : undefined;
-  const currentActiveHashtag = matchedHashtagFromUrl ?? activeHashtag ?? hashtags[0]?.name;
+  // Multi-selector: get selected tags from URL params (?tags=a,b or ?hashtag=a)
+  const selectedTags = useMemo(() => {
+    const raw = searchParams.get("tags") || searchParams.get("tag") || searchParams.get("hashtag") || "";
+    if (raw) {
+      return raw.split(",").map((t) => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
+    }
+    const pathMatch = location.pathname.match(/^\/hashtag\/([^/]+)$/);
+    if (pathMatch) {
+      return [pathMatch[1].toLowerCase().replace(/^#/, "")];
+    }
+    return [];
+  }, [searchParams, location.pathname]);
+
+  const handleToggleTag = (tagName: string) => {
+    const norm = tagName.trim().toLowerCase().replace(/^#/, "");
+    const nextTags = selectedTags.includes(norm)
+      ? selectedTags.filter((t) => t !== norm)
+      : [...selectedTags, norm];
+
+    const isFeedOrDiscover = location.pathname === "/feed" || location.pathname === "/discover";
+    const targetPath = isFeedOrDiscover ? location.pathname : "/feed";
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextTags.length > 0) {
+      nextParams.set("tags", nextTags.join(","));
+      nextParams.delete("tag");
+      nextParams.delete("hashtag");
+    } else {
+      nextParams.delete("tags");
+      nextParams.delete("tag");
+      nextParams.delete("hashtag");
+    }
+    const qs = nextParams.toString();
+    navigate({ pathname: targetPath, search: qs ? `?${qs}` : "" });
+  };
+
+  const handleClearTags = () => {
+    const isFeedOrDiscover = location.pathname === "/feed" || location.pathname === "/discover";
+    const targetPath = isFeedOrDiscover ? location.pathname : "/feed";
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("tags");
+    nextParams.delete("tag");
+    nextParams.delete("hashtag");
+    const qs = nextParams.toString();
+    navigate({ pathname: targetPath, search: qs ? `?${qs}` : "" });
+  };
 
   const { data: latestPostsData, isLoading: isLoadingPosts } = useGetFeedDiscover({ sort: "new" });
   const latestPosts = latestPostsData?.items?.slice(0, 3) ?? [];
@@ -228,10 +268,21 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
       <div className="h-px w-full bg-[#D4D4D4]" />
 
       {/* Section 2: TRENDING TOPICS */}
-      <section className="flex flex-col gap-4">
-        <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
-          {isCategory && categoryLabel ? `TRENDING IN ${categoryLabel.toUpperCase()}` : "TRENDING TOPICS"}
-        </h3>
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-ui text-[14px] font-semibold uppercase tracking-wider text-[#737373]">
+            {isCategory && categoryLabel ? `TRENDING IN ${categoryLabel.toUpperCase()}` : "TRENDING TOPICS"}
+          </h3>
+          {selectedTags.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearTags}
+              className="font-ui text-[11px] font-medium text-[#E5552D] hover:underline cursor-pointer"
+            >
+              Clear ({selectedTags.length})
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           {isLoadingHashtags
             ? [0, 1, 2, 3, 4, 5].map((i) => (
@@ -241,24 +292,30 @@ export function RightSidebar({ context }: { context: RightSidebarContext }) {
                 />
               ))
             : hashtags.map((tag) => {
-                const isActive = currentActiveHashtag?.toLowerCase() === tag.name.toLowerCase();
+                const norm = tag.name.toLowerCase().replace(/^#/, "");
+                const isSelected = selectedTags.includes(norm);
                 return (
-                  <Link
+                  <button
                     key={tag.name}
-                    to={`/hashtag/${tag.name}`}
-                    onClick={() => setActiveHashtag(tag.name)}
-                    title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}`}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-colors ${
-                      isActive
-                        ? "border border-[#E5552D] bg-[#E5552D] text-white hover:bg-[#d44820]"
+                    type="button"
+                    onClick={() => handleToggleTag(tag.name)}
+                    title={`${tag.postCount} ${tag.postCount === 1 ? "post" : "posts"}${isSelected ? " (Click to deselect)" : " (Click to select)"}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-ui text-[11px] font-medium transition-all cursor-pointer select-none ${
+                      isSelected
+                        ? "border border-[#E5552D] bg-[#E5552D] text-white hover:bg-[#d44820] shadow-sm"
                         : "border border-[#D4D4D4] bg-white text-[#111111] hover:border-[#111111] hover:text-[#111111]"
                     }`}
                   >
-                    #{tag.name}
-                    <span className={isActive ? "text-white/80 text-[10px]" : "text-[#737373] text-[10px]"}>
+                    <span>#{tag.name}</span>
+                    <span className={isSelected ? "text-white/85 text-[10px]" : "text-[#737373] text-[10px]"}>
                       {formatCount(tag.postCount)}
                     </span>
-                  </Link>
+                    {isSelected && (
+                      <span className="text-white/80 text-[11px] font-bold leading-none ml-0.5" aria-hidden>
+                        ×
+                      </span>
+                    )}
+                  </button>
                 );
               })}
         </div>

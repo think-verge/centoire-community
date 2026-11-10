@@ -1,5 +1,6 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { Country, City } from "country-state-city";
 import { AvatarBubble } from "../../components/AppShell";
 import {
   useCompleteOnboarding,
@@ -35,6 +36,7 @@ interface OnboardingUpdateMeData {
 }
 
 export function OnboardingPage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const stepParam = parseInt(searchParams.get("step") || "1", 10);
@@ -43,6 +45,38 @@ export function OnboardingPage() {
   // 0-indexed step for array indexing
   const step = currentStep - 1;
   const [likedCreators, setLikedCreators] = useState<string[]>([]);
+  const [selectedHashtags, setSelectedHashtags] = useState<string[]>(() => {
+    try {
+      const saved = sessionStorage.getItem("onboarding_hashtags");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return user?.followedHashtags ?? [];
+  });
+
+  const handleHashtagsChange = (tags: string[]) => {
+    setSelectedHashtags(tags);
+    try {
+      sessionStorage.setItem("onboarding_hashtags", JSON.stringify(tags));
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    if (selectedHashtags.length === 0 && user?.followedHashtags && user.followedHashtags.length > 0) {
+      setSelectedHashtags(user.followedHashtags);
+      try {
+        sessionStorage.setItem("onboarding_hashtags", JSON.stringify(user.followedHashtags));
+      } catch {
+        // ignore
+      }
+    }
+  }, [user?.followedHashtags, selectedHashtags.length]);
 
   useEffect(() => {
     const inviteParam = searchParams.get("invite");
@@ -81,16 +115,39 @@ export function OnboardingPage() {
           </div>
         </header>
 
-        {step === 0 && <InterestsStep onDone={() => setStep(1)} onBack={() => navigate("/")} />}
-        {step === 1 && <FollowStep onDone={() => setStep(2)} onBack={() => setStep(0)} onUpdateLikedCreators={(ids) => setLikedCreators(ids)} />}
+        {step === 0 && (
+          <InterestsStep
+            selected={selectedHashtags}
+            onChange={handleHashtagsChange}
+            onDone={() => setStep(1)}
+            onBack={() => navigate("/")}
+          />
+        )}
+        {step === 1 && (
+          <FollowStep
+            onDone={() => setStep(2)}
+            onBack={() => setStep(0)}
+            onUpdateLikedCreators={(ids) => setLikedCreators(ids)}
+          />
+        )}
         {step === 2 && <ProfileStep onBack={() => setStep(1)} likedCreators={likedCreators} />}
       </div>
     </main>
   );
 }
 
-function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [selected, setSelected] = useState<string[]>([]);
+function InterestsStep({
+  selected,
+  onChange,
+  onDone,
+  onBack,
+}: {
+  selected: string[];
+  onChange: (tags: string[]) => void;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const { refresh } = useAuth();
   const updateMe = useUpdateMe();
   const setInterests = useSetInterests({
     mutation: {
@@ -105,6 +162,7 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
         } catch {
           // ignore
         }
+        await refresh();
         onDone();
       },
     },
@@ -120,7 +178,7 @@ function InterestsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
         </p>
 
         <div className="mt-8">
-          <HashtagPicker selected={selected} onChange={setSelected} />
+          <HashtagPicker selected={selected} onChange={onChange} />
         </div>
       </div>
 
@@ -415,6 +473,239 @@ function FollowStep({ onDone, onBack, onUpdateLikedCreators }: { onDone: () => v
   );
 }
 
+interface SearchableOption {
+  value: string;
+  label: string;
+  icon?: string;
+}
+
+function SearchableSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+  disabledPlaceholder = "Select option",
+  allowCustom = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: SearchableOption[];
+  placeholder: string;
+  disabled?: boolean;
+  disabledPlaceholder?: string;
+  allowCustom?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Find currently selected option
+  const selectedOption = useMemo(() => {
+    return (
+      options.find((o) => o.value.toLowerCase() === value.toLowerCase()) ||
+      (value ? { value, label: value } : null)
+    );
+  }, [options, value]);
+
+  // Display label for the selected option
+  const selectedDisplay = useMemo(() => {
+    if (!selectedOption) return "";
+    return selectedOption.icon ? `${selectedOption.icon} ${selectedOption.label}` : selectedOption.label;
+  }, [selectedOption]);
+
+  // Sync query when open state changes
+  useEffect(() => {
+    if (!open) {
+      setQuery(selectedDisplay);
+    }
+  }, [open, selectedDisplay]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  // Filter options based on query
+  const filtered = useMemo(() => {
+    if (!open) return [];
+    const trimmed = query.trim().toLowerCase();
+    const isCurrentLabel =
+      selectedOption &&
+      (trimmed === selectedOption.label.toLowerCase() ||
+        trimmed === selectedDisplay.toLowerCase());
+
+    if (!trimmed || isCurrentLabel) {
+      return options.slice(0, 100);
+    }
+
+    const startsWith: SearchableOption[] = [];
+    const contains: SearchableOption[] = [];
+
+    for (const opt of options) {
+      const lower = opt.label.toLowerCase();
+      if (lower.startsWith(trimmed)) {
+        startsWith.push(opt);
+      } else if (lower.includes(trimmed)) {
+        contains.push(opt);
+      }
+      if (startsWith.length + contains.length >= 100) break;
+    }
+
+    return [...startsWith, ...contains];
+  }, [open, query, options, selectedOption, selectedDisplay]);
+
+  const handleSelect = (val: string) => {
+    onChange(val);
+    setOpen(false);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setQuery("");
+    setOpen(true);
+    inputRef.current?.focus();
+  };
+
+  const hasExactMatch = options.some(
+    (o) =>
+      o.label.toLowerCase() === query.trim().toLowerCase() ||
+      o.value.toLowerCase() === query.trim().toLowerCase()
+  );
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          disabled={disabled}
+          placeholder={disabled ? disabledPlaceholder : placeholder}
+          value={open ? query : selectedDisplay}
+          onFocus={() => {
+            if (!disabled) {
+              setOpen(true);
+              setTimeout(() => inputRef.current?.select(), 10);
+            }
+          }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!open) setOpen(true);
+          }}
+          className={`w-full border rounded-none px-4 py-2.5 pr-14 text-[14px] outline-none bg-white transition-colors ${
+            disabled
+              ? "border-[#EAEAEA] bg-[#F9F9F9] text-[#A3A3A3] cursor-not-allowed"
+              : "border-[#EAEAEA] text-[#111111] focus:border-[#D4D4D4] cursor-text"
+          }`}
+        />
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 gap-1 text-[#737373]">
+          {value && !disabled && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-1 hover:text-[#111111] text-[#A3A3A3] transition-colors"
+              title="Clear selection"
+            >
+              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            tabIndex={-1}
+            disabled={disabled}
+            onClick={() => {
+              if (disabled) return;
+              if (open) {
+                setOpen(false);
+              } else {
+                setOpen(true);
+                inputRef.current?.focus();
+                setTimeout(() => inputRef.current?.select(), 10);
+              }
+            }}
+            className="p-1 hover:text-[#111111] transition-colors disabled:cursor-not-allowed"
+          >
+            <svg
+              className={`size-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {open && !disabled && (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 z-30 mt-1 max-h-60 overflow-y-auto border border-[#EAEAEA] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] py-1 [-ms-overflow-style:none] [scrollbar-width:thin]"
+        >
+          {filtered.length === 0 && !allowCustom && (
+            <li className="px-4 py-2.5 text-[13px] text-[#8A8A8A] font-ui">
+              No matches found
+            </li>
+          )}
+
+          {filtered.map((opt) => {
+            const isSelected = selectedOption?.value.toLowerCase() === opt.value.toLowerCase();
+            return (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={isSelected}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelect(opt.value);
+                }}
+                className={`flex items-center justify-between px-4 py-2 text-[14px] cursor-pointer transition-colors ${
+                  isSelected ? "bg-[#FAF6F2] font-semibold text-[#111111]" : "text-[#333333] hover:bg-[#F9F9F9]"
+                }`}
+              >
+                <span className="flex items-center gap-2 truncate">
+                  {opt.icon && <span className="text-base shrink-0">{opt.icon}</span>}
+                  <span className="truncate">{opt.label}</span>
+                </span>
+                {isSelected && (
+                  <svg className="size-4 text-[#E5552D] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <polyline points="20 6 9 17 4 12" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </li>
+            );
+          })}
+
+          {allowCustom && query.trim() && !hasExactMatch && (
+            <li
+              role="option"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(query.trim());
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 text-[13px] text-[#E5552D] font-semibold border-t border-[#F2EDE4] cursor-pointer hover:bg-[#FAF6F2] transition-colors"
+            >
+              <span>+ Use "{query.trim()}"</span>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; likedCreators?: string[] }) {
   const { user, refresh } = useAuth();
   const navigate = useNavigate();
@@ -425,7 +716,58 @@ function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; liked
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl ?? null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string | null>(currentUser?.profileRole || "editor");
-  const [location, setLocation] = useState(currentUser?.location ?? "");
+  const countries = useMemo(() => Country.getAllCountries(), []);
+
+  const [selectedCountry, setSelectedCountry] = useState<string>(() => {
+    if (!currentUser?.location) return "";
+    const parts = currentUser.location.split(",").map((s) => s.trim());
+    if (parts.length >= 2) {
+      const countryStr = parts[parts.length - 1].toLowerCase();
+      const match = countries.find(
+        (c) => c.name.toLowerCase() === countryStr || c.isoCode.toLowerCase() === countryStr
+      );
+      if (match) return match.isoCode;
+    }
+    const match = countries.find(
+      (c) => c.name.toLowerCase() === currentUser.location!.toLowerCase() || c.isoCode.toLowerCase() === currentUser.location!.toLowerCase()
+    );
+    return match ? match.isoCode : "";
+  });
+
+  const availableCities = useMemo(() => {
+    if (!selectedCountry) return [];
+    const raw = City.getCitiesOfCountry(selectedCountry) || [];
+    const seen = new Set<string>();
+    const unique: Array<{ name: string }> = [];
+    for (const c of raw) {
+      if (!seen.has(c.name)) {
+        seen.add(c.name);
+        unique.push({ name: c.name });
+      }
+    }
+    return unique.sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedCountry]);
+
+  const countryOptions = useMemo(() => {
+    return countries.map((c) => ({
+      value: c.isoCode,
+      label: c.name,
+      icon: c.flag,
+    }));
+  }, [countries]);
+
+  const cityOptions = useMemo(() => {
+    return availableCities.map((c) => ({
+      value: c.name,
+      label: c.name,
+    }));
+  }, [availableCities]);
+
+  const [selectedCity, setSelectedCity] = useState<string>(() => {
+    if (!currentUser?.location) return "";
+    const parts = currentUser.location.split(",").map((s) => s.trim());
+    return parts.length >= 2 ? parts[0] : "";
+  });
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingHandle, setIsCheckingHandle] = useState(false);
   const [handleStatus, setHandleStatus] = useState<{ available: boolean; message: string } | null>(null);
@@ -560,13 +902,25 @@ function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; liked
   async function finish() {
     setIsSettingUp(true);
     try {
+      try {
+        sessionStorage.removeItem("onboarding_hashtags");
+      } catch {
+        // ignore
+      }
+      const countryObj = countries.find((c) => c.isoCode === selectedCountry);
+      const finalLocation = selectedCity && countryObj
+        ? `${selectedCity}, ${countryObj.name}`
+        : countryObj
+        ? countryObj.name
+        : selectedCity.trim() || undefined;
+
       await updateMe.mutateAsync({
         data: {
           handle: handle.trim().toLowerCase(),
           bio: bio || undefined,
           avatarUrl: avatarUrl ?? undefined,
           profileRole: selectedRole || undefined,
-          location: location.trim() || undefined,
+          location: finalLocation,
           likedCreators: likedCreators.length > 0 ? likedCreators : undefined,
         } as OnboardingUpdateMeData,
       });
@@ -737,9 +1091,8 @@ function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; liked
             </div>
           </div>
 
-          {/* Role & Location Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
+          {/* Primary Style Role */}
+          <div>
             <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
               PRIMARY STYLE ROLE
             </label>
@@ -763,20 +1116,40 @@ function ProfileStep({ onBack, likedCreators = [] }: { onBack: () => void; liked
                 </svg>
               </div>
             </div>
-            </div>
-          <div>
-            <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
-              LOCATION / BASE CITY (OPTIONAL)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Paris, France; Milan, Italy"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full border border-[#EAEAEA] rounded-none px-4 py-2.5 text-[14px] text-[#111111] outline-none bg-white focus:border-[#D4D4D4]"
-            />
           </div>
-        </div>
+
+          {/* Region & Location: Searchable Country then City */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+                COUNTRY (OPTIONAL)
+              </label>
+              <SearchableSelect
+                value={selectedCountry}
+                onChange={(code) => {
+                  setSelectedCountry(code);
+                  setSelectedCity("");
+                }}
+                options={countryOptions}
+                placeholder="Search or select country"
+              />
+            </div>
+
+            <div>
+              <label className="font-ui text-[12px] font-bold uppercase tracking-wider text-[#737373] mb-2 block">
+                BASE CITY (OPTIONAL)
+              </label>
+              <SearchableSelect
+                value={selectedCity}
+                onChange={(city) => setSelectedCity(city)}
+                options={cityOptions}
+                placeholder="Search or select city"
+                disabled={!selectedCountry}
+                disabledPlaceholder="Select country first"
+                allowCustom={true}
+              />
+            </div>
+          </div>
 
           {/* Bio */}
             <div>

@@ -34,6 +34,7 @@ import {
   CreatePolicyInputLogic,
 } from "../../lib/api/generated/model";
 import { listSources } from "../../lib/api/generated/admin/admin";
+import { searchHashtags } from "../../lib/api/generated/hashtags/hashtags";
 import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 
@@ -69,7 +70,23 @@ const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
   {
     key: "hashtag",
     label: "Hashtag",
-    type: "text",
+    type: "single",
+    loadOptions: async () => {
+      try {
+        const res = await searchHashtags({ limit: 200 });
+        return res.map((h) => ({
+          value: h.name,
+          label: `#${h.name} (${h.postCount ?? 0})`,
+        }));
+      } catch (err) {
+        console.error("Failed to load hashtags with limit 200", err);
+        const res = await searchHashtags();
+        return res.map((h) => ({
+          value: h.name,
+          label: `#${h.name} (${h.postCount ?? 0})`,
+        }));
+      }
+    },
   },
   {
     key: "author",

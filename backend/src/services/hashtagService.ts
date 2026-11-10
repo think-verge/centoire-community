@@ -6,7 +6,7 @@ import { ApiError } from "../utils/api-error.js";
 import { escapeRegex, normalizeHashtag, normalizeHashtags, normalizePrefix } from "../utils/hashtag.js";
 
 export const DEFAULT_SUGGEST_LIMIT = 8;
-export const MAX_SUGGEST_LIMIT = 50;
+export const MAX_SUGGEST_LIMIT = 200;
 const SHORT_PREFIX_TTL_MS = 60_000;
 const TRENDING_TTL_MS = 5 * 60_000;
 const TRENDING_WINDOW_DAYS = 90;
@@ -61,7 +61,37 @@ export async function search(params: { q?: string; limit?: number; featured?: bo
     .limit(limit)
     .select("name postCount")
     .lean();
-  const result = rows.map((r) => ({ name: r.name, postCount: r.postCount }));
+  let result: Suggestion[] = rows.map((r) => ({ name: r.name, postCount: r.postCount }));
+
+  // Auto-discover any hashtags present on posts that aren't yet registered in the Hashtag collection
+  if (result.length < limit && typeof (Post as unknown as { distinct?: unknown }).distinct === "function") {
+    const postTagQuery: Record<string, unknown> = {};
+    if (prefix) {
+      postTagQuery.hashtags = { $regex: `^${escapeRegex(prefix)}`, $options: "i" };
+    }
+    const distinctTags = await Post.distinct("hashtags", postTagQuery);
+    const existing = new Set(result.map((r) => r.name.toLowerCase()));
+    const missing = distinctTags
+      .filter((t): t is string => typeof t === "string" && Boolean(normalizeHashtag(t)) && !existing.has(t.toLowerCase()))
+      .slice(0, limit - result.length);
+
+    if (missing.length > 0) {
+      await ensureHashtags(missing);
+      for (const t of missing) {
+        const norm = normalizeHashtag(t);
+        if (norm && !existing.has(norm)) {
+          existing.add(norm);
+          const count = typeof (Post as unknown as { countDocuments?: unknown }).countDocuments === "function"
+            ? await Post.countDocuments({ hashtags: norm })
+            : 0;
+          await Hashtag.updateOne({ name: norm }, { $set: { postCount: count } });
+          result.push({ name: norm, postCount: count });
+        }
+      }
+      result.sort((a, b) => b.postCount - a.postCount || a.name.localeCompare(b.name));
+    }
+  }
+
   return cacheable ? remember(suggestCache, key, result) : result;
 }
 
@@ -113,7 +143,17 @@ export async function trending(params: { category?: string; limit?: number }): P
 
 export async function getByName(name: string, viewerId?: string) {
   const normalized = normalizeHashtag(name);
-  const doc = normalized ? await Hashtag.findOne({ name: normalized, status: "active" }) : null;
+  let doc = normalized ? await Hashtag.findOne({ name: normalized, status: "active" }) : null;
+  if (!doc && normalized) {
+    const count = typeof (Post as unknown as { countDocuments?: unknown }).countDocuments === "function"
+      ? await Post.countDocuments({ hashtags: normalized })
+      : 0;
+    if (count > 0) {
+      await ensureHashtags([normalized]);
+      await Hashtag.updateOne({ name: normalized }, { $set: { postCount: count } });
+      doc = await Hashtag.findOne({ name: normalized, status: "active" });
+    }
+  }
   if (!doc || !normalized) throw new ApiError(404, "Hashtag not found");
   const following = viewerId
     ? Boolean(await User.exists({ _id: viewerId, followedHashtags: normalized }))

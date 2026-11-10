@@ -109,11 +109,18 @@ export async function setInterests(userId: string, hashtags: string[]): Promise<
 
   const { added, removed } = diffHashtags(user.followedHashtags ?? [], next);
   user.followedHashtags = next;
+  user.domains = next;
   await user.save();
 
   if (added.length) await Hashtag.updateMany({ name: { $in: added } }, { $inc: { followerCount: 1 } });
   if (removed.length) {
     await Hashtag.updateMany({ name: { $in: removed }, followerCount: { $gt: 0 } }, { $inc: { followerCount: -1 } });
+  }
+
+  try {
+    await seedTopicMix(userId, next);
+  } catch {
+    // Non-blocking
   }
   return user;
 }

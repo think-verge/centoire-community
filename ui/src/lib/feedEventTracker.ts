@@ -1,7 +1,6 @@
 import { customInstance } from "./api/http";
 import type { EventItemInput } from "./api/generated/model";
 
-const FLUSH_INTERVAL_MS = 5000;
 const MAX_BATCH_SIZE = 20;
 const MAX_QUEUE_SIZE = 100;
 
@@ -13,23 +12,7 @@ class FeedEventTracker {
   private activeDwells = new Map<string, { startTime: number; accumulatedMs: number }>();
 
   constructor() {
-    if (typeof window !== "undefined") {
-      this.timer = setInterval(() => {
-        void this.flush();
-      }, FLUSH_INTERVAL_MS);
-
-      const handleUnload = () => {
-        this.flushWithBeacon();
-      };
-
-      window.addEventListener("pagehide", handleUnload);
-      window.addEventListener("beforeunload", handleUnload);
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") {
-          this.flushWithBeacon();
-        }
-      });
-    }
+    // Background interval disabled so feed browsing remains strictly read-only without constant DB writes
   }
 
   /**

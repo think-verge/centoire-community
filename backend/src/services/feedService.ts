@@ -37,13 +37,14 @@ const CARD_POPULATE = [
   { path: "circleId", select: "name slug" },
 ];
 
-/** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 + creator*3 - hoursOld/6
+/** score = log10(upvotes+1)*4 + tagMatch*2 + follow*6 + circle*4 + creator*3 + source*4 - hoursOld/6
  *  Note: cache creatorIds if the creator roster grows large (currently invite-only, so small). */
 function scoreStages(
   interests: string[],
   followedIds: Types.ObjectId[],
   circleIds: Types.ObjectId[],
   creatorIds: Types.ObjectId[],
+  followedSourceIds: Types.ObjectId[] = [],
 ): PipelineStage[] {
   return [
     {
@@ -57,6 +58,9 @@ function scoreStages(
         },
         authorIsCreator: {
           $cond: [{ $in: ["$authorId", creatorIds] }, 1, 0],
+        },
+        sourceFollowed: {
+          $cond: [{ $in: ["$sourceId", followedSourceIds] }, 1, 0],
         },
         hoursSincePublished: {
           $divide: [
@@ -76,10 +80,11 @@ function scoreStages(
         score: {
           $add: [
             { $multiply: [{ $log10: { $add: [{ $ifNull: ["$upvoteCount", 0] }, 1] } }, 4] },
-            { $multiply: ["$tagMatchCount", 2] },
+            { $multiply: ["$tagMatchCount", 12] },
             { $multiply: ["$authorFollowed", 6] },
             { $multiply: ["$inJoinedCircle", 4] },
             { $multiply: ["$authorIsCreator", 3] },
+            { $multiply: ["$sourceFollowed", 4] },
             { $multiply: [{ $ifNull: ["$aiQualityScore", 0] }, 2] },
             { $multiply: [{ $divide: [{ $ifNull: ["$hoursSincePublished", 0] }, 6] }, -1] },
           ],
@@ -186,6 +191,7 @@ async function rankedFeed(
   creatorIds: Types.ObjectId[],
   cursor: string | undefined,
   userId?: string,
+  followedSourceIds: Types.ObjectId[] = [],
 ): Promise<FeedPage> {
   const [dismissed, excludedAuthors, inaccessibleCircles] = await Promise.all([
     getDismissedPostIds(userId),
@@ -207,7 +213,7 @@ async function rankedFeed(
 
   const results = await Post.aggregate<{ _id: Types.ObjectId }>([
     { $match: match },
-    ...(scoreStages(interests, followedIds, circleIds, creatorIds) as PipelineStage.FacetPipelineStage[]),
+    ...(scoreStages(interests, followedIds, circleIds, creatorIds, followedSourceIds) as PipelineStage.FacetPipelineStage[]),
     { $skip: offset },
     { $limit: PAGE_SIZE + 1 },
     { $project: { _id: 1 } },
@@ -253,14 +259,15 @@ export async function trackDailyActiveUser(userId: string): Promise<void> {
 
 export async function forYouCore(userId: string, cursor?: string): Promise<FeedPage> {
   const user = await User.findById(userId).select("followedHashtags domains likedCreators");
-  const followedHashtags = user?.followedHashtags ?? [];
-  const domains = (user?.domains ?? []).map((d) => d.toLowerCase().trim()).filter(Boolean);
+  const followedHashtags = (user?.followedHashtags ?? []).map((h) => h.toLowerCase().trim().replace(/^#/, ""));
+  const domains = (user?.domains ?? []).map((d) => d.toLowerCase().trim().replace(/^#/, "")).filter(Boolean);
   const domainTags = domains.map((d) => d.replace(/[^a-z0-9]/g, ""));
   const interests = [...new Set([...followedHashtags, ...domains, ...domainTags])];
-  const [followedIds, circleIds, creatorIds] = await Promise.all([
+  const [followedIds, circleIds, creatorIds, followedSourceIds] = await Promise.all([
     userService.getFollowedUserIds(userId),
     userService.getMembershipCircleIds(userId),
     getCreatorIds(),
+    userService.getFollowedSourceIds(userId),
   ]);
 
   const likedCreators = user?.likedCreators ?? [];
@@ -274,14 +281,10 @@ export async function forYouCore(userId: string, cursor?: string): Promise<FeedP
     status: "published",
     publishedAt: { $gte: since },
   };
-  const orConditions: Record<string, unknown>[] = [];
-  if (interests.length > 0) orConditions.push({ hashtags: { $in: interests } });
-  if (circleIds.length > 0) orConditions.push({ circleId: { $in: circleIds } });
-  if (allFollowedIds.length > 0) orConditions.push({ authorId: { $in: allFollowedIds } });
-  if (orConditions.length > 0) {
-    match.$or = orConditions;
-  }
-  return rankedFeed(match, interests, allFollowedIds, circleIds, creatorIds, cursor, userId);
+
+  // Soft ranking: do not hard-filter out other cluster or sourced posts.
+  // Matching interests, circles, followed creators, and followed sources are ranked at the top via scoreStages.
+  return rankedFeed(match, interests, allFollowedIds, circleIds, creatorIds, cursor, userId, followedSourceIds);
 }
 
 export const feedOperations = {

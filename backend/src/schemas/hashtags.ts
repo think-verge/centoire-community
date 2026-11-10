@@ -17,7 +17,7 @@ export const HashtagSchema = registry.register(
 
 export const HashtagListQuerySchema = z.object({
   q: z.string().max(60).optional(),
-  limit: z.coerce.number().int().min(1).max(50).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
   featured: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
 });
 

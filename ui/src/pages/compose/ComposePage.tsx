@@ -827,15 +827,8 @@ export function ComposePage() {
                           ✕
                         </button>
 
-                        {/* Cover badge: white pill with black text, bottom-left */}
-                        {item.isCover && (
-                          <span className="absolute bottom-2 left-2 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-black shadow-xs">
-                            Cover
-                          </span>
-                        )}
-
                         {/* Video duration badge: translucent black pill, bottom-left */}
-                        {item.type === "video" && !item.isCover && (
+                        {item.type === "video" && (
                           <span className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur-xs">
                             <span className="text-[9px]">▷</span>
                             <span>{item.durationStr || "0:18"}</span>

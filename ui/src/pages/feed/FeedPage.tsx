@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { MasonryFeed } from "../../components/MasonryFeed";
 import { PostDrawer } from "../../components/PostDrawer";
 import { PostCard } from "../../components/PostCard";
@@ -32,8 +32,16 @@ const MORE_TABS: { key: TabKey; label: string }[] = [
 
 export function FeedPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+
+  const selectedTags = useMemo(() => {
+    const raw = searchParams.get("tags") || searchParams.get("tag") || searchParams.get("hashtag") || "";
+    return raw
+      ? raw.split(",").map((t) => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean)
+      : [];
+  }, [searchParams]);
   const [moreOpen, setMoreOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const topContainerRef = useRef<HTMLDivElement>(null);
@@ -176,45 +184,82 @@ export function FeedPage() {
   const posts = useMemo(() => {
     const raw = data?.pages.flatMap((page) => page.items) ?? [];
     const seen = new Set<string>();
-    return raw.filter((p) => {
+    const unique = raw.filter((p) => {
       if (seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
     });
-  }, [data?.pages]);
+    if (selectedTags.length === 0) return unique;
+    return unique.filter((p) =>
+      p.hashtags && p.hashtags.some((h) => selectedTags.includes(h.toLowerCase().replace(/^#/, "")))
+    );
+  }, [data?.pages, selectedTags]);
 
-  // Feed items with reserved position 8 for suggestion card
-  const feedItems = useMemo(() => {
-    const items: Array<
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+
+  // Top section displays 2 complete rows above the Featured Jobs banner.
+  // The Suggested For You card is reserved for the first row ending (below the refresh button).
+  // If fewer posts exist than (columns - 1), it naturally shifts next to the ending card towards the left.
+  const { topFeedItems, remainingFeedItems } = useMemo(() => {
+    if (suggestionDismissed) {
+      const topCount = columns * 2;
+      const topPosts = posts.slice(0, topCount);
+      const remPosts = posts.slice(topCount);
+      return {
+        topFeedItems: topPosts.map((p, idx) => ({
+          type: "post" as const,
+          post: p,
+          position: idx + 1,
+        })),
+        remainingFeedItems: remPosts.map((p, idx) => ({
+          type: "post" as const,
+          post: p,
+          position: topPosts.length + 1 + idx,
+        })),
+      };
+    }
+
+    const firstRowPostLimit = Math.max(1, columns - 1);
+    const firstRowPosts = posts.slice(0, firstRowPostLimit);
+    const secondRowPosts = posts.slice(firstRowPostLimit, firstRowPostLimit + columns);
+    const remainingPosts = posts.slice(firstRowPostLimit + columns);
+
+    const topItems: Array<
       | { type: "post"; post: PostCardType; position: number }
       | { type: "suggestion"; position: number }
-    > = [];
-    let pos = 1;
-    posts.forEach((p, idx) => {
-      if (idx === 7) {
-        items.push({ type: "suggestion", position: 8 });
-      }
-      items.push({ type: "post", post: p, position: pos });
-      pos++;
-    });
-    if (posts.length > 0 && posts.length < 8 && !items.some((it) => it.type === "suggestion")) {
-      items.push({ type: "suggestion", position: posts.length + 1 });
-    }
-    return items;
-  }, [posts]);
+    > = [
+      ...firstRowPosts.map((p, idx) => ({
+        type: "post" as const,
+        post: p,
+        position: idx + 1,
+      })),
+      {
+        type: "suggestion" as const,
+        position: firstRowPosts.length + 1,
+      },
+      ...secondRowPosts.map((p, idx) => ({
+        type: "post" as const,
+        post: p,
+        position: firstRowPosts.length + 2 + idx,
+      })),
+    ];
 
-  // Top section displays 2 complete full rows so every row goes all the way till the end
-  const topRows = 2;
-  const topCount = Math.max(columns * topRows, columns);
-  const topFeedItems = feedItems.slice(0, topCount);
-  const remainingFeedItems = feedItems.slice(topCount);
+    const remItems: Array<{ type: "post"; post: PostCardType; position: number }> =
+      remainingPosts.map((p, idx) => ({
+        type: "post" as const,
+        post: p,
+        position: topItems.length + 1 + idx,
+      }));
+
+    return { topFeedItems: topItems, remainingFeedItems: remItems };
+  }, [posts, columns, suggestionDismissed]);
 
   // Automatically fetch more if initial page doesn't have enough to fill both top and remaining
   useEffect(() => {
-    if (isAll && posts.length < topCount + columns && hasNextPage && !isFetchingNextPage) {
+    if (isAll && posts.length < columns * 3 && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [isAll, posts.length, topCount, columns, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [isAll, posts.length, columns, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Setup intersection observer for infinite scroll in All tab
   useEffect(() => {
@@ -360,13 +405,57 @@ export function FeedPage() {
           </div>
         </div>
 
+        {/* Active Topics Bar if selected via rightbar */}
+        {selectedTags.length > 0 && (
+          <div className="px-4 sm:px-6 mt-1 mb-3 flex items-center gap-2 flex-wrap">
+            <span className="font-ui text-xs font-semibold text-[#555555] uppercase tracking-wide">
+              Topics:
+            </span>
+            {selectedTags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#E5552D] px-2.5 py-1 text-xs font-medium text-white shadow-sm"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = selectedTags.filter((t) => t !== tag);
+                    const nextParams = new URLSearchParams(searchParams);
+                    if (next.length > 0) nextParams.set("tags", next.join(","));
+                    else nextParams.delete("tags");
+                    setSearchParams(nextParams, { replace: true });
+                  }}
+                  className="hover:text-black/70 cursor-pointer text-xs font-bold leading-none"
+                  aria-label={`Remove #${tag}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                const nextParams = new URLSearchParams(searchParams);
+                nextParams.delete("tags");
+                nextParams.delete("tag");
+                nextParams.delete("hashtag");
+                setSearchParams(nextParams, { replace: true });
+              }}
+              className="font-ui text-xs text-[#E5552D] hover:underline font-medium cursor-pointer ml-1"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
         {/* Top Posts Section for ALL tab */}
         <div ref={topContainerRef} className="px-4 pt-4 sm:px-6">
           {isAll ? (
             <>
               {isLoading ? (
                 <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-                  {Array.from({ length: topCount }).map((_, i) => (
+                  {Array.from({ length: columns * 2 }).map((_, i) => (
                     <div key={i} className="flex flex-col h-full"><SkeletonCard tall /></div>
                   ))}
                 </div>
@@ -375,7 +464,10 @@ export function FeedPage() {
                   <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
                     {topFeedItems.map((item) =>
                       item.type === "suggestion" ? (
-                        <FeedSuggestionCard key="feed-suggestion-card" />
+                        <FeedSuggestionCard
+                          key="feed-suggestion-card"
+                          onDismiss={() => setSuggestionDismissed(true)}
+                        />
                       ) : (
                         <PostCard
                           key={item.post.id}
@@ -405,18 +497,14 @@ export function FeedPage() {
             {remainingFeedItems.length > 0 ? (
               <section className="mb-8">
                 <div className="grid gap-6 px-3 -mx-3 py-3 -my-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
-                  {remainingFeedItems.map((item) =>
-                    item.type === "suggestion" ? (
-                      <FeedSuggestionCard key="feed-suggestion-card" />
-                    ) : (
-                      <PostCard
-                        key={item.post.id}
-                        post={item.post}
-                        position={item.position}
-                        onOpenPost={(p) => setSelectedSlug(p.slug)}
-                      />
-                    ),
-                  )}
+                  {remainingFeedItems.map((item) => (
+                    <PostCard
+                      key={item.post.id}
+                      post={item.post}
+                      position={item.position}
+                      onOpenPost={(p) => setSelectedSlug(p.slug)}
+                    />
+                  ))}
                   {isFetchingNextPage &&
                     Array.from({ length: 4 }).map((_, i) => (
                       <div key={`remaining-skeleton-${i}`} className="flex flex-col h-full"><SkeletonCard /></div>
@@ -434,7 +522,16 @@ export function FeedPage() {
                 ))}
               </div>
             ) : posts.length === 0 && !isLoading ? (
-              <EmptyFeed />
+              <EmptyFeed
+                selectedTags={selectedTags}
+                onClear={() => {
+                  const nextParams = new URLSearchParams(searchParams);
+                  nextParams.delete("tags");
+                  nextParams.delete("tag");
+                  nextParams.delete("hashtag");
+                  setSearchParams(nextParams, { replace: true });
+                }}
+              />
             ) : null}
           </div>
         </>
@@ -498,7 +595,31 @@ function FollowingLoggedOut() {
   );
 }
 
-function EmptyFeed() {
+function EmptyFeed({ selectedTags, onClear }: { selectedTags?: string[]; onClear?: () => void }) {
+  if (selectedTags && selectedTags.length > 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-[var(--color-hairline)] p-12 text-center bg-white">
+        <p className="font-editorial text-2xl italic text-[var(--color-charcoal)]">
+          No posts matching selected topics
+        </p>
+        <p className="mx-auto mt-2 max-w-md font-ui text-sm text-[var(--color-stone)]">
+          No published posts currently match #{selectedTags.join(", #")}. Try picking other topics or clear the filter.
+        </p>
+        {onClear && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={onClear}
+              className="rounded-lg bg-[#E4572E] px-4 py-2 font-ui text-sm font-semibold text-white hover:opacity-90 cursor-pointer"
+            >
+              Clear topic filters
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-dashed border-[var(--color-hairline)] p-12 text-center">
       <p className="font-editorial text-2xl italic text-[var(--color-charcoal)]">

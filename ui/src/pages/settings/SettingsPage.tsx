@@ -146,6 +146,7 @@ function ProfileSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
 
 function InterestsSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selected, setSelected] = useState<string[]>(() => user?.followedHashtags ?? []);
   const [saved, setSaved] = useState(false);
   const setInterests = useSetInterests({
@@ -154,6 +155,12 @@ function InterestsSection({ onSaved }: { onSaved: () => Promise<unknown> }) {
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
         await onSaved();
+        await queryClient.invalidateQueries({
+          predicate: (query) => {
+            const keyStr = JSON.stringify(query.queryKey);
+            return keyStr.includes("/feed");
+          },
+        });
       },
     },
   });

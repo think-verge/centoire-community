@@ -2842,7 +2842,7 @@
             "schema": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 50
+              "maximum": 200
             },
             "required": false,
             "name": "limit",

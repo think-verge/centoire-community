@@ -267,20 +267,25 @@ describe("Ticket #114: Onboarding Profile & Topic-Mix Seeding", () => {
 
       expect(aggregateSpy).toHaveBeenCalled();
       const pipeline = aggregateSpy.mock.calls[0][0];
-      const matchStage = pipeline[0] as { $match: { $or: Array<Record<string, unknown>> } };
+      const addFieldsStage = pipeline[1] as {
+        $addFields: {
+          tagMatchCount: { $size: { $setIntersection: [unknown, string[]] } };
+          authorFollowed: { $cond: [{ $in: [unknown, Types.ObjectId[]] }, number, number] };
+        };
+      };
 
-      // Should include hashtags from both followedHashtags AND domains
-      const hashtagMatch = matchStage.$match.$or.find((cond) => cond.hashtags);
-      expect(hashtagMatch).toBeDefined();
+      // Should include hashtags from both followedHashtags AND domains in scoring stage
+      const scoredInterests = addFieldsStage.$addFields.tagMatchCount.$size.$setIntersection[1];
+      expect(scoredInterests).toBeDefined();
       const expectedInterests = ["textiles", "streetwear", "vintage"];
       for (const exp of expectedInterests) {
-        expect((hashtagMatch?.hashtags as any).$in).toContain(exp);
+        expect(scoredInterests).toContain(exp);
       }
 
-      // Should include authorId for liked creators
-      const authorMatch = matchStage.$match.$or.find((cond) => cond.authorId);
-      expect(authorMatch).toBeDefined();
-      expect((authorMatch?.authorId as any).$in).toContainEqual(likedCreatorId);
+      // Should include liked creators in authorFollowed scoring boost
+      const scoredFollowedAuthors = addFieldsStage.$addFields.authorFollowed.$cond[0].$in[1];
+      expect(scoredFollowedAuthors).toBeDefined();
+      expect(scoredFollowedAuthors).toContainEqual(likedCreatorId);
     });
   });
 });
