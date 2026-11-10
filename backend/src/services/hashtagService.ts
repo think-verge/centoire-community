@@ -61,7 +61,7 @@ export async function search(params: { q?: string; limit?: number; featured?: bo
     .limit(limit)
     .select("name postCount")
     .lean();
-  let result: Suggestion[] = rows.map((r) => ({ name: r.name, postCount: r.postCount }));
+  const result: Suggestion[] = rows.map((r) => ({ name: r.name, postCount: r.postCount }));
 
   // Auto-discover any hashtags present on posts that aren't yet registered in the Hashtag collection
   if (result.length < limit && typeof (Post as unknown as { distinct?: unknown }).distinct === "function") {

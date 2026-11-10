@@ -1,6 +1,4 @@
 import cron from "node-cron";
-import { Post } from "../models/Post.js";
-import * as hashtagService from "../services/hashtagService.js";
 
 // Background worker: previously deleted expired aggregated posts after 48h.
 // Aggregated and sourced posts are now preserved so external articles remain in the catalog.
