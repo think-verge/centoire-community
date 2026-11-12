@@ -19,9 +19,9 @@ export NATS_URL ?= nats://127.0.0.1:4222
 platform-install:
 	npm install
 
-## NATS with JetStream (event bus + service registry)
+## NATS with JetStream (event bus + service registry); stops cleanly when its pane is closed
 nats:
-	mkdir -p .data/nats && nats-server -js -sd .data/nats
+	./scripts/nats.sh
 
 ## Edge gateway: routes /api/v1/* to whichever service announced the prefix
 gateway:
