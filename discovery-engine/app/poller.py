@@ -132,24 +132,25 @@ class Poller:
                     self._reddit_last = time.monotonic()
         return await fetch(client, source, self._http_cache[source.id])
 
-    async def poll_once(self, client: httpx.AsyncClient, source: Source) -> None:
+    async def poll_once(self, client: httpx.AsyncClient, source: Source) -> int:
+        """Poll one source; returns how many new items it saved."""
         # Items present on a source's very first successful poll were published before
         # we started watching, so they are flagged as baseline and never count as "early".
         baseline = not await self.store.has_polled(source.id)
         try:
             items = await self._fetch(client, source)
         except InstagramSkipped:
-            return
+            return 0
         except NotModified:
             self._errors[source.id] = 0
             await self.store.record_poll(source, ok=True)
-            return
+            return 0
         except Exception as exc:  # network, HTTP status, parse, API errors: log and retry later
             self._errors[source.id] += 1
             msg = f"{type(exc).__name__}: {exc}"[:300]
             log.warning("poll failed %s: %s", source.id, msg)
             await self.store.record_poll(source, ok=False, error=msg)
-            return
+            return 0
 
         self._errors[source.id] = 0
         items = [i for i in items if self._filter.keep(source, i)]
@@ -162,6 +163,7 @@ class Poller:
                 await self.origins.process(client, source, new)
             except Exception:
                 log.exception("origin tracing failed for %s", source.id)
+        return len(new)
 
     def _next_wait(self, source: Source) -> float:
         interval = self._interval(source)

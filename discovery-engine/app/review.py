@@ -1,12 +1,12 @@
-"""The bridge to the Centoire app: stories go to the editors' review queue, decisions come back,
-and the app's source list is shared with the engine.
+"""The bridge to the Centoire app: stories wait in a queue the backend pulls (app.internal_api),
+decisions come back, and the app's source list is shared with the engine.
 
-    engine story ──POST /internal/discovery/stories──▶ post "pending review" ──▶ /moderation
+    engine story ──stored payload──▶ GET /internal/discovery-engine/queue (pulled by the backend)
     engine ◀──GET /internal/discovery/decisions── approve / reject (+ reason)
     engine ◀──GET /internal/discovery/sources──── sources admins added or approved
     engine ──POST /internal/discovery/sources/suggestions──▶ "Suggested" on the Sources page
 
-What gets sent: a story once 2+ websites carry it, or straight away if it's a leak, while it is
+What gets queued: a story once 2+ websites carry it, or straight away if it's a leak, while it is
 under 48 hours old. While it's still pending, the evidence is refreshed as the story spreads.
 
 Sources are suggested, never added on their own, when (a) several publishers credit them as a
@@ -51,8 +51,8 @@ LOOKBACK_DAYS = 14
 MAX_SUGGESTIONS_PER_PASS = 5
 
 
-# Bump to resend every pending story once (e.g. after changing what the payload contains).
-PAYLOAD_VERSION = 4
+# Bump to re-queue every pending story once (e.g. after changing what the payload contains).
+PAYLOAD_VERSION = 5
 # Google News links resolved per pass (each costs a ~600 KB page); the rest wait for the next pass.
 MAX_RESOLVE_PER_PASS = 40
 NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u0900-\u0dff\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
@@ -99,9 +99,6 @@ class CentoireApp:
         if resp.status_code >= 400:
             raise AppError(f"{method} {path}: HTTP {resp.status_code}: {resp.text[:300]}")
         return resp.json()
-
-    async def post_story(self, payload: dict) -> dict:
-        return await self._call("POST", "/stories", json=payload)
 
     async def decisions(self, since: datetime) -> list[dict]:
         return await self._call("GET", "/decisions", params={"since": since.isoformat(), "limit": 200})
@@ -226,7 +223,7 @@ class ReviewBridge:
         own = {s.url for s in self.poller.all_sources if not s.id.startswith("app-")}
         wanted: dict[str, Source] = {}
         for row in rows:
-            if row["active"] and row["feedUrl"] not in own and (src := app_source_to_engine(row)):
+            if row.get("active") and row["feedUrl"] not in own and (src := app_source_to_engine(row)):
                 wanted[src.id] = src
         for src in wanted.values():
             if not any(s.id == src.id for s in self.poller.all_sources):
@@ -254,7 +251,8 @@ class ReviewBridge:
             seen.setdefault(s["_id"], s)
         return list(seen.values()), often_first
 
-    async def push_stories(self) -> int:
+    async def prepare_stories(self) -> int:
+        """Build and store the payload the backend pulls from the queue (nothing is sent)."""
         now = datetime.now(timezone.utc)
         stories, often_first = await self._candidates(now)
         due = []
@@ -270,7 +268,7 @@ class ReviewBridge:
             if (review and story.get("website_count", 0) <= review.get("pushed_websites", 0)
                     and review.get("payload_v") == PAYLOAD_VERSION and review.get("links_resolved", True)
                     and review.get("pushed_tag") == tag["tag"]):
-                continue  # nothing new since it was sent
+                continue  # nothing new since it was queued
             articles = await self.store.story_articles(story["_id"])
             if articles:
                 due.append((story, articles))
@@ -278,19 +276,24 @@ class ReviewBridge:
             return 0
         await self._resolve_links(due)
         await self._add_english(due)
-        sent = 0
+        prepared = 0
         for story, articles in due:
-            result = await self.app.post_story(story_payload(story, articles, story["_momentum"]))
+            payload = story_payload(story, articles, story["_momentum"])
             # Only links the resolution budget skipped count (failures are remembered as "").
             pending_links = self.poller.http_client() is not None and any(
                 is_google_news(a["url"]) and "resolved_url" not in (a.get("extra") or {}) for a in articles)
+            now = datetime.now(timezone.utc)
+            # The backend pulls this from GET /internal/discovery-engine/queue; queued_at moves
+            # forward each time the payload is re-prepared so the puller sees the refresh.
+            # post_id is absent until a decision arrives.
             await self.store.set_story_review(story["_id"], {
-                "post_id": result["postId"], "status": result["status"], "payload_v": PAYLOAD_VERSION,
-                # False: some Google News links weren't resolved yet; resend once they are
+                "payload": payload, "queued_at": now,
+                "status": "pending_review", "payload_v": PAYLOAD_VERSION,
+                # False: some Google News links weren't resolved yet; re-prepare once they are
                 "links_resolved": not pending_links, "pushed_tag": story["_momentum"]["tag"],
-                "pushed_websites": story.get("website_count", 0), "pushed_at": datetime.now(timezone.utc)})
-            sent += 1
-        return sent
+                "pushed_websites": story.get("website_count", 0), "pushed_at": now}, merge=True)
+            prepared += 1
+        return prepared
 
     async def _resolve_links(self, due: list[tuple[dict, list[dict]]]) -> None:
         """Find the publisher URL behind each Google News article in these stories (remembered on the
@@ -451,7 +454,7 @@ class ReviewBridge:
         last_suggest = 0.0
         loop = asyncio.get_running_loop()
         while True:
-            for step in (self.sync_sources, self.pull_decisions, self.push_stories):
+            for step in (self.sync_sources, self.pull_decisions, self.prepare_stories):
                 try:
                     n = await step()
                     if n:

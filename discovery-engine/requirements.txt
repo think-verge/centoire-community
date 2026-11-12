@@ -9,3 +9,4 @@ motor                # async MongoDB driver
 pytest
 pytest-asyncio
 numpy                # story matching (cosine similarity)
+nats-py

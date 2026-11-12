@@ -51,12 +51,8 @@ def test_app_sources_map_to_engine_sources():
 
 class FakeApp:
     def __init__(self, sources=(), decisions=()):
-        self.posted, self.suggested = [], []
+        self.suggested = []
         self._sources, self._decisions = list(sources), list(decisions)
-
-    async def post_story(self, payload):
-        self.posted.append(payload)
-        return {"postId": f"post-{payload['storyId']}", "status": "pending_review", "created": True}
 
     async def decisions(self, since):
         return [d for d in self._decisions if d["reviewedAt"] > since.isoformat()]
@@ -125,14 +121,14 @@ async def test_push_sends_new_and_grown_stories_only():
                        story("old", 3, review={"status": "pending_review", "pushed_websites": 3})])
     app = FakeApp()
     bridge = ReviewBridge(FakePoller(store), app)
-    assert await bridge.push_stories() == 3
+    assert await bridge.prepare_stories() == 3
     # "old" was sent by an earlier version of the payload, so it is resent once
-    assert sorted(p["storyId"] for p in app.posted) == ["big", "leak", "old"]
+    assert sorted(i for i, st in store.stories.items() if "payload" in st.get("review", {})) == ["big", "leak", "old"]
     assert store.stories["old"]["review"]["payload_v"] == PAYLOAD_VERSION
     assert store.stories["big"]["review"]["pushed_websites"] == 3
-    assert await bridge.push_stories() == 0  # nothing changed
+    assert await bridge.prepare_stories() == 0  # nothing changed
     store.stories["big"]["website_count"] = 6  # spread further while still pending
-    assert await bridge.push_stories() == 1
+    assert await bridge.prepare_stories() == 1
 
 
 async def test_decisions_come_back_onto_stories():
@@ -216,13 +212,13 @@ async def test_english_summary_is_written_once_and_refreshed_when_the_story_grow
     s["websites"]["sw"] = {"name": "スニーカーウォーズ", "first_at": T0, "url": "https://x", "title": "t", "articles": 1}
     store, app, llm = FakeStore([s]), FakeApp(), FakeLLM()
     bridge = ReviewBridge(FakePoller(store), app, llm=llm)
-    await bridge.push_stories()
-    assert app.posted[0]["excerpt"].startswith("English summary of")
+    await bridge.prepare_stories()
+    assert store.stories["s1"]["review"]["payload"]["excerpt"].startswith("English summary of")
     assert store.stories["s1"]["names_en"] == {"スニーカーウォーズ": "Sneaker Wars"}
     store.stories["s1"]["website_count"] = 5
-    await bridge.push_stories()
+    await bridge.prepare_stories()
     assert llm.calls == 2  # regrown story: summary refreshed
-    await bridge.push_stories()
+    await bridge.prepare_stories()
     assert llm.calls == 2  # unchanged: no new call
 
 
@@ -256,16 +252,44 @@ async def test_push_resolves_google_news_links_and_resends_when_some_were_left(m
     poller.client = object()
     app = FakeApp()
     bridge = ReviewBridge(poller, app)
-    await bridge.push_stories()
-    assert app.posted[-1]["externalUrl"] == "https://www.webuomo.jp/A0"
+    await bridge.prepare_stories()
+    q1 = store.stories["s1"]["review"]["queued_at"]
+    assert store.stories["s1"]["review"]["payload"]["externalUrl"] == "https://www.webuomo.jp/A0"
     assert store.stories["s1"]["review"]["links_resolved"] is False  # one link left for the next pass
-    await bridge.push_stories()
-    assert store.stories["s1"]["review"]["links_resolved"] is True and len(app.posted) == 2
+    await bridge.prepare_stories()
+    assert store.stories["s1"]["review"]["links_resolved"] is True and store.stories["s1"]["review"]["queued_at"] > q1
     assert ("k0", {"extra.resolved_url": "https://www.webuomo.jp/A0",
                    "extra.publisher_url": "https://www.webuomo.jp"}) in store.item_updates
-    await bridge.push_stories()
-    assert len(app.posted) == 2  # nothing new
+    q2 = store.stories["s1"]["review"]["queued_at"]
+    await bridge.prepare_stories()
+    assert store.stories["s1"]["review"]["queued_at"] == q2  # nothing new
 
 
 async def _articles(items):
     return items
+
+
+async def test_prepare_stores_the_payload_without_calling_the_app():
+    store = FakeStore([story("big", 3)])
+    app = FakeApp()
+    bridge = ReviewBridge(FakePoller(store), app)
+    assert await bridge.prepare_stories() == 1
+    review = store.stories["big"]["review"]
+    assert review["status"] == "pending_review" and review["payload"]["storyId"] == "big"
+    assert review["queued_at"] and "post_id" not in review and review["pushed_websites"] == 3
+    assert not hasattr(app, "post_story") and app.suggested == []
+    before = review["queued_at"]
+    store.stories["big"]["website_count"] = 6
+    await bridge.prepare_stories()
+    assert store.stories["big"]["review"]["queued_at"] > before  # re-prepared: queue position moves
+
+
+async def test_sync_handles_ordinary_rss_rows_without_review():
+    poller = FakePoller(FakeStore([]))
+    app = FakeApp(sources=[{"id": "a", "name": "Vogue", "feedUrl": "https://vogue.com/rss", "kind": "rss",
+                            "active": True, "review": None},
+                           {"id": "b", "name": "Old", "feedUrl": "https://old.com/rss", "kind": "rss",
+                            "active": False}])
+    bridge = ReviewBridge(poller, app)
+    await bridge.sync_sources()
+    assert poller.added == ["app-a"] and "https://old.com/rss" in bridge.known_feeds

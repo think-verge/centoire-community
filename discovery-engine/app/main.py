@@ -16,7 +16,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import RedirectResponse
 
 from app.config import get_settings
+from app.internal_api import router as internal_router
 from app.poller import Poller
+from app.registration import from_env as registration_from_env
 from app.sources import load_watchlist, planned_instagram_calls_per_hour
 from app.store import Store
 
@@ -45,9 +47,14 @@ async def lifespan(app: FastAPI):
         app.state.poller = poller
         task = asyncio.create_task(poller.run_forever())
         log.info("poller started for %d sources", len(poller.sources))
+    registration = registration_from_env()
+    if registration:
+        await registration.start()
     try:
         yield
     finally:
+        if registration:
+            await registration.stop()
         if task:
             task.cancel()
         if app.state.poller and app.state.poller.stories:
@@ -56,6 +63,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Centoire Discovery Engine", lifespan=lifespan)
+app.include_router(internal_router)
 
 
 @app.get("/", include_in_schema=False)

@@ -53,6 +53,7 @@ class Store:
         await self.items.create_index("story_id", sparse=True)
         await self.stories.create_index([("last_at", DESCENDING)])
         await self.stories.create_index([("first_at", DESCENDING)])
+        await self.stories.create_index([("review.queued_at", ASCENDING)], sparse=True)
 
     async def has_polled(self, source_id: str) -> bool:
         doc = await self.source_status.find_one({"_id": source_id}, {"last_ok_at": 1})
@@ -236,6 +237,14 @@ class Store:
         """Stories sent for review that no editor has decided yet (their tag keeps changing)."""
         cursor = self.stories.find({"review.status": "pending_review"}, {"vectors": 0, "item_keys": 0})
         return await cursor.to_list(length=None)
+
+    async def queued_stories(self, since: datetime, limit: int) -> list[dict]:
+        """Stories with a prepared payload no editor has decided yet, queued after `since`, oldest first."""
+        cursor = self.stories.find(
+            {"review.status": "pending_review", "review.payload": {"$exists": True},
+             "review.queued_at": {"$gt": since}},
+            {"review.payload": 1, "review.queued_at": 1}).sort("review.queued_at", ASCENDING).limit(limit)
+        return await cursor.to_list(length=limit)
 
     async def set_story_review(self, story_id: str, review: dict, *, merge: bool = False) -> None:
         update = {f"review.{k}": v for k, v in review.items()} if merge else {"review": review}

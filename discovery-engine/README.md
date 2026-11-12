@@ -74,19 +74,43 @@ website, and each outlet behind a Google News result is its own website.
 
 With `CENTOIRE_API_URL` and `CENTOIRE_DISCOVERY_SECRET` set (`app/review.py`), every 2 minutes:
 
-- **Stories → review.** A story goes to the app's content review (`/moderation`) once 2+ websites
-  carry it, or right away if it's a leak, while under 48 hours old. It becomes an aggregated post
-  in `pending_review`, attributed to "Centoire Discovery", with the evidence on the card: websites,
-  who published first, when the engine saw it, the spread. While it's pending, the evidence is
-  refreshed as the story spreads. Editors approve or reject as for any post. Discovery stories
-  always wait for an editor unless the backend sets `DISCOVERY_AUTO_APPROVE=true`.
+- **Stories → queue (pulled by the backend).** The engine never POSTs stories. Once 2+ websites
+  carry a story (or right away if it's a leak, while under 48 hours old), the engine stores the
+  prepared post payload on the story (`review.payload`, `review.queued_at`, status
+  `pending_review`) and the backend pulls it from `GET /internal/discovery-engine/queue`. The
+  evidence is re-prepared, and `queued_at` moves forward, as the story spreads or its momentum tag
+  changes. Editors approve or reject as for any post; decided stories leave the queue.
 - **Decisions → engine.** Approvals and rejections (with reasons) are read back onto
   `stories.review`; approved stories count toward suggesting the websites that carried them.
-- **Sources, both ways.** The engine watches every active source in the app with
-  `fetchedBy: discovery` (an admin adds one on the Sources page: RSS, sitemap, web page or
-  Instagram), and stops when it's paused or deleted. New sources are never added on their own:
+- **Sources, both ways.** The engine watches every active source the app lists (an admin adds
+  one on the Sources page: RSS, sitemap, web page or Instagram), and stops when it's paused or deleted. New sources are never added on their own:
   origin tracing and story history send them as **suggestions** with their evidence; an admin
   approves (watched from the next sync) or rejects (never suggested again).
+
+### Pull queue API (`app/internal_api.py`)
+
+All routes sit under `/internal/discovery-engine` and need the header `x-internal-secret` equal to
+`ENGINE_INTERNAL_SECRET` (default `dev-internal-secret`), else `401`.
+
+- `GET /queue?since=<ISO, default 1970>&limit=<default 100, max 200>` returns
+  `{"items": [{"storyId", "queuedAt", "payload"}], "nextSince"}`: undecided stories queued after
+  `since`, oldest first; `nextSince` is the last item's `queuedAt` (or `since` when empty).
+- `POST /fetch` with `{"sourceId": "<id>" | null}` polls the source `app-<id>` (or all sources),
+  then runs one story pass and one queue-preparation pass, and returns
+  `{"polled", "newItems", "queued"}`. `404 {"detail": "unknown source"}` if it isn't watched.
+- `GET /health` returns `{"ok": true}`.
+
+The read-only endpoints above (`/items`, `/sources`, `/stories`, ...) stay unprefixed.
+
+### Gateway registration (`app/registration.py`)
+
+With `NATS_URL` set, the engine publishes a `hello` to the NATS subject `gateway.services` every
+5 seconds (and a `goodbye` on shutdown) with its `instanceId`, `name: "discovery"`, `address`
+(`ENGINE_PUBLIC_URL`, default `http://127.0.0.1:8090`) and the private route
+`/internal/discovery-engine`. If NATS is down the engine logs a warning and keeps retrying.
+
+Still direct over HTTP to the backend: decisions (`GET /decisions`), the source list
+(`GET /sources`) and `POST /sources/suggestions`.
 
 Backend side: `backend/src/services/discoveryService.ts` and `/internal/discovery` routes on the
 `feat/discovery-review` branch.
