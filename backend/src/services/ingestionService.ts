@@ -37,7 +37,6 @@ async function fetchFeedXml(url: string): Promise<string> {
 const OG_IMAGE_TIMEOUT_MS = 3_000;
 const MAX_ITEMS_PER_FETCH = 25;
 
-const POST_TTL_MS = 2 * 24 * 60 * 60 * 1000; // 2 days
 
 export interface FetchStats {
   sourceId: string;
@@ -131,7 +130,6 @@ export async function fetchSource(source: ISource): Promise<FetchStats> {
           country: country ?? undefined,
           publishedAt,
           readTimeMinutes: readTimeMinutes(excerpt),
-          expiresAt: new Date(Date.now() + POST_TTL_MS),
         });
 
         // Fire-and-forget: AI agent reads the article and writes results back via PATCH /internal
