@@ -117,7 +117,7 @@ export async function updatePost(
 // Called by both publishPost (bypass path) and moderationService.approve (editor path).
 // Safe to call on aggregated posts — null-guards authorId before touching user/reputation.
 export async function finalizePublish(post: IPost): Promise<void> {
-  const firstPublish = !post.publishedAt;
+  const firstPublish = post.status !== "published";
   if (firstPublish) {
     // Create hashtags that are new and drop any that were blocked since the draft was written.
     post.hashtags = await hashtagService.ensureHashtags(post.hashtags, {
