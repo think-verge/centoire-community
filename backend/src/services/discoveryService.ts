@@ -216,9 +216,10 @@ export function serializeEngineSource(source: ISource) {
   };
 }
 
-/** Every source the engine is responsible for, including suggestions (so it never re-suggests one). */
+/** Every source except the placeholder one, inactive/suggested/rejected included so the engine never
+ *  re-suggests them. The engine decides what to watch from `active`. */
 export async function listEngineSources(): Promise<ISource[]> {
-  return Source.find({ fetchedBy: "discovery", kind: { $ne: "discovery" } }).sort({ createdAt: 1 });
+  return Source.find({ kind: { $ne: "discovery" } }).sort({ createdAt: 1 });
 }
 
 export interface SourceSuggestionInput {

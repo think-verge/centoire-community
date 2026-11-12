@@ -2,7 +2,7 @@ import { hashtagNames } from "./hashtags.js";
 import { registry, z, jsonBody, jsonResponse, errorResponse } from "./registry.js";
 import { PostCategorySchema } from "./posts.js";
 
-/** rss: fetched by the app's importer (or the engine). sitemap / page / instagram: the discovery
+/** rss: watched by the discovery engine. sitemap / page / instagram: the discovery
  *  engine only. discovery: the source the engine's stories are attributed to. */
 export const SourceKindSchema = z.enum(["rss", "sitemap", "page", "instagram", "discovery"]);
 
@@ -69,6 +69,10 @@ export const FetchStatsSchema = registry.register(
     itemsSeen: z.number(),
     imported: z.number(),
     skippedDuplicates: z.number(),
+    /** Stories the discovery engine queued for review from this fetch. */
+    queued: z.number().optional(),
+    /** Stories saved to the review queue after pulling from the engine. */
+    pulled: z.number().optional(),
     error: z.string().optional(),
   }),
 );
@@ -114,6 +118,6 @@ export function registerSourcePaths(): void {
     tags: ["admin"],
     operationId: "fetchSourceNow",
     request: { params: z.object({ id: z.string() }) },
-    responses: { 200: jsonResponse("Import stats", FetchStatsSchema) },
+    responses: { 200: jsonResponse("Fetch stats (the discovery engine polls the source; new stories go to review)", FetchStatsSchema) },
   });
 }

@@ -1,7 +1,7 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
 import { POST_CATEGORIES, isValidSubcategory, type PostCategory } from "../config/categoryTaxonomy.js";
 
-/** What kind of address `feedUrl` holds. Only "rss" is fetched by the app's own importer;
+/** What kind of address `feedUrl` holds. The app no longer fetches anything itself;
  *  the other kinds are watched by the discovery engine (see `fetchedBy`). "discovery" is the
  *  single source that the engine's stories are attributed to. */
 export const SOURCE_KINDS = ["rss", "sitemap", "page", "instagram", "discovery"] as const;

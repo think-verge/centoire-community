@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { Source, type ISource } from "../models/Source.js";
-import * as ingestionService from "../services/ingestionService.js";
+import { requestFetch } from "../services/discoveryPullService.js";
 import { ApiError } from "../utils/api-error.js";
 import { MAX_SOURCE_HASHTAGS } from "../utils/hashtag.js";
 import * as hashtagService from "../services/hashtagService.js";
@@ -97,11 +97,17 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function fetchNow(req: Request, res: Response): Promise<void> {
   const source = await Source.findById(req.params.id);
   if (!source) throw new ApiError(404, "Source not found");
-  if (source.fetchedBy === "discovery") {
-    throw new ApiError(400, "The discovery engine watches this source; it can't be fetched from here");
-  }
-  const stats = await ingestionService.fetchSource(source);
-  res.json(stats);
+  if (source.kind === "discovery") throw new ApiError(400, "This is the placeholder source for engine stories; it can't be fetched");
+  const stats = await requestFetch(source._id.toString());
+  res.json({
+    sourceId: source._id.toString(),
+    sourceName: source.name,
+    itemsSeen: stats.polled,
+    imported: stats.newItems,
+    skippedDuplicates: Math.max(0, stats.polled - stats.newItems),
+    queued: stats.queued,
+    pulled: stats.pulled,
+  });
 }
 
 export async function follow(req: Request, res: Response): Promise<void> {

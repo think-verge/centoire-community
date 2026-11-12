@@ -2621,6 +2621,12 @@
           "skippedDuplicates": {
             "type": "number"
           },
+          "queued": {
+            "type": "number"
+          },
+          "pulled": {
+            "type": "number"
+          },
           "error": {
             "type": "string"
           }
@@ -5686,7 +5692,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Import stats",
+            "description": "Fetch stats (the discovery engine polls the source; new stories go to review)",
             "content": {
               "application/json": {
                 "schema": {

@@ -12,5 +12,7 @@ export interface FetchStats {
   itemsSeen: number;
   imported: number;
   skippedDuplicates: number;
+  queued?: number;
+  pulled?: number;
   error?: string;
 }
