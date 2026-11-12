@@ -226,7 +226,7 @@ export interface SourceSuggestionInput {
   siteUrl: string;
   feedUrl: string;
   kind: Exclude<SourceKind, "discovery">;
-  region?: string;
+  region?: string | null;
   reason: string;
   evidence: string[];
   score?: number;
@@ -261,7 +261,7 @@ export async function suggestSource(input: SourceSuggestionInput): Promise<{ sou
     faviconUrl: host ? `https://www.google.com/s2/favicons?domain=${host}&sz=64` : undefined,
     kind: input.kind,
     fetchedBy: "discovery",
-    region: input.region,
+    region: input.region ?? undefined,
     active: false,
     review: "suggested",
     suggestion,

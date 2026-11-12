@@ -50,7 +50,7 @@ export const SourceSuggestionSchema = z.object({
   siteUrl: z.string().url(),
   feedUrl: z.string().url(),
   kind: z.enum(["rss", "sitemap", "page", "instagram"]),
-  region: z.string().max(6).optional(),
+  region: z.string().max(6).nullish(),
   reason: z.string().min(1).max(1000),
   evidence: z.array(z.string().max(1000)).max(20).default([]),
   score: z.number().optional(),

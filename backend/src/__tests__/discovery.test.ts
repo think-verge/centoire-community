@@ -140,6 +140,19 @@ describe("discovery engine integration", () => {
     expect(rejected.save).not.toHaveBeenCalled();
   });
 
+  it("accepts a suggestion with no region (the engine sends null)", async () => {
+    expect(SourceSuggestionSchema.safeParse({
+      name: "GQ Japan", siteUrl: "https://gqjapan.jp", feedUrl: "https://gqjapan.jp/feed", kind: "rss",
+      region: null, reason: "First on stories that spread", evidence: [],
+    }).success).toBe(true);
+
+    vi.spyOn(Source, "findOne").mockResolvedValueOnce(null);
+    const create = vi.spyOn(Source, "create").mockImplementation(async (doc) => fakeDoc(doc as object) as never);
+    await suggestSource({ name: "GQ Japan", siteUrl: "https://gqjapan.jp", feedUrl: "https://gqjapan.jp/feed",
+      kind: "rss", region: null, reason: "r", evidence: [] });
+    expect(create.mock.calls[0]![0]).toMatchObject({ region: undefined });
+  });
+
   it("reports decisions with whether an editor made them", async () => {
     const reviewedAt = new Date("2026-11-10T10:00:00Z");
     vi.spyOn(Post, "find").mockReturnValue({
