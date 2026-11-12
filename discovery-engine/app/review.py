@@ -218,7 +218,7 @@ class ReviewBridge:
     # ---------- sources ----------
 
     async def sync_sources(self) -> int:
-        rows = await self.app.sources()
+        rows = [r for r in await self.app.sources() if r.get("feedUrl")]  # nothing to watch without one
         self.known_feeds = {r["feedUrl"] for r in rows}
         own = {s.url for s in self.poller.all_sources if not s.id.startswith("app-")}
         wanted: dict[str, Source] = {}

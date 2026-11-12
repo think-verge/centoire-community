@@ -219,7 +219,8 @@ export function serializeEngineSource(source: ISource) {
 /** Every source except the placeholder one, inactive/suggested/rejected included so the engine never
  *  re-suggests them. The engine decides what to watch from `active`. */
 export async function listEngineSources(): Promise<ISource[]> {
-  return Source.find({ kind: { $ne: "discovery" } }).sort({ createdAt: 1 });
+  // A source with no feed URL (e.g. a manual or demo entry) is nothing the engine can watch.
+  return Source.find({ kind: { $ne: "discovery" }, feedUrl: { $exists: true, $nin: [null, ""] } }).sort({ createdAt: 1 });
 }
 
 export interface SourceSuggestionInput {

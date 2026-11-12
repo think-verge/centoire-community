@@ -293,3 +293,14 @@ async def test_sync_handles_ordinary_rss_rows_without_review():
     bridge = ReviewBridge(poller, app)
     await bridge.sync_sources()
     assert poller.added == ["app-a"] and "https://old.com/rss" in bridge.known_feeds
+
+
+async def test_sync_skips_sources_with_no_feed_url():
+    poller = FakePoller(FakeStore([]))
+    app = FakeApp(sources=[{"id": "d", "name": "Demo paid site", "siteUrl": "http://127.0.0.1:8765", "kind": "rss",
+                            "active": True, "region": None},
+                           {"id": "a", "name": "Vogue", "feedUrl": "https://vogue.com/rss", "kind": "rss",
+                            "active": True}])
+    bridge = ReviewBridge(poller, app)
+    await bridge.sync_sources()  # used to raise KeyError: 'feedUrl' and stop all source syncing
+    assert poller.added == ["app-a"]

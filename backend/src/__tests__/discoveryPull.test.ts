@@ -129,10 +129,10 @@ describe("discovery queue pull", () => {
     });
   });
 
-  it("listEngineSources returns everything except the placeholder source", async () => {
+  it("listEngineSources returns every source with a feed URL except the placeholder", async () => {
     const sort = vi.fn().mockResolvedValue([]);
     const find = vi.spyOn(Source, "find").mockReturnValue({ sort } as never);
     await discoveryService.listEngineSources();
-    expect(find).toHaveBeenCalledWith({ kind: { $ne: "discovery" } });
+    expect(find).toHaveBeenCalledWith({ kind: { $ne: "discovery" }, feedUrl: { $exists: true, $nin: [null, ""] } });
   });
 });
