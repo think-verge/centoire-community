@@ -115,7 +115,7 @@ for the design. Everything below is in addition to `cd backend && npm run dev`, 
 | notifications | `services/notifications` | 8111 | NATS, `MONGODB_URI` |
 | search | `services/search` | 8112 | NATS, `MONGODB_URI` |
 | UI | `ui` | 5173 | `API_PROXY_TARGET=http://localhost:8100` |
-| discovery-engine (standalone) | `discovery-engine` | 8090 | Python 3.12, MongoDB; see its README |
+| discovery-engine | `discovery-engine` | 8090 | Python 3.12, MongoDB; `make discovery` (also a pane in `./centmux`); see its README |
 | ai-agent (optional) | `ai-agent` | 8001 | Python 3.12 |
 
 First time: `npm install` at the repo root (installs and builds the shared `@centoire/*` packages),

@@ -29,6 +29,8 @@ windows:
           - make search
         - recsys:
           - make recsys
+        - discovery:
+          - make discovery
 
   - ui:
       panes:
