@@ -34,6 +34,28 @@ export const ViewerStateSchema = registry.register(
   }),
 );
 
+const PostDiscoverySchema = registry.register(
+  "PostDiscovery",
+  z.object({
+    storyId: z.string(),
+    category: z.string().nullable(),
+    websiteCount: z.number(),
+    articleCount: z.number(),
+    firstPublished: z.object({ name: z.string(), url: z.string().nullable(), at: z.string() }).nullable(),
+    engineSawAt: z.string().nullable(),
+    spread: z.array(z.object({ name: z.string(), url: z.string().nullable(), firstAt: z.string() })),
+    markets: z.array(z.string()),
+    momentum: z
+      .object({
+        tag: z.enum(["breaking", "rising", "early", "steady", "settled"]),
+        reason: z.string(),
+        computedAt: z.string().nullable(),
+      })
+      .nullable()
+      .optional(),
+  }),
+);
+
 export const PostCardSchema = registry.register(
   "PostCard",
   z.object({
@@ -60,6 +82,8 @@ export const PostCardSchema = registry.register(
     updatedAt: z.string(),
     viewer: ViewerStateSchema,
     authorIsCreator: z.boolean(),
+    /** Set on stories the discovery engine put up for review: how far the story had spread. */
+    discovery: PostDiscoverySchema.nullable().optional(),
   }),
 );
 

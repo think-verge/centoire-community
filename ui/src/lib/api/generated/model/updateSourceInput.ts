@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UpdateSourceInputCategory } from './updateSourceInputCategory';
+import type { UpdateSourceInputKind } from './updateSourceInputKind';
+import type { UpdateSourceInputFetchedBy } from './updateSourceInputFetchedBy';
+import type { UpdateSourceInputReview } from './updateSourceInputReview';
 
 export interface UpdateSourceInput {
   /**
@@ -26,4 +29,12 @@ export interface UpdateSourceInput {
   /** @nullable */
   subcategory?: string | null;
   active?: boolean;
+  kind?: UpdateSourceInputKind;
+  fetchedBy?: UpdateSourceInputFetchedBy;
+  /**
+   * @maxLength 6
+   * @nullable
+   */
+  region?: string | null;
+  review?: UpdateSourceInputReview;
 }

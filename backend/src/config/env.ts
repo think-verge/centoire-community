@@ -25,9 +25,7 @@ export const env = {
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ?? "",
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
   MAIL_FROM: process.env.MAIL_FROM ?? "Centoire <no-reply@centoire.local>",
-  ENABLE_INGESTION: process.env.ENABLE_INGESTION === "true",
   ENABLE_AI_PROCESSING: process.env.ENABLE_AI_PROCESSING !== "false",
-  INGESTION_CRON: process.env.INGESTION_CRON ?? "*/30 * * * *",
   AI_SERVICE_URL: process.env.AI_SERVICE_URL ?? "http://localhost:8001",
   AI_INTERNAL_SECRET: process.env.AI_INTERNAL_SECRET ?? "dev-internal-secret",
   RECSYS_SERVICE_URL: process.env.RECSYS_SERVICE_URL ?? "http://localhost:8004",
@@ -36,6 +34,16 @@ export const env = {
   NATS_URL: process.env.NATS_URL ?? "",
   // Shared by platform services calling core's /internal/sync feed (distinct from AI_INTERNAL_SECRET).
   INTERNAL_SECRET: process.env.INTERNAL_SECRET ?? "dev-internal-secret",
+  // The discovery engine's calls to /internal/discovery (story candidates, sources, decisions).
+  DISCOVERY_INTERNAL_SECRET: process.env.DISCOVERY_INTERNAL_SECRET ?? "dev-discovery-secret",
+  // The engine's queue, pulled by this backend (via the gateway's private listener).
+  DISCOVERY_ENGINE_URL: process.env.DISCOVERY_ENGINE_URL ?? "http://127.0.0.1:8101/internal/discovery-engine",
+  DISCOVERY_ENGINE_SECRET: process.env.DISCOVERY_ENGINE_SECRET ?? "dev-internal-secret",
+  ENABLE_DISCOVERY_PULL: process.env.ENABLE_DISCOVERY_PULL !== "false",
+  DISCOVERY_PULL_CRON: process.env.DISCOVERY_PULL_CRON ?? "*/2 * * * *",
+  // false = discovery stories always wait for an editor, even when an auto-approve policy matches
+  // (e.g. the seeded "auto-approve AI-analyzed non-spam content"). Auto-reject still applies.
+  DISCOVERY_AUTO_APPROVE: process.env.DISCOVERY_AUTO_APPROVE === "true",
   ANNOUNCE_ADDRESS: process.env.ANNOUNCE_ADDRESS ?? "",
   // true = the notifications service owns /notifications and the event listeners.
   NOTIFICATIONS_EXTERNAL: process.env.NOTIFICATIONS_EXTERNAL === "true",

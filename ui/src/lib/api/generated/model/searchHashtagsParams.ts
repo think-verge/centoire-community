@@ -14,7 +14,7 @@ export type SearchHashtagsParams = {
 q?: string;
 /**
  * @minimum 1
- * @maximum 50
+ * @maximum 200
  */
 limit?: number;
 featured?: SearchHashtagsFeatured;

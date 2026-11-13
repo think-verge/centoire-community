@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CreateSourceInputCategory } from './createSourceInputCategory';
+import type { CreateSourceInputKind } from './createSourceInputKind';
+import type { CreateSourceInputFetchedBy } from './createSourceInputFetchedBy';
 
 export interface CreateSourceInput {
   /**
@@ -26,4 +28,11 @@ export interface CreateSourceInput {
   /** @nullable */
   subcategory?: string | null;
   active?: boolean;
+  kind?: CreateSourceInputKind;
+  fetchedBy?: CreateSourceInputFetchedBy;
+  /**
+   * @maxLength 6
+   * @nullable
+   */
+  region?: string | null;
 }

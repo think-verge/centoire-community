@@ -1,7 +1,8 @@
 SHELL := /bin/bash
 AGENT_VENV := ai-agent/.venv
+DISCOVERY_VENV := discovery-engine/.venv
 
-.PHONY: ui ui-platform backend core agent agent-install install platform-install nats gateway notifications search recsys openapi seed help
+.PHONY: ui ui-platform backend core agent agent-install install platform-install nats gateway notifications search recsys discovery discovery-install openapi seed help
 
 ## Start the React dev server (port 5173)
 ui:
@@ -12,7 +13,7 @@ backend:
 	cd backend && npm run dev
 
 # ---- Platform mode (gateway + NATS + extracted services) --------------------------------
-# Ports: gateway 8100 (public) / 8101 (internal), core 8000, notifications 8111, search 8112, recsys 8004, NATS 4222.
+# Ports: gateway 8100 (public) / 8101 (internal), core 8000, notifications 8111, search 8112, recsys 8004, discovery 8090, NATS 4222.
 export NATS_URL ?= nats://127.0.0.1:4222
 
 ## Install + build workspace packages (@centoire/*) and service deps
@@ -42,6 +43,14 @@ recsys:
 ## React dev server proxied through the gateway instead of straight to the monolith
 ui-platform:
 	cd ui && API_PROXY_TARGET=http://localhost:8100 npm run dev
+
+## Create the discovery engine venv, install its deps and create .env from the template if missing
+discovery-install:
+	./scripts/discovery-install.sh
+
+## Discovery engine (port 8090): polls sources, groups stories, sends them to content review in core
+discovery: discovery-install
+	cd discovery-engine && .venv/bin/uvicorn app.main:app --port 8090
 
 ## Create venv and install Python deps if needed
 agent-install:

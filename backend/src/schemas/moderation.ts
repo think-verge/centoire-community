@@ -94,6 +94,9 @@ export const ModerationQueueQuerySchema = z.object({
   source: z.string().optional(),
   hashtag: z.string().optional(),
   author: z.string().optional(),
+  /** momentum (default): breaking, rising and early stories first, most widely covered first;
+   *  then other posts; then steady and settled stories. oldest: first in, first reviewed. */
+  sort: z.enum(["momentum", "oldest"]).default("momentum"),
 });
 
 export function registerModerationPaths(): void {

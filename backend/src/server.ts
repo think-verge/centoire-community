@@ -3,7 +3,7 @@ import { createApp } from "./app.js";
 import { connectDb } from "./config/db.js";
 import { env } from "./config/env.js";
 import { initEventBus } from "./events/eventBus.js";
-import { startIngestionCron } from "./workers/rssCron.js";
+import { startDiscoveryPullCron } from "./workers/discoveryPullCron.js";
 import { startCleanupCron } from "./workers/cleanupCron.js";
 import { startHashtagCountsCron } from "./workers/hashtagCountsCron.js";
 
@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     });
     console.log(`[server] registered with gateway via ${env.NATS_URL}`);
   }
-  startIngestionCron();
+  startDiscoveryPullCron();
   startCleanupCron();
   startHashtagCountsCron();
 }

@@ -35,11 +35,15 @@ cd backend && npm run openapi     # regenerate openapi/openapi.json from Zod
 cd ../ui   && npm run api:refresh # copy spec + regenerate typed hooks (orval)
 ```
 
-### RSS ingestion
+### Content discovery
 
-Admin-managed sources (`/admin/sources` in the UI) are fetched by an in-process cron
-(every 30 min) when `ENABLE_INGESTION=true`. Manual pulls: the "Fetch now" button, or
-`npx tsx scripts/fetch-sources.ts`. Imports are deduped by a canonical-URL hash; only
+The discovery engine (`discovery-engine/`, `make discovery`) is the only thing that fetches content.
+It watches every active source in `/admin/sources` plus its own watchlist, groups articles into
+stories and keeps them in a queue. The backend pulls that queue every 2 minutes
+(`DISCOVERY_PULL_CRON`) and puts each story into the content review queue as a `pending_review` post.
+The engine registers with the gateway over NATS, and the backend reaches it through the gateway's
+private listener (`DISCOVERY_ENGINE_URL`). "Fetch now" on a source asks the engine to poll it
+immediately, then pulls the queue. Imports are deduped by a canonical-URL hash; only
 title/excerpt/og-image are stored and cards link out to the original story.
 
 ### Email
@@ -115,6 +119,7 @@ for the design. Everything below is in addition to `cd backend && npm run dev`, 
 | notifications | `services/notifications` | 8111 | NATS, `MONGODB_URI` |
 | search | `services/search` | 8112 | NATS, `MONGODB_URI` |
 | UI | `ui` | 5173 | `API_PROXY_TARGET=http://localhost:8100` |
+| discovery-engine | `discovery-engine` | 8090 | Python 3.12, MongoDB; `make discovery` (also a pane in `./centmux`); see its README |
 | ai-agent (optional) | `ai-agent` | 8001 | Python 3.12 |
 
 First time: `npm install` at the repo root (installs and builds the shared `@centoire/*` packages),
@@ -188,7 +193,6 @@ Done when a fresh Windows machine with Node, a `MONGODB_URI`, and no tmux/make/b
 | backend | `npm run openapi` | export OpenAPI spec from Zod |
 | backend | `npm run seed` | idempotent seed (hashtags/sources/circles/admin) |
 | backend | `npm test` | vitest unit tests |
-| backend | `npx tsx scripts/fetch-sources.ts` | one-off RSS pull |
 | ui | `npm run dev` | Vite dev server with /api proxy |
 | ui | `npm run api:refresh` | regenerate orval client from backend spec |
 | ui | `npm run build` | typecheck + production build |

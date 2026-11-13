@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SourceCategory } from './sourceCategory';
+import type { SourceKind } from './sourceKind';
+import type { SourceFetchedBy } from './sourceFetchedBy';
+import type { SourceReview } from './sourceReview';
+import type { SourceSuggestion } from './sourceSuggestion';
 import type { SourceLastStatus } from './sourceLastStatus';
 
 export interface Source {
@@ -21,6 +25,14 @@ export interface Source {
   /** @nullable */
   subcategory: string | null;
   active: boolean;
+  kind: SourceKind;
+  fetchedBy: SourceFetchedBy;
+  /** @nullable */
+  region: string | null;
+  /** @nullable */
+  review: SourceReview;
+  /** @nullable */
+  suggestion: SourceSuggestion;
   /** @nullable */
   lastFetchedAt: string | null;
   /** @nullable */

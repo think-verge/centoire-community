@@ -1,0 +1,86 @@
+# Brand websites — the brand's own channels, not its shop catalogue.
+#
+# Every URL was checked live on 2026-11-06 with the engine's user agent.
+#
+#   type sitemap  a brand sitemap; every URL never listed before becomes an item
+#                 (Nike's SNKRS sitemap gains a URL when a launch page is published)
+#   type page     a newsroom / press page; every new link matching include_url is an item
+#   type rss      brand blogs that already publish a feed (Shopify .atom)
+#   include_url   regexes; only matching URLs are watched
+#   enrich        open each new page for its real title/image/date (false where pages
+#                 block us or the URL slug already says it all)
+#   interval      seconds, overriding the tier; the Nike sitemaps are 1–12 MB and Nike
+#                 ignores conditional requests, so they are fetched in full every time.
+#                 Nike regenerates them about once a day (~13:00 UTC; seen 2026-11-07), so
+#                 hourly is enough. Measured: a new SNKRS page lands hours to a day AFTER the
+#                 sneaker blogs; it confirms a launch, it doesn't break it.
+#
+# Checked and not watchable without a browser (blocked or rendered by script):
+# adidas.com / news.adidas.com, New Balance, Vans, Converse, HOKA, Crocs, Puma newsroom,
+# Palace, adidas Group press (times out for our user agent). Follow these on Instagram.
+# Checked 2026-11-09, no usable feed: Palace, Sp5der, Hellstar, Cactus Plant Flea Market,
+# Fear of God (empty blog), Nocta, Aries, Represent/Awake NY/Dime/Reebok (blogs stale for
+# months), Carhartt WIP, Stone Island, Human Made, Kapital, atmos, Ader Error (blocked),
+# thisisneverthat, Wooyoungmi, Andersson Bell, Visvim, Undercover, Our Legacy, Acronym.
+
+sources:
+  # ---------- Nike / Jordan / SB: SNKRS launch pages, per market ----------
+  # A launch only on JP / KR / IN SNKRS is a regional exclusive: that's the geography signal.
+  - {id: nike-snkrs-us, name: Nike SNKRS US, type: sitemap, region: US, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-us.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-jp, name: Nike SNKRS JP, type: sitemap, region: JP, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-ja-jp.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-gb, name: Nike SNKRS GB, type: sitemap, region: GB, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-gb.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-kr, name: Nike SNKRS KR, type: sitemap, region: KR, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-ko-kr.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  - {id: nike-snkrs-in, name: Nike SNKRS IN, type: sitemap, region: IN, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-snkrsweb-en-in.xml", include_url: ['/launch/t/'], exclude_title: ['\btest\b']}
+  # Campaign and collection landing pages (new collabs often get one before launch).
+  - {id: nike-landing-us, name: Nike landing pages, type: sitemap, region: US, role: brand, interval: 3600, enrich: false,
+     url: "https://www.nike.com/sitemap-v2-landingpage-en-us.xml"}
+  - {id: nike-newsroom, name: Nike Newsroom, type: page, region: GLOBAL, role: brand, tier: normal,
+     url: "https://about.nike.com/en/newsroom", include_url: ['/en/newsroom/[a-z-]+/[^/]+$']}
+
+  # ---------- Supreme: season previews and news posts ----------
+  # A new /previews/<season> appears when the season preview goes live; /news/<id> are
+  # collaboration announcements (usually the Monday before a Thursday drop).
+  - {id: supreme-site, name: Supreme, type: sitemap, region: US, role: brand, tier: normal,
+     url: "https://supreme.com/sitemap.xml", include_url: ['/previews/', '/news/\d+']}
+
+  # ---------- other newsrooms ----------
+  - {id: asics-press, name: ASICS Press, type: page, region: JP, role: brand, tier: slow,
+     url: "https://corp.asics.com/en/press", include_url: ['/en/press/article/']}
+
+  # ---------- brand blogs with feeds ----------
+  - {id: stussy-blog,        name: Stüssy Features,       type: rss, region: US, role: brand, tier: normal, url: "https://www.stussy.com/blogs/features.atom"}
+  - {id: aimeleondore-blog,  name: Aimé Leon Dore News,   type: rss, region: US, role: brand, tier: normal, url: "https://www.aimeleondore.com/blogs/news.atom"}
+  - {id: kith-blog,          name: Kith Discover,         type: rss, region: US, role: brand, tier: slow,   url: "https://kith.com/blogs/discover.atom"}
+  - {id: bape-blog,          name: BAPE News,             type: rss, region: JP, role: brand, tier: normal, url: "https://bape.com/blogs/news.atom"}
+  - {id: patta-blog,         name: Patta News,            type: rss, region: NL, role: brand, tier: normal, url: "https://www.patta.nl/blogs/news.atom"}
+  - {id: jjjjound-previews,  name: JJJJound Previews,     type: rss, region: CA, role: brand, tier: normal, url: "https://www.jjjjound.com/blogs/previews.atom"}
+  - {id: jjjjound-projects,  name: JJJJound Projects,     type: rss, region: CA, role: brand, tier: normal, url: "https://www.jjjjound.com/blogs/projects.atom"}
+
+  # ---------- streetwear brand blogs (added 2026-11-09; each posted within the last ~6 weeks) ----------
+  # All Shopify: slow tier, because Shopify rate-limits per IP across every store it hosts.
+  - {id: corteiz-blog,       name: Corteiz Archive,       type: rss, region: GB, role: brand, tier: slow, url: "https://www.corteiz.com/blogs/archive.atom"}
+  - {id: braindead-blog,     name: Brain Dead Archive,    type: rss, region: US, role: brand, tier: slow, url: "https://wearebraindead.com/blogs/archive.atom"}
+  - {id: denimtears-blog,    name: Denim Tears Lookbook,  type: rss, region: US, role: brand, tier: slow, url: "https://denimtears.com/blogs/lookbook.atom"}
+  - {id: noah-blog,          name: Noah News,             type: rss, region: US, role: brand, tier: slow, url: "https://noahny.com/blogs/news.atom"}
+  - {id: pleasures-blog,     name: Pleasures Lookbooks,   type: rss, region: US, role: brand, tier: slow, url: "https://pleasuresnow.com/blogs/lookbooks.atom"}
+  - {id: bbc-blog,           name: Billionaire Boys Club, type: rss, region: US, role: brand, tier: slow, url: "https://www.bbcicecream.com/blogs/news.atom"}
+  - {id: union-blog,         name: Union LA Blog,         type: rss, region: US, role: brand, tier: slow, url: "https://store.unionlosangeles.com/blogs/blog.atom"}
+  - {id: placesfaces-blog,   name: Places+Faces News,     type: rss, region: GB, role: brand, tier: slow, url: "https://www.placesplusfaces.com/blogs/news.atom"}
+  - {id: colebuxton-blog,    name: Cole Buxton Media,     type: rss, region: GB, role: brand, tier: slow, url: "https://www.colebuxton.com/blogs/media.atom"}
+  - {id: onlineceramics-blog, name: Online Ceramics,      type: rss, region: US, role: brand, tier: slow, url: "https://onlineceramics.com/feed/"}
+  - {id: wtaps-blog,         name: WTAPS Feature,         type: rss, region: JP, role: brand, tier: slow, url: "https://wtaps.com/blogs/feature.atom"}
+  - {id: sacai-blog,         name: sacai News,            type: rss, region: JP, role: brand, tier: slow, url: "https://www.sacai.jp/blogs/news.atom"}
+  - {id: neighborhood-blog,  name: Neighborhood News,     type: rss, region: JP, role: brand, tier: slow, url: "https://www.neighborhood.jp/blogs/news.atom"}
+  - {id: helas-blog,         name: Hélas News,            type: rss, region: FR, role: brand, tier: slow, url: "https://www.helascaps.com/blogs/news.atom"}
+  - {id: bluorng-blog,       name: Bluorng News,          type: rss, region: IN, role: brand, tier: slow, url: "https://bluorng.com/blogs/news.atom"}
+  - {id: bonkerscorner-blog, name: Bonkers Corner,        type: rss, region: IN, role: brand, tier: slow, url: "https://www.bonkerscorner.com/blogs/bonkers-corner.atom"}
+  - {id: urbanmonkey-blog,   name: Urban Monkey News,     type: rss, region: IN, role: brand, tier: slow, url: "https://www.urbanmonkey.com/blogs/news.atom"}
+
+  # ---------- END. editorial (its launch calendar is in sources.yaml) ----------
+  - {id: end-features,       name: END. Features,         type: rss, region: GB, role: brand,    tier: slow,   url: "https://www.endclothing.com/blogs/features.atom"}
+

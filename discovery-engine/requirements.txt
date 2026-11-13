@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+httpx
+feedparser
+pyyaml
+python-dotenv
+motor                # async MongoDB driver
+pytest
+pytest-asyncio
+numpy                # story matching (cosine similarity)
+nats-py

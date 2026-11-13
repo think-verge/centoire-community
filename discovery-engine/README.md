@@ -1,0 +1,171 @@
+# Centoire Discovery Engine (MVP)
+
+Watches streetwear & sneaker sources across regions, stores every new item with the
+time we **first saw it**, and (by the end of the MVP week) groups items into stories,
+flags what's breaking, and measures how far ahead of BoF / WWD we were.
+
+The watchlist is split in three files. Every source has a `region`; items carry `regions`,
+so everything can be filtered by market.
+
+- [`brand_sites.yaml`](brand_sites.yaml): brands' own channels: Nike SNKRS launch-page
+  sitemaps for US/JP/GB/KR/IN, Nike landing pages and newsroom, Supreme previews and news,
+  ASICS press, and 24 brand blogs (Stüssy, ALD, Kith, BAPE, Patta, JJJJound, Corteiz, Brain
+  Dead, Denim Tears, Noah, WTAPS, sacai, Neighborhood, Bluorng, …). Sitemaps and pages have
+  no feed, so the engine remembers every URL they have ever listed and reports only new ones
+  (`app/sites.py`).
+- [`instagram.yaml`](instagram.yaml): 70 brand, insider, collaborator and shop accounts
+  (170 of 180 calls/hour).
+- [`sources.yaml`](sources.yaml): publishers in 11 markets (feeds, plus news sitemaps or
+  homepage article lists for Sole Retriever, Complex, House of Heat, Sneakerjagers, Fashion
+  Press, Sneaker Freaker and Grailify), benchmarks (BoF, WWD), Google News searches per
+  market, Reddit, Shopify store catalogues and END. launches (release confirmation, not
+  early news).
+- **Discovered sources** (role `discovered`, kept in MongoDB): added automatically by origin
+  tracing, below.
+
+## Finding primary sources automatically (origin tracing)
+
+Publishers credit where a story started: "Photos: acgtaiwan, runners_highest", "Images via
+Nike", an embedded Instagram post ("A post shared by … (@travisscott)"), a link to an X post.
+Every article the engine collects is read for those credits (`app/citations.py`): from the
+feed's article text, or by opening the article for feeds that only carry a summary
+(`fetch_article: true`). Each credited name is counted per publisher and per day
+(`app/origins.py`, MongoDB `origin_candidates`).
+
+A name becomes a **primary source** when 2+ publishers credited it, or one publisher credited it
+on 3+ different days. Plain links count for less (3+ publishers for a website), editions of one
+outlet (hypebeast.com/.cn/.kr) count once, and names a publisher puts on most of its articles
+(its own accounts, its shop) are ignored. Every 30 minutes, qualifying names are added:
+
+| Credited name | What happens |
+|---|---|
+| Instagram account | checked via business discovery, then watched (slow tier, within the hourly budget). Waits as `pending_instagram` until Instagram is connected |
+| Website | watched if it publishes an RSS/Atom feed; otherwise `not_watchable` |
+| X / TikTok / Weibo / YouTube / a person's name | `not_watchable`: listed for a person to follow up |
+
+- `GET /origins?min_publishers=2` — credited names, with the article lines that credited them
+- `POST /origins/{id}/reject` — never add this one (e.g. `instagram:size`)
+- `python -m scripts.trace_origins` — read every feed's current articles and run one promotion pass
+
+## Stories: one event, every site that reported it
+
+Articles are grouped by the event they report (`app/stories.py`, MongoDB `stories`). Every
+minute, new articles go through Gemini in batches of 40:
+
+1. **Triage** (`STORY_TRIAGE_MODEL`, default gemini-3.5-flash-lite): is it fashion / streetwear /
+   sneaker / art news? Deals, listings, job ads, personal Reddit posts and off-topic news are
+   dropped (kept in `items`, with `triage.relevant: false`). Relevant ones get a category and
+   one neutral English headline, so a Japanese, Korean and English write-up read alike.
+2. **Candidates**: the headline is embedded (`EMBED_MODEL`, gemini-embedding-001); stories from
+   the last 14 days with close headlines are candidates.
+3. **Match** (`STORY_MATCH_MODEL`, default gemini-3.5-flash): which candidate story each article
+   belongs to, or which new story it starts. Follow-ups (leak → reveal → release date) join;
+   other colourways or other collabs of the same brand don't.
+
+A story counts **websites**, not feeds: Hypebeast's English, Korean and Chinese editions are one
+website, and each outlet behind a Google News result is its own website.
+
+- `GET /stories?hours=48&min_websites=3` — stories, most widely covered first: who published
+  first, when the engine saw it, and the spread (each website with its first time)
+- `GET /stories/{id}` — the same plus every article
+- `python -m scripts.build_stories` — triage and group the backlog (run with the engine stopped)
+
+## Review queue and shared sources (the Centoire app)
+
+With `CENTOIRE_API_URL` and `CENTOIRE_DISCOVERY_SECRET` set (`app/review.py`), every 2 minutes:
+
+- **Stories → queue (pulled by the backend).** The engine never POSTs stories. Once 2+ websites
+  carry a story (or right away if it's a leak, while under 48 hours old), the engine stores the
+  prepared post payload on the story (`review.payload`, `review.queued_at`, status
+  `pending_review`) and the backend pulls it from `GET /internal/discovery-engine/queue`. The
+  evidence is re-prepared, and `queued_at` moves forward, as the story spreads or its momentum tag
+  changes. Editors approve or reject as for any post; decided stories leave the queue.
+- **Decisions → engine.** Approvals and rejections (with reasons) are read back onto
+  `stories.review`; approved stories count toward suggesting the websites that carried them.
+- **Sources, both ways.** The engine watches every active source the app lists (an admin adds
+  one on the Sources page: RSS, sitemap, web page or Instagram), and stops when it's paused or deleted. New sources are never added on their own:
+  origin tracing and story history send them as **suggestions** with their evidence; an admin
+  approves (watched from the next sync) or rejects (never suggested again).
+
+### Pull queue API (`app/internal_api.py`)
+
+All routes sit under `/internal/discovery-engine` and need the header `x-internal-secret` equal to
+`ENGINE_INTERNAL_SECRET` (default `dev-internal-secret`), else `401`.
+
+- `GET /queue?since=<ISO, default 1970>&limit=<default 100, max 200>` returns
+  `{"items": [{"storyId", "queuedAt", "payload"}], "nextSince"}`: undecided stories queued after
+  `since`, oldest first; `nextSince` is the last item's `queuedAt` (or `since` when empty).
+- `POST /fetch` with `{"sourceId": "<id>" | null}` polls the source `app-<id>` (or all sources),
+  then runs one story pass and one queue-preparation pass, and returns
+  `{"polled", "newItems", "queued"}`. `404 {"detail": "unknown source"}` if it isn't watched.
+- `GET /health` returns `{"ok": true}`.
+
+The read-only endpoints above (`/items`, `/sources`, `/stories`, ...) stay unprefixed.
+
+### Gateway registration (`app/registration.py`)
+
+With `NATS_URL` set, the engine publishes a `hello` to the NATS subject `gateway.services` every
+5 seconds (and a `goodbye` on shutdown) with its `instanceId`, `name: "discovery"`, `address`
+(`ENGINE_PUBLIC_URL`, default `http://127.0.0.1:8090`) and the private route
+`/internal/discovery-engine`. If NATS is down the engine logs a warning and keeps retrying.
+
+Still direct over HTTP to the backend: decisions (`GET /decisions`), the source list
+(`GET /sources`) and `POST /sources/suggestions`.
+
+Backend side: `backend/src/services/discoveryService.ts` and `/internal/discovery` routes on the
+`feat/discovery-review` branch.
+
+## Momentum: breaking, rising, early, steady, settled
+
+Every story sent for review carries a tag (`app/momentum.py`), recomputed every 2 minutes;
+pending posts are refreshed whenever it changes. Thresholds come from how 610 stories spread
+over 4 days (83% never left one website; those that reached 5+ got to 3 websites in a median
+5.3h; half of the stories with 3 websites within 6h reached 5+):
+
+| Tag | Rule |
+|---|---|
+| breaking | under 12h old and 3+ websites within 6h of the first |
+| rising | 2+ new websites in the last 12h, under 3 days old |
+| early | 1-2 websites, under 12h old, and a leak or first from a source whose first stories often spread (20%+ reached 3+ websites, 2+ times with a 1h lead) |
+| steady | a new website in the last 24h |
+| settled | no new website in 24h |
+
+Single-website stories are only sent for review when they're early. In the app, the review
+queue's "Sort: Momentum" puts breaking first.
+
+## Run
+
+```bash
+uv venv -p 3.12 .venv && uv pip install -p .venv -r requirements.txt
+cp .env.example .env
+mongod --dbpath .data/mongo --bind_ip 127.0.0.1 --port 27017   # or point MONGODB_URI at Atlas
+.venv/bin/uvicorn app.main:app --port 8090                      # API + poller in one process
+```
+
+- `GET /items?region=IN&role=publisher` — newest fresh items first
+- `GET /sources` — watchlist with last poll status per source
+- `GET /stats` — counts by region
+- `python -m scripts.poll --once` — one polling round, prints a health table
+- `python -m pytest -q`
+
+## How "first seen" stays honest
+
+Items present on a source's very first poll are stored with `baseline: true`; they were
+published before we started watching, so they never count toward lead time.
+
+## MVP week
+
+| Day | Status |
+|---|---|
+| 1–2 Watchlist + poller (RSS, Google News, Reddit, Shopify), regions, first-seen times | done |
+| 3 Instagram connector: 60-account watchlist ([instagram.yaml](instagram.yaml)), call budget + auto back-off, engagement snapshots, tagged-account candidates (`/instagram`, `/instagram/candidates`) | built; waiting for Meta credentials — see [docs/instagram-setup.md](docs/instagram-setup.md) |
+| 3 Brand websites: sitemap and newsroom diffing, brand blog feeds ([brand_sites.yaml](brand_sites.yaml)) | done, live |
+| 3 Origin tracing: find primary sources from publishers' credits and add them automatically | done, live |
+| 4 Stories: Gemini relevance triage, English headline, grouping by event across languages, websites per story (`/stories`) | done, live |
+| 4+ Review queue in the app, editor decisions back to the engine, shared + suggested sources | done, tested locally |
+| 5 Breaking detection + lead time vs BoF/WWD | |
+| 6 Live page | |
+| 7 Polish + demo | |
+
+Known gap: Reddit answers 429 to unauthenticated feeds; switch to the official OAuth API
+(`REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET`).

@@ -8,6 +8,11 @@ import { apiRouter } from "./routes/index.js";
 export function createApp(): Express {
   const app = express();
 
+  // Behind the gateway (and nginx in production) every request carries X-Forwarded-For. Trusting
+  // loopback proxies makes req.ip the real client, which express-rate-limit keys on; without it
+  // the limiter throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR and counts everyone as the gateway.
+  app.set("trust proxy", "loopback");
+
   app.set("trust proxy", 1);
 
   app.use(

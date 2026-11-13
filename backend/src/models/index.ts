@@ -21,3 +21,4 @@ import "./Cluster.js";
 import "./Event.js";
 import "./SuggestionFeedback.js";
 import "./UserTopicMix.js";
+import "./DiscoveryCursor.js";

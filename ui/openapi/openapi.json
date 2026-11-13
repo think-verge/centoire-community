@@ -114,6 +114,116 @@
           "bookmarked"
         ]
       },
+      "PostDiscovery": {
+        "type": "object",
+        "properties": {
+          "storyId": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "websiteCount": {
+            "type": "number"
+          },
+          "articleCount": {
+            "type": "number"
+          },
+          "firstPublished": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "nullable": true
+              },
+              "at": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "name",
+              "url",
+              "at"
+            ]
+          },
+          "engineSawAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "spread": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "name",
+                "url",
+                "firstAt"
+              ]
+            }
+          },
+          "markets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "momentum": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "tag": {
+                "type": "string",
+                "enum": [
+                  "breaking",
+                  "rising",
+                  "early",
+                  "steady",
+                  "settled"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "computedAt": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "tag",
+              "reason",
+              "computedAt"
+            ]
+          }
+        },
+        "required": [
+          "storyId",
+          "category",
+          "websiteCount",
+          "articleCount",
+          "firstPublished",
+          "engineSawAt",
+          "spread",
+          "markets"
+        ]
+      },
       "PostCard": {
         "type": "object",
         "properties": {
@@ -139,6 +249,9 @@
               "rejected",
               "removed"
             ]
+          },
+          "curated": {
+            "type": "boolean"
           },
           "title": {
             "type": "string"
@@ -274,6 +387,16 @@
           },
           "authorIsCreator": {
             "type": "boolean"
+          },
+          "discovery": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PostDiscovery"
+              },
+              {
+                "nullable": true
+              }
+            ]
           }
         },
         "required": [
@@ -491,6 +614,33 @@
         "required": [
           "scanned",
           "updated"
+        ]
+      },
+      "CuratePostInput": {
+        "type": "object",
+        "properties": {
+          "curated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CuratePostResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "curated": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "curated",
+          "status"
         ]
       },
       "UploadedImage": {
@@ -2201,6 +2351,65 @@
           "active": {
             "type": "boolean"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram",
+              "discovery"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true
+          },
+          "review": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "suggested",
+              "approved",
+              "rejected"
+            ]
+          },
+          "suggestion": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "score": {
+                "type": "number",
+                "nullable": true
+              },
+              "suggestedAt": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "reason",
+              "evidence",
+              "score",
+              "suggestedAt"
+            ]
+          },
           "lastFetchedAt": {
             "type": "string",
             "nullable": true
@@ -2228,6 +2437,11 @@
           "category",
           "subcategory",
           "active",
+          "kind",
+          "fetchedBy",
+          "region",
+          "review",
+          "suggestion",
           "lastFetchedAt",
           "lastStatus",
           "lastError"
@@ -2281,6 +2495,27 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 6
           }
         },
         "required": [
@@ -2337,6 +2572,34 @@
           },
           "active": {
             "type": "boolean"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "rss",
+              "sitemap",
+              "page",
+              "instagram"
+            ]
+          },
+          "fetchedBy": {
+            "type": "string",
+            "enum": [
+              "app",
+              "discovery"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 6
+          },
+          "review": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ]
           }
         }
       },
@@ -2358,6 +2621,12 @@
           "skippedDuplicates": {
             "type": "number"
           },
+          "queued": {
+            "type": "number"
+          },
+          "pulled": {
+            "type": "number"
+          },
           "error": {
             "type": "string"
           }
@@ -2368,6 +2637,254 @@
           "itemsSeen",
           "imported",
           "skippedDuplicates"
+        ]
+      },
+      "SuggestedCircle": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "coverImageUrl": {
+            "type": "string"
+          },
+          "memberCount": {
+            "type": "integer"
+          },
+          "postCount": {
+            "type": "integer"
+          },
+          "isPrivate": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "scoreBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "description",
+          "memberCount",
+          "postCount",
+          "isPrivate",
+          "score",
+          "reason"
+        ]
+      },
+      "SuggestedCirclesResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestedCircle"
+            }
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ]
+      },
+      "SuggestedCreator": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "handle": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "avatarUrl": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "followerCount": {
+            "type": "integer"
+          },
+          "postCount": {
+            "type": "integer"
+          },
+          "isEmerging": {
+            "type": "boolean"
+          },
+          "score": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "scoreBreakdown": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "handle",
+          "displayName",
+          "followerCount",
+          "postCount",
+          "isEmerging",
+          "score",
+          "reason"
+        ]
+      },
+      "SuggestedCreatorsResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SuggestedCreator"
+            }
+          },
+          "count": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ]
+      },
+      "SuggestionDismissBody": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "circle",
+              "creator"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId"
+        ]
+      },
+      "SuggestionIgnoreBody": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "circle",
+              "creator"
+            ]
+          },
+          "targetId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId"
+        ]
+      },
+      "SuggestionImpressionsBody": {
+        "type": "object",
+        "properties": {
+          "impressions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "targetType": {
+                  "type": "string",
+                  "enum": [
+                    "circle",
+                    "creator"
+                  ]
+                },
+                "targetId": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "score": {
+                  "type": "number"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "targetType",
+                "targetId",
+                "position"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "impressions"
+        ]
+      },
+      "SuggestionFeedbackResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "action": {
+            "type": "string"
+          },
+          "dismissedUntil": {
+            "type": "string",
+            "nullable": true
+          },
+          "ignoreCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "action"
         ]
       }
     },
@@ -3244,6 +3761,160 @@
         }
       }
     },
+    "/users/{id}/block": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "blockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User blocked"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unblockUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unblocked"
+          }
+        }
+      }
+    },
+    "/users/{id}/mute": {
+      "post": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "muteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User muted"
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "unmuteUser",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "User unmuted"
+          }
+        }
+      }
+    },
+    "/users/me/blocks": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getBlockedUsers",
+        "responses": {
+          "200": {
+            "description": "List of blocked users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/me/mutes": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "operationId": "getMutedUsers",
+        "responses": {
+          "200": {
+            "description": "List of muted users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicUser"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/onboarding/suggestions": {
       "get": {
         "tags": [
@@ -3772,6 +4443,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BackfillCategoriesResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/posts/{id}/curate": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "curatePost",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CuratePostInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Post curated status updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CuratePostResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -4972,7 +5692,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Import stats",
+            "description": "Fetch stats (the discovery engine polls the source; new stories go to review)",
             "content": {
               "application/json": {
                 "schema": {
@@ -5025,6 +5745,174 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/circles": {
+      "get": {
+        "tags": [
+          "suggestions"
+        ],
+        "operationId": "getSuggestedCircles",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personalized circle recommendations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedCirclesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/creators": {
+      "get": {
+        "tags": [
+          "suggestions"
+        ],
+        "operationId": "getSuggestedCreators",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Personalized creator recommendations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedCreatorsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/dismiss": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "operationId": "dismissSuggestion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionDismissBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dismissal recorded (hidden for 30 days)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionFeedbackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/ignore": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "operationId": "ignoreSuggestion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionIgnoreBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ignore recorded (hidden for 14 days after 3 ignores)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionFeedbackResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/suggestions/impressions": {
+      "post": {
+        "tags": [
+          "suggestions"
+        ],
+        "operationId": "recordSuggestionImpressions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionImpressionsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Impressions logged successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ]
+                    },
+                    "loggedCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "loggedCount"
+                  ]
                 }
               }
             }
@@ -5138,6 +6026,19 @@
             },
             "required": false,
             "name": "author",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "momentum",
+                "oldest"
+              ],
+              "default": "momentum"
+            },
+            "required": false,
+            "name": "sort",
             "in": "query"
           }
         ],

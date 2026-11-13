@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "../../components/Button";
 import { Field } from "../../components/Field";
 import { PostDrawer } from "../../components/PostDrawer";
+import { DiscoveryEvidence } from "../../components/DiscoveryEvidence";
 import { Switch } from "../../components/Switch";
 import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } from "../../components/Table";
 import { ActiveFilterPills } from "../../components/filter/ActiveFilterPills";
@@ -39,6 +40,15 @@ import { useAuth } from "../../lib/auth-context";
 import { hasPermission } from "../../lib/permissions";
 
 const QUEUE_FILTER_CONFIG: FilterFieldDef[] = [
+  {
+    key: "sort",
+    label: "Sort",
+    type: "single",
+    options: [
+      { value: "momentum", label: "Momentum: breaking first (default)" },
+      { value: "oldest", label: "Oldest first" },
+    ],
+  },
   {
     key: "status",
     label: "Status",
@@ -249,6 +259,7 @@ function QueueTab() {
     source: activeFilters.source?.[0],
     hashtag: activeFilters.hashtag?.[0],
     author: activeFilters.author?.[0],
+    sort: activeFilters.sort?.[0] as "oldest" | "momentum" | undefined,
   });
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -551,6 +562,7 @@ function QueueItem({
               )}
               <span>· {post.origin}</span>
             </div>
+            {post.discovery && <DiscoveryEvidence discovery={post.discovery} />}
           </div>
           {!isRejecting && (
             <div

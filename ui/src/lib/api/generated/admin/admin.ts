@@ -28,6 +28,8 @@ import type {
   BackfillCategoriesResult,
   CreateInviteInput,
   CreateSourceInput,
+  CuratePostInput,
+  CuratePostResponse,
   ErrorResponse,
   FetchStats,
   Invite,
@@ -294,6 +296,64 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getBackfillPostCategoriesMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    export const curatePost = (
+    id: string,
+    curatePostInput: CuratePostInput,
+ ) => {
+      
+      
+      return customInstance<CuratePostResponse>(
+      {url: `/admin/posts/${id}/curate`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: curatePostInput
+    },
+      );
+    }
+  
+
+
+export const getCuratePostMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof curatePost>>, TError,{id: string;data: CuratePostInput}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof curatePost>>, TError,{id: string;data: CuratePostInput}, TContext> => {
+
+const mutationKey = ['curatePost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof curatePost>>, {id: string;data: CuratePostInput}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  curatePost(id,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CuratePostMutationResult = NonNullable<Awaited<ReturnType<typeof curatePost>>>
+    export type CuratePostMutationBody = CuratePostInput
+    export type CuratePostMutationError = ErrorType<ErrorResponse>
+
+    export const useCuratePost = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof curatePost>>, TError,{id: string;data: CuratePostInput}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof curatePost>>,
+        TError,
+        {id: string;data: CuratePostInput},
+        TContext
+      > => {
+
+      const mutationOptions = getCuratePostMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }

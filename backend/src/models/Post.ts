@@ -4,6 +4,22 @@ import { POST_CATEGORIES, isValidSubcategory, type PostCategory } from "../confi
 export type PostOrigin = "native" | "aggregated";
 export type PostStatus = "draft" | "pending_review" | "published" | "rejected" | "removed";
 
+/** Evidence from the discovery engine for a story it put up for review: how widely the story
+ *  spread, who published it first, and when the engine saw it. */
+export interface IPostDiscovery {
+  storyId: string;
+  category?: string;
+  websiteCount: number;
+  articleCount: number;
+  firstPublished?: { name: string; url?: string; at: Date };
+  engineSawAt?: Date;
+  spread: Array<{ name: string; url?: string; firstAt: Date }>;
+  markets: string[];
+  /** breaking | rising | early | steady | settled, and its rank in that order (0 = breaking). */
+  momentum?: { tag: string; reason: string; rank: number; computedAt: Date };
+  updatedAt: Date;
+}
+
 export interface IPost extends Document {
   _id: Types.ObjectId;
   origin: PostOrigin;
@@ -55,6 +71,7 @@ export interface IPost extends Document {
   embeddingStatus?: "pending" | "completed" | "failed";
   clusterId?: number;
   clusterVersion?: number;
+  discovery?: IPostDiscovery;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -111,6 +128,28 @@ const postSchema = new Schema<IPost>(
     embeddingStatus: { type: String, enum: ["pending", "completed", "failed"] },
     clusterId: { type: Number },
     clusterVersion: { type: Number },
+    discovery: {
+      type: new Schema<IPostDiscovery>(
+        {
+          storyId: { type: String, required: true },
+          category: { type: String },
+          websiteCount: { type: Number, default: 0 },
+          articleCount: { type: Number, default: 0 },
+          firstPublished: { name: String, url: String, at: Date },
+          engineSawAt: { type: Date },
+          spread: { type: [{ name: String, url: String, firstAt: Date, _id: false }], default: [] },
+          markets: { type: [String], default: [] },
+          momentum: {
+            tag: { type: String, enum: ["breaking", "rising", "early", "steady", "settled"] },
+            reason: String,
+            rank: Number,
+            computedAt: Date,
+          },
+          updatedAt: { type: Date },
+        },
+        { _id: false },
+      ),
+    },
   },
   { timestamps: true },
 );
@@ -127,6 +166,9 @@ postSchema.index({ status: 1, country: 1, publishedAt: -1 });
 postSchema.index({ title: "text", contentText: "text", excerpt: "text" });
 postSchema.index({ embeddingStatus: 1, createdAt: -1 });
 postSchema.index({ clusterId: 1, createdAt: -1 }, { sparse: true });
+postSchema.index({ "discovery.storyId": 1 }, { unique: true, sparse: true });
+postSchema.index({ "discovery.storyId": 1, reviewedAt: 1 }, { sparse: true });
+postSchema.index({ status: 1, "discovery.momentum.rank": 1, createdAt: -1 });
 
 postSchema.pre("validate", function (next) {
   if (this.subcategory && !this.category) {

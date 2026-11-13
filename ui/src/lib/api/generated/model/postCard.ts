@@ -12,12 +12,14 @@ import type { PostCardSource } from './postCardSource';
 import type { PostCardCircle } from './postCardCircle';
 import type { PostCardCategory } from './postCardCategory';
 import type { ViewerState } from './viewerState';
+import type { PostCardDiscovery } from './postCardDiscovery';
 
 export interface PostCard {
   id: string;
   slug: string;
   origin: PostCardOrigin;
   status: PostCardStatus;
+  curated?: boolean;
   title: string;
   excerpt: string;
   /** @nullable */
@@ -44,4 +46,5 @@ export interface PostCard {
   updatedAt: string;
   viewer: ViewerState;
   authorIsCreator: boolean;
+  discovery?: PostCardDiscovery;
 }
