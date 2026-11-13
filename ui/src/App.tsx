@@ -57,6 +57,7 @@ export default function App() {
               <Route path="/circles/new" element={<CreateCirclePage />} />
               <Route path="/circles" element={<CirclesPage />} />
               <Route path="/bookmarks" element={<BookmarksPage />} />
+              <Route path="/bookmarks/new" element={<BookmarksPage />} />
               <Route path="/search" element={<SearchPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin/sources" element={<AdminSourcesPage />} />
