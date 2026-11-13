@@ -29,8 +29,8 @@ jobs:
             # scp only adds/overwrites, so files deleted in git would linger and break the build.
             rm -rf /var/www/centoire-community/backend/src \
                    /var/www/centoire-community/backend/scripts \
-                   /var/www/centoire-community/packages \
-                   /var/www/centoire-community/services \
+                   /var/www/centoire-community/packages/*/src \
+                   /var/www/centoire-community/services/*/src \
                    /var/www/centoire-community/extension/src \
                    /var/www/centoire-community/ui/src
 

@@ -8,6 +8,7 @@ SERVICE_NAME="${SERVICE_NAME:-centoire-community-backend}"
 PUBLIC_PORT="${PUBLIC_PORT:-5175}"
 BACKEND_PORT="${BACKEND_PORT:-8002}"
 FRONTEND_ENV="${FRONTEND_ENV:-/etc/centoire-community/frontend.env}"
+DEPLOY_USER="${DEPLOY_USER:-dsehgal}"
 
 if [ ! -f /etc/centoire-community/backend.env ]; then
   echo "Missing /etc/centoire-community/backend.env"
@@ -76,4 +77,8 @@ if [ -f /etc/letsencrypt/live/centoire.com/fullchain.pem ]; then
   curl -sf --resolve centoire.com:443:127.0.0.1 https://centoire.com/ >/dev/null
   curl -sf --resolve centoire.com:443:127.0.0.1 https://centoire.com/api/v1/health >/dev/null
 fi
+
+echo "==> Restoring file ownership for deploy user"
+chown -R "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR"
+
 echo "==> Centoire Community deployment complete"
