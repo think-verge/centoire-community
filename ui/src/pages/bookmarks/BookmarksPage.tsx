@@ -679,7 +679,7 @@ function BookmarkGridCard({
                     type="button"
                     title="Saved"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center transition-colors text-[#111111]"
+                    className="flex items-center justify-center transition-colors text-[#111111]/60 hover:text-[#111111]"
                   >
                     <svg className="size-4 fill-current" viewBox="0 0 24 24">
                       <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -750,8 +750,8 @@ function BookmarkGridCard({
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center justify-center transition-colors text-[#111111]/60 hover:text-[#111111]"
                 >
-                  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  <svg className="size-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
                 </button>
               </div>
@@ -1026,15 +1026,15 @@ export function BookmarksPage() {
               className="mb-3 inline-flex items-center gap-2 font-ui text-[12px] font-normal text-[#777777] hover:text-[#111111] leading-none transition-colors cursor-pointer"
             >
               <svg
-                className="w-[9.33px] h-[9.33px] text-[#777777] shrink-0"
+                className="size-4 text-[#777777] shrink-0"
                 fill="none"
-                viewBox="0 0 10 10"
+                viewBox="0 0 16 16"
                 stroke="currentColor"
                 strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M8.5 5H1.5M5 1.5L1.5 5 5 8.5" />
+                <path d="M13 8H3M7 4L3 8L7 12" />
               </svg>
               <span>Back to Bookmarks</span>
             </button>
@@ -1095,20 +1095,20 @@ export function BookmarksPage() {
                   />
                 </div>
 
-                {/* Privacy note - No tick button, informational note only (Figma node 1637-3642) */}
+                {/* Privacy note - No tick button, informational note only (Figma node 1637-3642: lock-keyhole icon) */}
                 <div className="flex items-center gap-1.5 font-ui text-[12px] font-normal leading-[18px] text-[#777777] pt-0.5">
                   <svg
-                    className="size-3.5 text-[#777777] shrink-0"
+                    className="w-[14px] h-[14px] text-[#777777] shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
-                    strokeWidth="1.5"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                    />
+                    <circle cx="12" cy="16" r="1" />
+                    <rect x="3" y="10" width="18" height="12" rx="2" />
+                    <path d="M7 10V7a5 5 0 0 1 10 0v3" />
                   </svg>
                   <span>Private collection. Only you can see what’s inside.</span>
                 </div>
